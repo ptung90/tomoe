@@ -73,7 +73,6 @@ function buildSlots(card: Card, slotCount: number, imgStyle: string, forPrint = 
         '"><div class="img-bg" style="background-image:url(\'' + esc(img.url) + '\');' +
         resolveImgStyle(img, imgStyle) +
         'background-repeat:no-repeat;width:100%;height:100%;"></div>' +
-        '' +
         '</div>'
       );
     }
@@ -122,14 +121,155 @@ function _scopeCardCss(css: string, cardId: string): string {
   );
 }
 
-// TEMPORARY — replaced in Task 3 with the real compound-layout dispatcher.
-function buildCompound(_card: Card, _ctx: unknown): string | null { return null; }
+// ── Compound layouts ───────────────────────────────────────────────
+interface CompoundCellOptions {
+  paddingPx?: number;
+  borderWidth?: number;
+  borderCss?: string;
+  borderRadiusPx?: number;
+  overflow?: string;
+  background?: string;
+}
+
+function buildCompoundCellStyle(baseStyle: string, options: CompoundCellOptions = {}): string {
+  const {
+    paddingPx = 0,
+    borderWidth = 0,
+    borderCss = '',
+    borderRadiusPx = 0,
+    overflow = 'auto',
+    background = 'white',
+  } = options;
+  return (
+    baseStyle +
+    'box-sizing:border-box;' +
+    'background:' + background + ';' +
+    'padding:' + paddingPx + 'px;' +
+    'overflow:' + overflow + ';' +
+    'border:' + borderWidth + 'px ' + borderCss + ';' +
+    'border-radius:' + borderRadiusPx + 'px;'
+  );
+}
+
+function buildSectionCellHtml(section: CardSection | null | undefined, hideLabels: boolean, locale: string): string {
+  if (!section) return '<div class="fc-section fc-section--empty"></div>';
+  const _label = resolveLocale(section.label, locale);
+  const _content = resolveLocale(section.content, locale);
+  return (
+    `<div class="fc-section${section.customClass ? ` ${esc(section.customClass)}` : ''}">` +
+    (!hideLabels && _label ? '<span class="fc-section__label"' + (section.labelSize ? ` style="font-size:${section.labelSize}px"` : '') + '>• ' + mdInline(_label) + ': </span>' : '') +
+    '<div class="fc-section__content"' + ((section.fontSize || section.textAlign) ? ` style="${section.fontSize ? `font-size:${section.fontSize}px;` : ''}${section.textAlign ? `text-align:${section.textAlign};` : ''}"` : '') + '>' +
+    mdBlock(_content) +
+    '</div></div>'
+  );
+}
+
+function titleBlock(showTitle: boolean, titleStyle: string, resolvedTitle: string): string {
+  return showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '';
+}
+
+interface CompoundShellArgs {
+  cardStyleTag: string;
+  cls: string;
+  layout: string;
+  id: string;
+  wrapperStyle: string;
+  titleHtml?: string;
+  gridClass?: string;
+  gridStyle: string;
+  cellsHtml: string;
+  handlesHtml?: string;
+}
+
+// Shared skeleton for every compound layout: style tag + card wrapper +
+// optional title + grid container + cells (+ optional drag handles).
+function renderCompoundShell(args: CompoundShellArgs): string {
+  const { cardStyleTag, cls, layout, id, wrapperStyle, titleHtml = '', gridClass = '', gridStyle, cellsHtml, handlesHtml = '' } = args;
+  const clsAttr = gridClass ? ' class="' + gridClass + '"' : '';
+  return (
+    cardStyleTag +
+    '<div class="' + cls + '" data-layout="' + layout + '" data-id="' + id + '" style="' + wrapperStyle + '">' +
+    titleHtml +
+    '<div' + clsAttr + ' style="' + gridStyle + '">' +
+    cellsHtml + handlesHtml +
+    '</div></div>'
+  );
+}
+
+interface CompoundCtx {
+  s: Settings;
+  forPrint: boolean;
+  cls: string;
+  id: string;
+  cardStyleTag: string;
+  wrapperStyle: string;
+  titleStyle: string;
+  contentStyle: string;
+  gap: number;
+  imgStyle: string;
+  borderCss: string;
+  imgPaddingPx: number;
+  paddingPx: number;
+  locale: string;
+}
+
+function build_3card(card: Card, ctx: CompoundCtx): string {
+  const { s } = ctx;
+  const cols = 3;
+  const imgPct = card.imageHeightPercent || 45;
+  // fit mode (global setting): title pins top, content pins bottom, image fills the middle with imgPct as a min-height floor
+  const fit = !!ctx.s.threeCardFit;
+  const imgAreaStyle = fit ? 'flex:1 1 auto;min-height:' + imgPct + '%;' : 'flex:' + imgPct + ';min-height:0;';
+  const txtAreaStyle = fit ? 'flex:0 0 auto;' : 'flex:' + (100 - imgPct) + ';min-height:0;';
+  const cells = Array.from({ length: cols }, (_, i) => {
+    const sec = card.sections[i] || ({ label: '', content: '' } as CardSection);
+    const img = card.images.find((im) => im.slot === i);
+    const title = resolveLocale(sec.label, ctx.locale);
+    const content = resolveLocale(sec.content, ctx.locale);
+    const imgUrl = img && img.url ? img.url : '';
+    const hasContent = !!(title || imgUrl || (content || '').trim());
+    const cellBorderW = (ctx.forPrint && !hasContent) ? 0 : s.border.width;
+    const imgBg = imgUrl
+      ? '<div class="img-bg" style="background-image:url(\'' + esc(imgUrl) + '\');' + resolveImgStyle(img, ctx.imgStyle) + 'background-repeat:no-repeat;width:100%;height:100%;"></div>'
+      : ctx.forPrint ? '' : '<span class="empty-placeholder">📷</span>';
+    const cellStyle =
+      'box-sizing:border-box;background:white;overflow:hidden;display:flex;flex-direction:column;' +
+      'border:' + cellBorderW + 'px ' + ctx.borderCss + ';border-radius:' + s.border.radius + 'px;padding:' + ctx.paddingPx + 'px;';
+    return (
+      '<div class="fc-image-slot-' + i + '" style="' + cellStyle + '">' +
+      (title && !card.hideSectionLabels ? '<div class="fc-title" style="' + ctx.titleStyle + '">' + mdInline(title) + '</div>' : '') +
+      '<div style="' + imgAreaStyle + 'overflow:hidden;display:flex;align-items:center;justify-content:center;padding:' + ctx.imgPaddingPx + 'px;background:white;">' +
+      imgBg +
+      '</div>' +
+      '<div class="fc-sections" style="' + txtAreaStyle + 'overflow:hidden;text-align:justify;' + ctx.contentStyle + '">' +
+      mdBlock(content) +
+      '</div>' +
+      '</div>'
+    );
+  }).join('');
+  const gridStyle = 'flex:1;overflow:hidden;display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:' + ctx.gap + 'px;';
+  return renderCompoundShell({
+    cardStyleTag: ctx.cardStyleTag, cls: ctx.cls, layout: card.layout, id: ctx.id,
+    wrapperStyle: ctx.wrapperStyle,
+    titleHtml: '',
+    gridClass: '', gridStyle,
+    cellsHtml: cells, handlesHtml: '',
+  });
+}
+
+function buildCompound(card: Card, ctx: CompoundCtx): string | null {
+  switch (card.layout) {
+    case '3card': return build_3card(card, ctx);
+    default: return null;
+  }
+}
 
 export function buildCardHTML(card: Card, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
   const s = settings;
   const { w, h } = overridePx || getPaperPx(s.paperSize, card.orientation || s.orientation);
   const marginPx = mmToPx(s.margin);
   const paddingPx = mmToPx(s.padding);
+  const imgPaddingPx = mmToPx(s.imgPadding ?? 0);
   const vAlign = s.textVAlign || 'top';
   const vAlignJustify = TEXT_VALIGN_MAP[vAlign] || 'flex-start';
   const textVAlignStyle = 'justify-content:' + vAlignJustify + ';';
@@ -170,6 +310,9 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     ';border-radius:' +
     s.border.radius +
     'px;';
+  const borderCss = s.border.style + ' ' + s.border.color;
+  const compoundWrapperStyle =
+    'width:' + cardW + 'px;height:' + cardH + 'px;margin:' + marginPx + 'px auto;background:white;padding:0;border:none;';
   const sizeStyle =
     'width:' +
     cardW +
@@ -201,13 +344,19 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const cardStyleTag = '<style>' + _h1Rule + _labelSizeRule + _contentSizeRule + _imgLabelFontRule + (card.customCss ? _scopeCardCss(card.customCss, card.id) : '') + '</style>';
   const showTitle = !!resolvedTitle && !card.hideTitle;
 
-  const compoundCtx = { s, forPrint, locale };
+  const compoundCtx: CompoundCtx = {
+    s, forPrint, cls, id: card.id, cardStyleTag,
+    wrapperStyle: compoundWrapperStyle,
+    titleStyle, contentStyle,
+    gap: marginPx,
+    imgStyle, borderCss, imgPaddingPx, paddingPx,
+    locale,
+  };
   const compoundHtml = buildCompound(card, compoundCtx);
   if (compoundHtml !== null) return compoundHtml;
 
   // fullimage: image-only card with inner padding wrapper
   if (card.layout === 'fullimage') {
-    const imgPaddingPx = mmToPx(s.imgPadding ?? 0);
     const borderW = s.border.width || 0;
     const nopadStyle = 'width:' + cardW + 'px;height:' + cardH + 'px;margin:' + marginPx + 'px auto;background:white;padding:0;';
     const innerWrapStyle =

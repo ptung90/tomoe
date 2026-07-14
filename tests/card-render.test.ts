@@ -75,3 +75,23 @@ describe('buildCardHTML grid/fulltext/fullimage', () => {
     expect(html).not.toContain('📷');
   });
 });
+
+describe('buildCardHTML 3card', () => {
+  it('renders a 3-column card with per-column titles, content, and images', () => {
+    const html = buildCardHTML(card({
+      layout: '3card',
+      images: [{ slot: 0, url: 'http://x/0.png' }, { slot: 1, url: 'http://x/1.png' }],
+      sections: [
+        { id: 's0', label: 'One', content: 'first' },
+        { id: 's1', label: 'Two', content: 'second' },
+        { id: 's2', label: 'Three', content: 'third' },
+      ],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('data-layout="3card"');
+    expect(html).toContain('fc-image-slot-0');
+    expect(html).toContain('fc-image-slot-2');
+    expect(html).toContain('http://x/0.png');
+    expect(html).toContain('first');
+    expect(html).toContain('third');
+  });
+});
