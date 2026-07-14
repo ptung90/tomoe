@@ -21,7 +21,7 @@ function load(): RecentFile[] {
   try {
     const raw = localStorage.getItem(KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
+    return Array.isArray(arr) ? arr.filter((r) => r && typeof r.path === 'string') : [];
   } catch { return []; }
 }
 function persist(list: RecentFile[]): void {
