@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { get } from 'svelte/store';
+import { render, fireEvent, screen } from '@testing-library/svelte';
 import Workspace from '../src/lib/modules/flashcards/Workspace.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 
@@ -18,8 +19,16 @@ describe('Flashcards Workspace', () => {
     expect(screen.getByText('Words')).toBeInTheDocument();       // left pane schema
     expect(screen.getByText('Title')).toBeInTheDocument();       // right pane field (record auto-selected)
   });
-  it('shows the project name in the header', () => {
+  it('shows the project name in an editable header field', () => {
     render(Workspace);
-    expect(screen.getByText('Untitled')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Untitled')).toBeInTheDocument();
+  });
+  it('editing the header field renames the project (and blank falls back to Untitled)', async () => {
+    render(Workspace);
+    const input = screen.getByLabelText('project name');
+    await fireEvent.change(input, { target: { value: 'Birds' } });
+    expect(get(S.project).projectName).toBe('Birds');
+    await fireEvent.change(input, { target: { value: '   ' } });
+    expect(get(S.project).projectName).toBe('Untitled');
   });
 });

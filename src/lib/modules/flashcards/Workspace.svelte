@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { project } from './stores';
+  import { project, setProjectName } from './stores';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
@@ -10,7 +10,12 @@
 
 <div class="workspace">
   <header class="header">
-    <span class="project-name">{$project.projectName}</span>
+    <input
+      class="project-name"
+      aria-label="project name"
+      value={$project.projectName}
+      onchange={(e) => setProjectName((e.target as HTMLInputElement).value.trim() || 'Untitled')}
+    />
     <span class="counts">
       {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
@@ -34,7 +39,10 @@
   .workspace { flex:1; display:flex; flex-direction:column; min-height:0; background:var(--bg); color:var(--text); }
   .header { display:flex; align-items:center; gap:12px; padding:8px 12px;
     background:var(--surface); border-bottom:1px solid var(--border); }
-  .project-name { font-weight:600; }
+  .project-name { font-weight:600; font:inherit; color:var(--text); background:transparent;
+    border:1px solid transparent; border-radius:6px; padding:3px 7px; min-width:8ch; }
+  .project-name:hover { border-color:var(--border); }
+  .project-name:focus { outline:none; border-color:var(--accent); background:var(--bg); }
   .counts { color:var(--text-muted); font-size:12px; }
   .body { flex:1; display:grid; min-height:0; }
   .left, .right { min-height:0; min-width:0; }
