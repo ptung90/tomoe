@@ -1,8 +1,10 @@
 <script lang="ts">
   import FolderOpen from 'lucide-svelte/icons/folder-open';
+  import X from 'lucide-svelte/icons/x';
   import { MODULES } from '../modules/registry';
   import { setActiveModule } from '../shell';
-  import { pickOpen } from '../fileService';
+  import { pickOpen, openPath } from '../fileService';
+  import { recentFiles, removeRecent, clearRecent } from '../recentFiles';
 
   function startNew(id: string) {
     const mod = MODULES.find((m) => m.id === id);
@@ -21,6 +23,23 @@
       {/each}
       <button class="btn btn-ghost" onclick={pickOpen}><FolderOpen size={16} /> Open file…</button>
     </div>
+    {#if $recentFiles.length}
+      <div class="recent">
+        <div class="recent-head"><span>Recent</span>
+          <button type="button" class="clear" onclick={clearRecent}>Clear</button></div>
+        <ul>
+          {#each $recentFiles as r (r.path)}
+            <li>
+              <button type="button" class="recent-item" title={r.path} onclick={() => openPath(r.path)}>
+                <span class="rname">{r.name}</span><span class="rpath">{r.path}</span>
+              </button>
+              <button type="button" class="rm" aria-label={`remove ${r.name}`} title="Remove"
+                onclick={() => removeRecent(r.path)}><X size={13} /></button>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -42,4 +61,18 @@
   .btn:hover { opacity:.92; }
   .btn-ghost { background:transparent; color:var(--text); }
   .btn-ghost:hover { background:var(--accent-weak); color:var(--accent); }
+  .recent { width:100%; margin-top:6px; display:flex; flex-direction:column; gap:6px; }
+  .recent-head { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--text-muted); }
+  .clear { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px; cursor:pointer; padding:2px 4px; border-radius:5px; }
+  .clear:hover { background:var(--accent-weak); color:var(--accent); }
+  .recent ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .recent li { display:flex; align-items:center; gap:4px; }
+  .recent-item { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+    border:none; background:transparent; color:var(--text); border-radius:6px; padding:5px 8px; font:inherit; cursor:pointer; text-align:left; }
+  .recent-item:hover { background:var(--accent-weak); }
+  .rname { font-size:13px; }
+  .rpath { font-size:11px; color:var(--text-muted); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rm { border:none; background:transparent; color:var(--text-muted); padding:4px; border-radius:5px; cursor:pointer; flex:0 0 auto; }
+  .rm:hover { background:var(--accent-weak); color:var(--accent); }
+  .recent-item:focus-visible, .rm:focus-visible, .clear:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 </style>
