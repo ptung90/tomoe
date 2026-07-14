@@ -9,8 +9,8 @@
 
 :root {
   /* ---- Brand (the ONLY colors you normally change) ---- */
-  --accent:       #c0562f;   /* primary: selected rows, primary buttons, links, focus */
-  --accent-weak:  #faece6;   /* soft tint: hovers, active backgrounds, chips */
+  --accent:       #0d9488;   /* primary: selected rows, primary buttons, links, focus */
+  --accent-weak:  color-mix(in srgb, var(--accent) 10%, var(--surface));   /* soft tint: hovers, active backgrounds, chips */
 
   /* ---- Neutrals (warm "paper") ---- */
   --bg:           #fbfaf8;   /* app background */
@@ -39,8 +39,8 @@
 /* Dark palette — applied when the OS prefers dark (unless forced light)… */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --accent:      #e0703f;
-    --accent-weak: #3a2a22;
+    --accent:      #2dd4bf;
+    --accent-weak: color-mix(in srgb, var(--accent) 22%, var(--surface));
     --bg:          #1c1a17;
     --surface:     #26231f;
     --sidebar:     #211e1a;
@@ -51,8 +51,8 @@
 }
 /* …or when explicitly forced dark. */
 :root[data-theme="dark"] {
-  --accent:      #e0703f;
-  --accent-weak: #3a2a22;
+  --accent:      #2dd4bf;
+  --accent-weak: color-mix(in srgb, var(--accent) 22%, var(--surface));
   --bg:          #1c1a17;
   --surface:     #26231f;
   --sidebar:     #211e1a;
