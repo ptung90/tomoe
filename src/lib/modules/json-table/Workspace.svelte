@@ -3,32 +3,18 @@
   import TreePane from './components/TreePane.svelte';
   import DetailPane from './components/DetailPane.svelte';
   import BigEditor from './editors/BigEditor.svelte';
-  import { data, dirty, theme, undo, redo } from './stores';
-  import { pickOpen, saveCurrent } from './io';
-  import { applyTheme } from '../../theme';
+  import { data, dirty } from './stores';
   import { dragX } from '../../actions/resize';
 
   let treeWidth = $state(300);
 
-  function onKeydown(e: KeyboardEvent) {
-    const k = e.key.toLowerCase();
-    if (e.ctrlKey && k === 's') { e.preventDefault(); saveCurrent(); }
-    else if (e.ctrlKey && k === 'o') { e.preventDefault(); pickOpen(); }
-    else if (e.ctrlKey && k === 'z') { e.preventDefault(); undo(); }
-    else if (e.ctrlKey && (k === 'y' || (e.shiftKey && k === 'z'))) { e.preventDefault(); redo(); }
-  }
+  // Open/Save/Undo/Redo and theme are owned by the shell (App.svelte) now that this
+  // Workspace is one of several modules; only the browser close-guard stays local.
   function onBeforeUnload(e: BeforeUnloadEvent) { if ($dirty) { e.preventDefault(); e.returnValue = ''; } }
 
-  // Apply theme whenever it changes.
-  $effect(() => { applyTheme($theme); });
-
   onMount(() => {
-    window.addEventListener('keydown', onKeydown);
     window.addEventListener('beforeunload', onBeforeUnload);
-    return () => {
-      window.removeEventListener('keydown', onKeydown);
-      window.removeEventListener('beforeunload', onBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
   });
 </script>
 

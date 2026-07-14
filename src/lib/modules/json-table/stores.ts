@@ -4,6 +4,7 @@ import * as H from '../../history';
 import { clampPath } from './pathUtils';
 import { loadBool, saveBool, loadTheme } from '../../theme';
 import type { Theme } from '../../theme';
+export { toast, showToast } from '../../shell';
 
 const history = writable<H.History<JsonValue | null>>(H.createHistory(null));
 
@@ -15,7 +16,6 @@ export const filePath = writable<string | null>(null);
 export const dirty = writable<boolean>(false);
 export const selectedPath = writable<Path>([]);
 export const theme = writable<Theme>(loadTheme());
-export const toast = writable<{ message: string; kind: 'success' | 'error' } | null>(null);
 export const bigEditorPath = writable<Path | null>(null);
 export const twoLevel = writable<boolean>(loadBool('jte-two-level', true));
 export const editorTab = writable<'form' | 'text'>('form');
@@ -71,12 +71,5 @@ export function closeBigEditor(): void { bigEditorPath.set(null); }
 
 export function setTwoLevel(on: boolean): void { twoLevel.set(on); saveBool('jte-two-level', on); }
 export function setEditorTab(t: 'form' | 'text'): void { editorTab.set(t); }
-
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
-export function showToast(message: string, kind: 'success' | 'error' = 'success'): void {
-  toast.set({ message, kind });
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.set(null), 2500);
-}
 
 export function setTheme(t: Theme): void { theme.set(t); }

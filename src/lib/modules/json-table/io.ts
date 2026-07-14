@@ -10,6 +10,15 @@ export function serialize(value: JsonValue): string {
   return JSON.stringify(value, null, 2) + '\n';
 }
 
+/** Parse already-loaded text into this module's store (no re-read, no dirty confirm). */
+export function openText(text: string, path: string | null): void {
+  try {
+    loadDocument(JSON.parse(text) as JsonValue, path);
+  } catch (e) {
+    showToast(`Invalid JSON file: ${(e as Error).message}`, 'error');
+  }
+}
+
 export async function openPath(path: string): Promise<void> {
   // Guard unsaved edits before replacing the current document.
   if (get(dirty)) {

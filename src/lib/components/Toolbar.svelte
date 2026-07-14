@@ -1,40 +1,54 @@
 <script lang="ts">
+  import FilePlus from 'lucide-svelte/icons/file-plus';
   import FolderOpen from 'lucide-svelte/icons/folder-open';
   import Save from 'lucide-svelte/icons/save';
-  import SaveAll from 'lucide-svelte/icons/save-all';
   import Undo2 from 'lucide-svelte/icons/undo-2';
   import Redo2 from 'lucide-svelte/icons/redo-2';
   import Sun from 'lucide-svelte/icons/sun';
   import Moon from 'lucide-svelte/icons/moon';
   import Monitor from 'lucide-svelte/icons/monitor';
-  import Columns2 from 'lucide-svelte/icons/columns-2';
-  import { data, filePath, dirty, canUndo, canRedo, undo, redo, theme, setTheme, twoLevel, setTwoLevel } from '../modules/json-table/stores';
-  import { pickOpen, saveCurrent, pickSave } from '../modules/json-table/io';
+  import SettingsIcon from 'lucide-svelte/icons/settings';
+  import { activeModuleId, theme, configOpen, setActiveModule } from '../shell';
+  import { getModule } from '../modules/registry';
+  import { pickOpen } from '../fileService';
   import type { Theme } from '../theme';
 
-  const fileName = $derived($filePath ? $filePath.split(/[\\/]/).pop() : 'No file');
+  const mod = $derived($activeModuleId ? getModule($activeModuleId) : null);
+  // Store references, re-bound whenever the active module changes; `$` auto-subscribes reactively
+  // and tolerates a null/undefined store (renders as `undefined` rather than throwing).
+  const dirty = $derived(mod?.dirty);
+  const canUndo = $derived(mod?.canUndo);
+  const canRedo = $derived(mod?.canRedo);
+
   const nextTheme: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'light' };
 </script>
 
 <header class="toolbar">
   <div class="grp">
+    <button onclick={() => setActiveModule(null)} title="New / back to start screen">
+      <FilePlus size={18} /> New
+    </button>
     <button onclick={pickOpen} title="Open (Ctrl+O)"><FolderOpen size={18} /> Open</button>
-    <button onclick={saveCurrent} disabled={$data === null} title="Save (Ctrl+S)"><Save size={18} /> Save</button>
-    <button onclick={pickSave} disabled={$data === null} title="Save As"><SaveAll size={18} /> Save As</button>
+    <button onclick={() => mod?.save()} disabled={!mod} title="Save (Ctrl+S)"><Save size={18} /> Save</button>
   </div>
   <span class="sep"></span>
   <div class="grp">
-    <button onclick={undo} disabled={!$canUndo} aria-label="undo" title="Undo (Ctrl+Z)"><Undo2 size={18} /></button>
-    <button onclick={redo} disabled={!$canRedo} aria-label="redo" title="Redo (Ctrl+Y)"><Redo2 size={18} /></button>
+    <button onclick={() => mod?.undo()} disabled={!mod || !$canUndo} aria-label="undo" title="Undo (Ctrl+Z)">
+      <Undo2 size={18} />
+    </button>
+    <button onclick={() => mod?.redo()} disabled={!mod || !$canRedo} aria-label="redo" title="Redo (Ctrl+Y)">
+      <Redo2 size={18} />
+    </button>
   </div>
   <div class="spacer"></div>
-  <span class="file">{$dirty ? '● ' : ''}{fileName}</span>
-  <button class="toggle2" class:on={$twoLevel} aria-pressed={$twoLevel} disabled={$data === null}
-    onclick={() => setTwoLevel(!$twoLevel)} aria-label="two-column mode" title="Two-column mode">
-    <Columns2 size={18} />
-  </button>
-  <button class="theme" onclick={() => setTheme(nextTheme[$theme])} aria-label="toggle theme" title={`Theme: ${$theme}`}>
+  {#if mod}
+    <span class="file">{$dirty ? '● ' : ''}{mod.label}</span>
+  {/if}
+  <button class="theme" onclick={() => theme.set(nextTheme[$theme])} aria-label="toggle theme" title={`Theme: ${$theme}`}>
     {#if $theme === 'light'}<Sun size={18} />{:else if $theme === 'dark'}<Moon size={18} />{:else}<Monitor size={18} />{/if}
+  </button>
+  <button class="settings" onclick={() => configOpen.set(true)} aria-label="settings" title="Settings">
+    <SettingsIcon size={18} />
   </button>
 </header>
 
@@ -49,7 +63,5 @@
   .sep { width:1px; height:22px; background:var(--border); }
   .spacer { flex:1; }
   .file { color:var(--text-muted); font-size:13px; }
-  .toggle2 { color:var(--text-muted); }
-  .toggle2.on { background:var(--accent-weak); color:var(--accent); }
-  .theme { color:var(--text-muted); }
+  .theme, .settings { color:var(--text-muted); }
 </style>
