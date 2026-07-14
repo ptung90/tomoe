@@ -3,3 +3,6 @@ dist
 src-tauri/target
 *.log
 .superpowers
+
+# User-saved project files
+save_data/
