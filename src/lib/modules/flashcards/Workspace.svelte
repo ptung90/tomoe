@@ -4,8 +4,10 @@
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
   import SchemaEditorModal from './components/SchemaEditorModal.svelte';
+  import CardPreview from './components/CardPreview.svelte';
 
   let leftWidth = $state(300);
+  let rightWidth = $state(360);
 </script>
 
 <div class="workspace">
@@ -21,7 +23,7 @@
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
     </span>
   </header>
-  <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr`}>
+  <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr 6px ${rightWidth}px`}>
     <div class="left"><SchemaRecordList /></div>
     <div
       class="divider divider-x"
@@ -31,6 +33,14 @@
       use:dragX={(dx) => (leftWidth = Math.max(220, Math.min(560, leftWidth + dx)))}
     ></div>
     <div class="right"><RecordDetail /></div>
+    <div
+      class="divider divider-x"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="resize preview"
+      use:dragX={(dx) => (rightWidth = Math.max(240, Math.min(720, rightWidth - dx)))}
+    ></div>
+    <div class="preview-pane"><CardPreview /></div>
   </div>
   <SchemaEditorModal />
 </div>
@@ -45,7 +55,7 @@
   .project-name:focus { outline:none; border-color:var(--accent); background:var(--bg); }
   .counts { color:var(--text-muted); font-size:12px; }
   .body { flex:1; display:grid; min-height:0; }
-  .left, .right { min-height:0; min-width:0; }
+  .left, .right, .preview-pane { min-height:0; min-width:0; }
   .left { background:var(--sidebar); }
   .right { background:var(--bg); }
 </style>
