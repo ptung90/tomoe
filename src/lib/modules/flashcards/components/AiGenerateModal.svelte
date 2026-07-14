@@ -17,7 +17,8 @@
     if (!canRun) return;
     busy = true; error = '';
     try {
-      const n = await aiGenerateRecords(schemaId, instruction.trim(), count);
+      const safeCount = Math.min(50, Math.max(1, Math.floor(Number(count)) || 1));
+      const n = await aiGenerateRecords(schemaId, instruction.trim(), safeCount);
       showToast(`Added ${n} record${n === 1 ? '' : 's'}`);
       onClose();
     } catch (e) {
