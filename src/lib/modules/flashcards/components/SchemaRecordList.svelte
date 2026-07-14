@@ -1,0 +1,112 @@
+<script lang="ts">
+  import Plus from 'lucide-svelte/icons/plus';
+  import Pencil from 'lucide-svelte/icons/pencil';
+  import Clipboard from 'lucide-svelte/icons/clipboard';
+  import ClipboardPaste from 'lucide-svelte/icons/clipboard-paste';
+  import { confirm } from '@tauri-apps/plugin-dialog';
+  import {
+    project, selectedRecordId, selectRecord, addRecord,
+    schemaEditorOpen, importRecords,
+  } from '../stores';
+  import { showToast } from '../../../shell';
+  import type { RecordItem, Schema } from '../model';
+  import LocaleBar from './LocaleBar.svelte';
+
+  function rowLabel(rec: RecordItem, schema: Schema): string {
+    const f = schema.fields.find((x) => x.type !== 'image');
+    if (!f) return '(untitled)';
+    const v = rec.fields[f.key];
+    const s = v && typeof v === 'object' ? (v[$project.activeLocale] ?? '') : (typeof v === 'string' ? v : '');
+    return s.trim() || '(untitled)';
+  }
+  const recordsBySchema = $derived((id: string) => $project.records.filter((r) => r.schemaId === id));
+
+  async function copyJson(schemaId: string) {
+    const recs = $project.records.filter((r) => r.schemaId === schemaId);
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(recs, null, 2));
+      showToast('Records copied as JSON');
+    } catch { showToast('Could not access clipboard', 'error'); }
+  }
+  async function pasteJson(schemaId: string) {
+    let incoming: RecordItem[];
+    try {
+      const txt = await navigator.clipboard.readText();
+      const parsed = JSON.parse(txt);
+      if (!Array.isArray(parsed)) throw new Error('not an array');
+      incoming = parsed as RecordItem[];
+    } catch { showToast('Clipboard is not a records JSON array', 'error'); return; }
+    const overwrite = await confirm(
+      `Paste ${incoming.length} record(s)? OK = overwrite this schema, Cancel = append.`,
+      { title: 'Paste records', kind: 'info' },
+    );
+    importRecords(schemaId, incoming, overwrite ? 'overwrite' : 'append');
+    showToast('Records pasted');
+  }
+</script>
+
+<div class="list">
+  <div class="list-top">
+    <LocaleBar />
+    <button type="button" class="new-schema" onclick={() => schemaEditorOpen.set('__new__')}>
+      <Plus size={14} /> Schema
+    </button>
+  </div>
+
+  {#if $project.schemas.length === 0}
+    <div class="empty">
+      <p>No schemas yet.</p>
+      <button type="button" onclick={() => schemaEditorOpen.set('__new__')}>Create a schema</button>
+    </div>
+  {:else}
+    {#each $project.schemas as schema (schema.id)}
+      <section class="schema">
+        <header class="schema-head">
+          <span class="schema-name">{schema.name}</span>
+          <span class="count">{recordsBySchema(schema.id).length}</span>
+          <div class="schema-actions">
+            <button type="button" aria-label="edit schema" title="Edit schema"
+              onclick={() => schemaEditorOpen.set(schema.id)}><Pencil size={13} /></button>
+            <button type="button" aria-label="copy json" title="Copy records JSON"
+              onclick={() => copyJson(schema.id)}><Clipboard size={13} /></button>
+            <button type="button" aria-label="paste json" title="Paste records JSON"
+              onclick={() => pasteJson(schema.id)}><ClipboardPaste size={13} /></button>
+          </div>
+        </header>
+        <ul class="records">
+          {#each recordsBySchema(schema.id) as rec (rec.id)}
+            <li>
+              <button type="button" class="rec" class:sel={$selectedRecordId === rec.id}
+                onclick={() => selectRecord(rec.id)}>{rowLabel(rec, schema)}</button>
+            </li>
+          {/each}
+        </ul>
+        <button type="button" class="add-rec" onclick={() => addRecord(schema.id)}>
+          <Plus size={13} /> Add record
+        </button>
+      </section>
+    {/each}
+  {/if}
+</div>
+
+<style>
+  .list { height:100%; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:12px; background:var(--sidebar); }
+  .list-top { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .new-schema, .add-rec { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
+    background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px; }
+  .new-schema:hover, .add-rec:hover { background:var(--accent-weak); color:var(--accent); }
+  .schema { display:flex; flex-direction:column; gap:6px; }
+  .schema-head { display:flex; align-items:center; gap:8px; }
+  .schema-name { font-weight:600; font-size:13px; }
+  .count { font-size:11px; color:var(--text-muted); background:var(--accent-weak); border-radius:10px; padding:0 7px; }
+  .schema-actions { margin-left:auto; display:flex; gap:2px; }
+  .schema-actions button { border:none; background:transparent; color:var(--text-muted); padding:3px; border-radius:5px; }
+  .schema-actions button:hover { background:var(--accent-weak); color:var(--accent); }
+  .records { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .rec { width:100%; text-align:left; border:none; background:transparent; color:var(--text);
+    border-radius:6px; padding:6px 9px; font:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rec:hover { background:var(--accent-weak); }
+  .rec.sel { background:var(--accent); color:#fff; font-weight:600; }
+  .empty { color:var(--text-muted); font-size:13px; text-align:center; padding:20px 8px; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .empty button { border:1px solid var(--border); background:transparent; color:var(--text); border-radius:6px; padding:5px 12px; font:inherit; }
+</style>
