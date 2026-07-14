@@ -4,7 +4,7 @@
   import { data, select } from '../stores';
   import { pathExists } from '../pathUtils';
   import { itemLabel } from '../nodeLabel';
-  import { truncate } from '../textUtils';
+  import { truncate } from '../../../textUtils';
 
   let { path }: { path: Path } = $props();
 

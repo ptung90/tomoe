@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hasContainerChild } from '../src/lib/nodeUtils';
+import { hasContainerChild } from '../src/lib/modules/json-table/nodeUtils';
 
 describe('hasContainerChild', () => {
   it('true for objects with a nested object or array', () => {

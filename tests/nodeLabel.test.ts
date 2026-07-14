@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemLabel } from '../src/lib/nodeLabel';
+import { itemLabel } from '../src/lib/modules/json-table/nodeLabel';
 
 describe('itemLabel', () => {
   it('shows scalar values directly', () => {

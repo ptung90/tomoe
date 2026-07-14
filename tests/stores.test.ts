@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import {
   data, filePath, dirty, selectedPath, canUndo, canRedo,
   loadDocument, editValue, addItem, removeItem, undo, redo, select, markSaved,
-} from '../src/lib/stores';
+} from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => { loadDocument({ words: ['a'] }, '/tmp/x.json'); });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
-import DetailPane from '../src/lib/components/DetailPane.svelte';
-import { loadDocument, select, setTwoLevel, setEditorTab } from '../src/lib/stores';
+import DetailPane from '../src/lib/modules/json-table/components/DetailPane.svelte';
+import { loadDocument, select, setTwoLevel, setEditorTab } from '../src/lib/modules/json-table/stores';
 
 // Keep every test starting from a known mode/tab state.
 beforeEach(() => { setTwoLevel(false); setEditorTab('form'); });

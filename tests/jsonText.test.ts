@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatNode, validateJson, autoFix } from '../src/lib/jsonText';
+import { formatNode, validateJson, autoFix } from '../src/lib/modules/json-table/jsonText';
 
 describe('formatNode', () => {
   it('pretty-prints with 2 spaces', () => {

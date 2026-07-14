@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import ObjectForm from '../src/lib/editors/ObjectForm.svelte';
-import { data, selectedPath, loadDocument } from '../src/lib/stores';
+import ObjectForm from '../src/lib/modules/json-table/editors/ObjectForm.svelte';
+import { data, selectedPath, loadDocument } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ title: 'Hi', nested: { a: 1 } }, null));
 

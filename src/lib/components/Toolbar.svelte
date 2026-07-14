@@ -8,9 +8,8 @@
   import Moon from 'lucide-svelte/icons/moon';
   import Monitor from 'lucide-svelte/icons/monitor';
   import Columns2 from 'lucide-svelte/icons/columns-2';
-  import Settings from 'lucide-svelte/icons/settings';
-  import { data, filePath, dirty, canUndo, canRedo, undo, redo, theme, setTheme, twoLevel, setTwoLevel, openConfig } from '../stores';
-  import { pickOpen, saveCurrent, pickSave } from '../fileService';
+  import { data, filePath, dirty, canUndo, canRedo, undo, redo, theme, setTheme, twoLevel, setTwoLevel } from '../modules/json-table/stores';
+  import { pickOpen, saveCurrent, pickSave } from '../modules/json-table/io';
   import type { Theme } from '../theme';
 
   const fileName = $derived($filePath ? $filePath.split(/[\\/]/).pop() : 'No file');
@@ -34,9 +33,6 @@
     onclick={() => setTwoLevel(!$twoLevel)} aria-label="two-column mode" title="Two-column mode">
     <Columns2 size={18} />
   </button>
-  <button class="settings" onclick={openConfig} aria-label="settings" title="AI settings">
-    <Settings size={18} />
-  </button>
   <button class="theme" onclick={() => setTheme(nextTheme[$theme])} aria-label="toggle theme" title={`Theme: ${$theme}`}>
     {#if $theme === 'light'}<Sun size={18} />{:else if $theme === 'dark'}<Moon size={18} />{:else}<Monitor size={18} />{/if}
   </button>
@@ -55,5 +51,5 @@
   .file { color:var(--text-muted); font-size:13px; }
   .toggle2 { color:var(--text-muted); }
   .toggle2.on { background:var(--accent-weak); color:var(--accent); }
-  .settings, .theme { color:var(--text-muted); }
+  .theme { color:var(--text-muted); }
 </style>

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import ObjectArrayTable from '../src/lib/editors/ObjectArrayTable.svelte';
-import { data, loadDocument } from '../src/lib/stores';
+import ObjectArrayTable from '../src/lib/modules/json-table/editors/ObjectArrayTable.svelte';
+import { data, loadDocument } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ rows: [{ name: 'a', qty: 1 }, { name: 'b', qty: 2 }] }, null));
 

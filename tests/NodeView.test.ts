@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import NodeView from '../src/lib/components/NodeView.svelte';
-import { loadDocument } from '../src/lib/stores';
+import NodeView from '../src/lib/modules/json-table/components/NodeView.svelte';
+import { loadDocument } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ words: ['cat'], meta: { v: 1 }, rows: [{ a: 1 }] }, null));
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import ParentTwoLevelView from '../src/lib/components/ParentTwoLevelView.svelte';
-import { data, selectedPath, loadDocument, select } from '../src/lib/stores';
+import ParentTwoLevelView from '../src/lib/modules/json-table/components/ParentTwoLevelView.svelte';
+import { data, selectedPath, loadDocument, select } from '../src/lib/modules/json-table/stores';
 
 // document: root.f = { a: 'x', arr: ['p','q'], other: [1,2] }
 const parent = () => ({ a: 'x', arr: ['p', 'q'], other: [1, 2] });

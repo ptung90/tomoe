@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nodeMatches, subtreeMatches } from '../src/lib/treeFilter';
+import { nodeMatches, subtreeMatches } from '../src/lib/modules/json-table/treeFilter';
 
 describe('treeFilter', () => {
   it('nodeMatches key or scalar value, case-insensitive', () => {

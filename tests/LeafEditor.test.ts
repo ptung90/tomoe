@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import LeafEditor from '../src/lib/editors/LeafEditor.svelte';
-import { data, loadDocument } from '../src/lib/stores';
+import LeafEditor from '../src/lib/modules/json-table/editors/LeafEditor.svelte';
+import { data, loadDocument } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ s: 'hi', n: 3, b: false }, null));
 

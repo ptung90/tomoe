@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pathExists, clampPath } from '../src/lib/pathUtils';
+import { pathExists, clampPath } from '../src/lib/modules/json-table/pathUtils';
 
 const root = { a: { b: [10, 20] } };
 

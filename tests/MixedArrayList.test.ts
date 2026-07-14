@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import MixedArrayList from '../src/lib/editors/MixedArrayList.svelte';
-import { data, selectedPath, loadDocument } from '../src/lib/stores';
+import MixedArrayList from '../src/lib/modules/json-table/editors/MixedArrayList.svelte';
+import { data, selectedPath, loadDocument } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ mix: [1, { a: 2 }] }, null));
 

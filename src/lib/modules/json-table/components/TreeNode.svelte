@@ -5,7 +5,7 @@
   import { selectedPath, select } from '../stores';
   import { subtreeMatches } from '../treeFilter';
   import { itemLabel } from '../nodeLabel';
-  import { truncate } from '../textUtils';
+  import { truncate } from '../../../textUtils';
   import Self from './TreeNode.svelte';
 
   let { label, value, path, query, index = null }: {

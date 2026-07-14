@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import TextEditorView from '../src/lib/components/TextEditorView.svelte';
-import { data, loadDocument, select } from '../src/lib/stores';
+import TextEditorView from '../src/lib/modules/json-table/components/TextEditorView.svelte';
+import { data, loadDocument, select } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => { loadDocument({ obj: { a: 1 } }, null); select(['obj']); });
 

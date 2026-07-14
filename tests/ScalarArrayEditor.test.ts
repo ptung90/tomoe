@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import ScalarArrayEditor from '../src/lib/editors/ScalarArrayEditor.svelte';
-import { data, loadDocument } from '../src/lib/stores';
+import ScalarArrayEditor from '../src/lib/modules/json-table/editors/ScalarArrayEditor.svelte';
+import { data, loadDocument } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ words: ['cat', 'dog'] }, null));
 

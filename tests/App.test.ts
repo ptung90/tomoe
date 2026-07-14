@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import App from '../src/App.svelte';
-import { loadDocument } from '../src/lib/stores';
+import { loadDocument } from '../src/lib/modules/json-table/stores';
 
 describe('App', () => {
   it('shows empty state when no document', () => {

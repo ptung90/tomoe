@@ -5,7 +5,7 @@
   import Maximize2 from 'lucide-svelte/icons/maximize-2';
   import { objectKeyUnion, classify, type JsonValue, type Path } from '../jsonModel';
   import { addItem, removeItem, select, openBigEditor } from '../stores';
-  import { isLongText } from '../textUtils';
+  import { isLongText } from '../../../textUtils';
   import LeafEditor from './LeafEditor.svelte';
 
   let { value, path }: { value: JsonValue[]; path: Path } = $props();

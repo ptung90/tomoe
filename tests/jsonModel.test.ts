@@ -7,7 +7,7 @@ import {
   addArrayItem,
   removeArrayItem,
   objectKeyUnion,
-} from '../src/lib/jsonModel';
+} from '../src/lib/modules/json-table/jsonModel';
 
 describe('classify', () => {
   it('classifies scalars', () => {

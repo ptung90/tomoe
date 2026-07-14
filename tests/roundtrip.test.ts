@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   updateAtPath, addArrayItem, removeArrayItem, getAtPath,
-} from '../src/lib/jsonModel';
+} from '../src/lib/modules/json-table/jsonModel';
 
 const raw = readFileSync(
   resolve(process.cwd(), 'tests/fixtures/reading-folders-data.json'),

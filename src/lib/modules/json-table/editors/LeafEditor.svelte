@@ -1,7 +1,7 @@
 <script lang="ts">
   import { classify, type JsonValue, type Path } from '../jsonModel';
   import { editValue } from '../stores';
-  import { isLongText } from '../textUtils';
+  import { isLongText } from '../../../textUtils';
 
   let { value, path, compact = false }: { value: JsonValue; path: Path; compact?: boolean } = $props();
   const kind = $derived(classify(value));

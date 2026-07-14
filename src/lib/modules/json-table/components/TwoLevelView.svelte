@@ -3,7 +3,7 @@
   import { classify, type JsonValue, type Path } from '../jsonModel';
   import LeafEditor from '../editors/LeafEditor.svelte';
   import NodeView from './NodeView.svelte';
-  import { dragX } from '../actions/resize';
+  import { dragX } from '../../../actions/resize';
 
   let { value, path }: { value: Record<string, JsonValue>; path: Path } = $props();
   let leftW = $state(340);

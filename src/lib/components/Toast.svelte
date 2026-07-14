@@ -2,7 +2,7 @@
   import { fly } from 'svelte/transition';
   import Check from 'lucide-svelte/icons/check';
   import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
-  import { toast } from '../stores';
+  import { toast } from '../modules/json-table/stores';
 </script>
 
 {#if $toast}

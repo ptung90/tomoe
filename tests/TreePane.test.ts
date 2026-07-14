@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import TreePane from '../src/lib/components/TreePane.svelte';
-import { loadDocument, selectedPath, select } from '../src/lib/stores';
+import TreePane from '../src/lib/modules/json-table/components/TreePane.svelte';
+import { loadDocument, selectedPath, select } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => loadDocument({ folders: [{ keySound: 'ai' }], notes: ['hello'] }, null));
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import BigEditor from '../src/lib/editors/BigEditor.svelte';
-import { data, bigEditorPath, loadDocument, openBigEditor, closeBigEditor } from '../src/lib/stores';
+import BigEditor from '../src/lib/modules/json-table/editors/BigEditor.svelte';
+import { data, bigEditorPath, loadDocument, openBigEditor, closeBigEditor } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => { loadDocument({ note: 'hello world' }, null); closeBigEditor(); });
 

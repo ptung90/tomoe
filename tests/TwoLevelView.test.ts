@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import TwoLevelView from '../src/lib/components/TwoLevelView.svelte';
-import { data, loadDocument, select } from '../src/lib/stores';
+import TwoLevelView from '../src/lib/modules/json-table/components/TwoLevelView.svelte';
+import { data, loadDocument, select } from '../src/lib/modules/json-table/stores';
 
 const doc = () => ({ keySound: 'KS', graphemes: ['ai', 'ay'], cards: [{ grapheme: 'gg' }] });
 beforeEach(() => { loadDocument(doc(), null); select([]); });

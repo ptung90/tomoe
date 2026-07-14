@@ -2,7 +2,7 @@
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import { classify, type JsonValue, type Path } from '../jsonModel';
   import { select } from '../stores';
-  import { isLongText } from '../textUtils';
+  import { isLongText } from '../../../textUtils';
   import LeafEditor from './LeafEditor.svelte';
 
   let { value, path }: { value: Record<string, JsonValue>; path: Path } = $props();

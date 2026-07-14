@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import Breadcrumb from '../src/lib/components/Breadcrumb.svelte';
-import { selectedPath, loadDocument } from '../src/lib/stores';
+import Breadcrumb from '../src/lib/modules/json-table/components/Breadcrumb.svelte';
+import { selectedPath, loadDocument } from '../src/lib/modules/json-table/stores';
 
 describe('Breadcrumb', () => {
   it('shows root and segments; clicking navigates', async () => {

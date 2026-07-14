@@ -4,7 +4,7 @@
   import { select } from '../stores';
   import LeafEditor from '../editors/LeafEditor.svelte';
   import NodeView from './NodeView.svelte';
-  import { dragX } from '../actions/resize';
+  import { dragX } from '../../../actions/resize';
 
   let { parent, parentPath, activeKey }: {
     parent: Record<string, JsonValue>; parentPath: Path; activeKey: string;

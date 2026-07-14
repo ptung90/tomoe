@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import TreeNode from '../src/lib/components/TreeNode.svelte';
-import { loadDocument } from '../src/lib/stores';
+import TreeNode from '../src/lib/modules/json-table/components/TreeNode.svelte';
+import { loadDocument } from '../src/lib/modules/json-table/stores';
 
 const long = 'Folders and graphemes follow the sound-family list in the PDF';
 

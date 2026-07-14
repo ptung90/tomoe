@@ -3,7 +3,7 @@ import { render, fireEvent, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import Toolbar from '../src/lib/components/Toolbar.svelte';
-import { loadDocument, editValue, data, twoLevel, setTwoLevel, configOpen } from '../src/lib/stores';
+import { loadDocument, editValue, data, twoLevel, setTwoLevel } from '../src/lib/modules/json-table/stores';
 
 beforeEach(() => { loadDocument({ words: ['a'] }, '/tmp/demo.json'); setTwoLevel(false); });
 
@@ -28,11 +28,5 @@ describe('Toolbar', () => {
     await fireEvent.click(screen.getByRole('button', { name: /two-column/i }));
     expect(get(twoLevel)).toBe(true);
     setTwoLevel(false);
-  });
-  it('settings button opens the config modal', async () => {
-    configOpen.set(false);
-    render(Toolbar);
-    await fireEvent.click(screen.getByRole('button', { name: /settings/i }));
-    expect(get(configOpen)).toBe(true);
   });
 });
