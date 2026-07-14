@@ -4,6 +4,7 @@ import { newProject, type Project, type SchemaField, type RecordItem, type Setti
 import * as ops from './recordOps';
 import * as cardMapping from './cardMapping';
 import * as cardOps from './cardOps';
+import * as ai from './lib/ai';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -11,6 +12,36 @@ export const canUndo: Readable<boolean> = derived(history, (h) => H.canUndo(h));
 export const canRedo: Readable<boolean> = derived(history, (h) => H.canRedo(h));
 export const dirty: Writable<boolean> = writable(false);
 export const filePath: Writable<string | null> = writable(null);
+
+// ── AI config (localStorage, NOT in the document) ───────────────────────
+function loadAiConfig(): ai.AiConfig {
+  try {
+    return {
+      apiKey: localStorage.getItem('tomoe.ai.apiKey') ?? '',
+      model: localStorage.getItem('tomoe.ai.model') ?? ai.DEFAULT_AI_MODEL,
+    };
+  } catch { return { apiKey: '', model: ai.DEFAULT_AI_MODEL }; }
+}
+const _aiConfig = writable<ai.AiConfig>(loadAiConfig());
+export const aiConfig: Readable<ai.AiConfig> = derived(_aiConfig, (c) => c);
+export function setAiConfig(patch: Partial<ai.AiConfig>): void {
+  _aiConfig.update((c) => {
+    const next = { ...c, ...patch };
+    try {
+      if (patch.apiKey !== undefined) localStorage.setItem('tomoe.ai.apiKey', next.apiKey);
+      if (patch.model !== undefined) localStorage.setItem('tomoe.ai.model', next.model);
+    } catch { /* ignore storage errors */ }
+    return next;
+  });
+}
+export async function aiGenerateRecords(schemaId: string, instruction: string, count: number): Promise<number> {
+  const p = get(project);
+  const schema = p.schemas.find((s) => s.id === schemaId);
+  if (!schema) return 0;
+  const recs = await ai.generateRecords(get(_aiConfig), schema, instruction, count, p.locales);
+  if (recs.length) importRecords(schemaId, recs, 'append');
+  return recs.length;
+}
 
 export function initProject(): void {
   history.set(H.createHistory(newProject()));

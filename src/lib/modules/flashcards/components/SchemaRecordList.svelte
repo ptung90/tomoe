@@ -4,6 +4,7 @@
   import Clipboard from 'lucide-svelte/icons/clipboard';
   import ClipboardPaste from 'lucide-svelte/icons/clipboard-paste';
   import Layers from 'lucide-svelte/icons/layers';
+  import Sparkles from 'lucide-svelte/icons/sparkles';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import {
     project, selectedRecordId, selectRecord, addRecord,
@@ -13,6 +14,9 @@
   import type { RecordItem, Schema } from '../model';
   import LocaleBar from './LocaleBar.svelte';
   import EmptyState from './EmptyState.svelte';
+  import AiGenerateModal from './AiGenerateModal.svelte';
+
+  let aiSchemaId = $state<string | null>(null);
 
   function rowLabel(rec: RecordItem, schema: Schema): string {
     const f = schema.fields.find((x) => x.type !== 'image');
@@ -75,6 +79,8 @@
               onclick={() => copyJson(schema.id)}><Clipboard size={13} /></button>
             <button type="button" aria-label="paste json" title="Paste records JSON"
               onclick={() => pasteJson(schema.id)}><ClipboardPaste size={13} /></button>
+            <button type="button" aria-label="ai generate" title="Generate records with AI"
+              onclick={() => aiSchemaId = schema.id}><Sparkles size={13} /></button>
           </div>
         </header>
         <ul class="records">
@@ -90,6 +96,10 @@
         </button>
       </section>
     {/each}
+  {/if}
+
+  {#if aiSchemaId}
+    <AiGenerateModal schemaId={aiSchemaId} onClose={() => aiSchemaId = null} />
   {/if}
 </div>
 
