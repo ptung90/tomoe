@@ -36,4 +36,14 @@ describe('Flashcards Workspace', () => {
     await fireEvent.change(input, { target: { value: '   ' } });
     expect(get(S.project).projectName).toBe('Untitled');
   });
+  it('toggles between Records and Cards views', async () => {
+    const { getByRole, container } = render(Workspace);
+    // default: Records view shows the detail form field
+    expect(screen.getByText('Title')).toBeInTheDocument();
+    await fireEvent.click(getByRole('tab', { name: /cards/i }));
+    // Cards view shows gallery thumbnails
+    expect(container.querySelector('.thumb')).toBeInTheDocument();
+    await fireEvent.click(getByRole('tab', { name: /records/i }));
+    expect(screen.getByText('Title')).toBeInTheDocument();
+  });
 });
