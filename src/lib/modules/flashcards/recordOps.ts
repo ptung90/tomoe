@@ -102,3 +102,37 @@ export function deleteSchema(p: Project, schemaId: string): Project {
     records: p.records.filter((r) => r.schemaId !== schemaId),
   };
 }
+
+export function addLocale(p: Project, locale: string): Project {
+  if (!locale || p.locales.includes(locale)) return p;
+  return migrateRecordFields({ ...p, locales: [...p.locales, locale] });
+}
+
+export function removeLocale(p: Project, locale: string): Project {
+  if (!p.locales.includes(locale) || p.locales.length <= 1) return p;
+  const locales = p.locales.filter((l) => l !== locale);
+  const activeLocale = p.activeLocale === locale ? locales[0] : p.activeLocale;
+  return migrateRecordFields({ ...p, locales, activeLocale });
+}
+
+export function setActiveLocale(p: Project, locale: string): Project {
+  if (!p.locales.includes(locale)) return p;
+  return { ...p, activeLocale: locale };
+}
+
+export function importRecords(
+  p: Project, schemaId: string, incoming: RecordItem[], mode: 'overwrite' | 'append',
+): Project {
+  if (!p.schemas.some((s) => s.id === schemaId)) return p;
+  const normalized: RecordItem[] = incoming.map((r) => ({
+    ...r,
+    id: r.id || uid('rec'),
+    schemaId,
+    fieldsHash: r.fieldsHash ?? '',
+    fields: r.fields ?? {},
+  }));
+  const records = mode === 'overwrite'
+    ? [...p.records.filter((r) => r.schemaId !== schemaId), ...normalized]
+    : [...p.records, ...normalized];
+  return migrateRecordFields({ ...p, records });
+}

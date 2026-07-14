@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, type Project, type Schema } from '../src/lib/modules/flashcards/model';
+import { newProject, type Project, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
 import type { SchemaField } from '../src/lib/modules/flashcards/model';
 import * as ops from '../src/lib/modules/flashcards/recordOps';
 
@@ -107,5 +107,55 @@ describe('recordOps schema ops', () => {
     const p2 = ops.deleteSchema(added.project, 's1');
     expect(p2.schemas).toHaveLength(0);
     expect(p2.records).toHaveLength(0);
+  });
+});
+
+describe('recordOps locale + import', () => {
+  it('addLocale extends locales and seeds the key in multilingual fields', () => {
+    const { p } = withSchema();
+    const added = ops.addRecord(p, 's1');
+    const p2 = ops.addLocale(added.project, 'ja');
+    expect(p2.locales).toContain('ja');
+    expect(p2.records[0].fields.title).toEqual({ en: '', vi: '', ja: '' });
+  });
+  it('addLocale ignores duplicates and blanks', () => {
+    const p = newProject();
+    expect(ops.addLocale(p, 'en')).toBe(p);
+    expect(ops.addLocale(p, '')).toBe(p);
+  });
+  it('removeLocale strips the key and fixes activeLocale', () => {
+    const { p } = withSchema();
+    const added = ops.addRecord(p, 's1');
+    const p2 = ops.setActiveLocale(added.project, 'vi');
+    const p3 = ops.removeLocale(p2, 'vi');
+    expect(p3.locales).toEqual(['en']);
+    expect(p3.activeLocale).toBe('en');
+    expect(p3.records[0].fields.title).toEqual({ en: '' });
+  });
+  it('removeLocale refuses to remove the last locale', () => {
+    const p = newProject();
+    const one = ops.removeLocale(p, 'vi'); // now ['en']
+    expect(ops.removeLocale(one, 'en')).toBe(one);
+  });
+  it('setActiveLocale only accepts known locales', () => {
+    const p = newProject();
+    expect(ops.setActiveLocale(p, 'zz')).toBe(p);
+    expect(ops.setActiveLocale(p, 'vi').activeLocale).toBe('vi');
+  });
+  it('importRecords overwrite replaces that schema records only', () => {
+    const { p } = withSchema();
+    const seeded = ops.addRecord(p, 's1').project;
+    const incoming: RecordItem[] = [{ id: '', schemaId: 'ignored', fieldsHash: '', fields: { title: { en: 'A', vi: '' } } }];
+    const p2 = ops.importRecords(seeded, 's1', incoming, 'overwrite');
+    expect(p2.records).toHaveLength(1);
+    expect(p2.records[0].schemaId).toBe('s1'); // forced
+    expect(p2.records[0].id).not.toBe('');      // id assigned
+    expect(p2.records[0].fields.title).toEqual({ en: 'A', vi: '' });
+  });
+  it('importRecords append keeps existing', () => {
+    const { p } = withSchema();
+    const seeded = ops.addRecord(p, 's1').project;
+    const p2 = ops.importRecords(seeded, 's1', [{ id: 'x', schemaId: 's1', fieldsHash: '', fields: {} }], 'append');
+    expect(p2.records).toHaveLength(2);
   });
 });
