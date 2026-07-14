@@ -57,7 +57,7 @@ export function regenerateCard(project: Project, cardId: string): Project {
     .map((id) => project.records.find((r) => r.id === id))
     .filter((r): r is RecordItem => !!r);
   const rebuilt = recordsToCard(recs, schema, template, project.settings, project.activeLocale);
-  const next: Card = { ...rebuilt, id: card.id, sourceHash: hashFields(project, card.packedRecordIds) };
+  const next: Card = { ...rebuilt, id: card.id, sourceHash: hashFields(project, card.packedRecordIds), edited: false };
   return { ...project, cards: project.cards.map((c) => (c.id === cardId ? next : c)) };
 }
 

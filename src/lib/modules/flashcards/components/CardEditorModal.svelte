@@ -6,7 +6,11 @@
   import ImageField from './ImageField.svelte';
 
   const card = $derived($project.cards.find((c) => c.id === $cardEditorOpen) ?? null);
-  const cellCount = $derived(card ? Math.max(card.sections.length, card.packedRecordIds?.length ?? 0) : 0);
+  // Only cells backed by a real record are editable. For packed (compound) cards this is
+  // packedRecordIds.length; sections may be padded to the layout's full slot count (e.g. a
+  // 3card built from 1 record still has 3 sections), so falling back to sections.length would
+  // expose ghost cells that applyCardToRecords silently skips (no record to write back to).
+  const cellCount = $derived(card ? (card.packedRecordIds?.length ?? card.sections.length) : 0);
 
   const debounced = keyedDebounce(
     (cardId: string, i: number, patch: { label?: string; content?: string }) => setCardCell(cardId, i, patch),
@@ -40,20 +44,22 @@
         <button type="button" aria-label="close" onclick={close}><X size={16} /></button>
       </header>
       <div class="modal-body">
-        {#each Array(cellCount) as _, i (i)}
-          <div class="cell">
-            <span class="cell-title">Card {i + 1}</span>
-            <label class="fld"><span class="lbl">Label</span>
-              <input value={cellLabel(i)} oninput={(e) => onText(i, { label: (e.target as HTMLInputElement).value })} />
-            </label>
-            <div class="fld"><span class="lbl">Content</span>
-              <RichText value={cellContent(i)} onChange={(md) => onText(i, { content: md })} />
+        {#key card.id}
+          {#each Array(cellCount) as _, i (i)}
+            <div class="cell">
+              <span class="cell-title">Card {i + 1}</span>
+              <label class="fld"><span class="lbl">Label</span>
+                <input value={cellLabel(i)} oninput={(e) => onText(i, { label: (e.target as HTMLInputElement).value })} />
+              </label>
+              <div class="fld"><span class="lbl">Content</span>
+                <RichText value={cellContent(i)} onChange={(md) => onText(i, { content: md })} />
+              </div>
+              <div class="fld"><span class="lbl">Image</span>
+                <ImageField value={cellImage(i)} onChange={(u) => onImage(i, u)} />
+              </div>
             </div>
-            <div class="fld"><span class="lbl">Image</span>
-              <ImageField value={cellImage(i)} onChange={(u) => onImage(i, u)} />
-            </div>
-          </div>
-        {/each}
+          {/each}
+        {/key}
       </div>
       <footer class="modal-foot">
         <span class="spacer"></span>

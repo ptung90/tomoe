@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, type Project, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
+import { newProject, serializeProject, parseProject, type Project, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
 import * as ops from '../src/lib/modules/flashcards/cardOps';
 
 function proj(layout = '3card', n = 4): Project {
@@ -136,5 +136,22 @@ describe('setCardCell / applyCardToRecords', () => {
     expect(p.cards[0].edited).toBe(true);
     p = ops.regenerateCard(p, id);
     expect(p.cards[0].edited).toBeFalsy();
+  });
+});
+
+describe('serializeProject / parseProject round-trip', () => {
+  it('preserves a packed card\'s edited flag + edited section content', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 0, { label: 'Owl', content: 'a bird' });
+    expect(p.cards[0].edited).toBe(true);
+
+    const roundTripped = parseProject(serializeProject(p));
+
+    const card = roundTripped.cards.find((c) => c.id === id)!;
+    expect(card.edited).toBe(true);
+    expect(card.sections[0].label).toBe('Owl');
+    expect(card.sections[0].content).toBe('a bird');
+    expect(card.packedRecordIds).toEqual(p.cards[0].packedRecordIds);
   });
 });
