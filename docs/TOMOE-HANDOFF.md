@@ -1,4 +1,4 @@
-# Tomoe — Handoff (specs #1–#3 complete)
+# Tomoe — Handoff (roadmap #1–#8 complete)
 
 Snapshot for a fresh Claude Code session in `d:\github\tomoe`.
 Read `CLAUDE.md` first for architecture/conventions; this doc is the status +
@@ -6,28 +6,26 @@ what-to-do-next.
 
 ## Where things stand
 
-Roadmap: **#1 Foundation ✅ · #2 Records workspace ✅ · #3 Card render + preview ✅.**
+Roadmap: **all eight specs merged to `master`** —
+**#1 Foundation ✅ · #2 Records ✅ · #3 Card render+preview ✅ · #4 Pack/edit/apply ✅ · #5 Images ✅ · #6 Export ✅ · #7 AI ✅ · #8 Polish (recent files) ✅.**
 Each was built spec → plan → subagent-driven-development (per-task reviews +
-whole-branch review + fix wave) and merged to `master` with a `--no-ff` merge
-commit. Specs/plans live in `docs/superpowers/specs/` and `docs/superpowers/plans/`
-(`*-foundation-*`, `*-flashcards-records-*`, `*-flashcards-card-render-*`).
+whole-branch review + fix wave) and merged with a `--no-ff` commit. Specs/plans
+live in `docs/superpowers/specs/` and `docs/superpowers/plans/`.
 
-- **#2 Records workspace** — schema/field editor, record CRUD + duplicate,
-  multi-locale form, rich-text (TipTap→Markdown), image field, locale management,
-  JSON copy/paste, editable project name. Left `SchemaRecordList` | `RecordDetail`.
-- **#3 Card render + live preview** — pure `lib/card-render.ts` (`buildCardHTML`,
-  7 layouts: fulltext/fullimage/2x2/1top-1bot/1top-2bot/2top-1bot/3card) +
-  `lib/card-render.css`; `cardMapping.ts` (auto-template + record→card); third
-  `CardPreview` pane with layout/paper/orientation controls + `StyleControls`
-  (border/fonts, live color pickers).
+- **#2 Records workspace** — schema/field editor, record CRUD + duplicate, multi-locale form, rich-text (TipTap→Markdown), image field, locale management, JSON copy/paste, editable project name.
+- **#3 Card render + live preview** — pure `lib/card-render.ts` (`buildCardHTML`, 7 layouts) + `lib/card-render.css`; `cardMapping.ts`; `CardPreview` pane + `StyleControls`.
+- **#4 Pack / card edit / apply** (a+b+c) — persisted `Card`s via `cardOps.ts` (`packRecords`/`packAllForSchema`/`regenerateCard`/`deleteCard`/`setCardCell`/`applyCardToRecords`, `isCardStale`); `CardGallery` (synced/stale/edited status) + `CardEditorModal`; 3card packs 3 records/page.
+- **#5 Images** — `lib/imageSearch.ts` `searchWikimedia` (keyless) + `ImageSearchModal` + `CropModal` (cropperjs); `ImageField` Search/Crop actions.
+- **#6 Export** — `lib/printCards.ts` `collectPrintCards` (gallery card set) + `PrintView` (`@media print` isolation, scoped via `:has(.print-view)`) + Workspace Print button → `window.print()` (Save-as-PDF). No PDF lib.
+- **#7 AI** — `lib/ai.ts` (pure prompt + tolerant parse; `generateRecords` via `@anthropic-ai/sdk` behind an injectable factory) + `aiConfig` (localStorage, never in the doc) + `aiGenerateRecords` (append) + `AiGenerateModal` + ✨ Sparkles action. Anthropic-only, `claude-opus-4-8`.
+- **#8 Polish** — shell `recentFiles.ts` (localStorage, cap 10, dedup) recorded at `fileService.openPath`; StartScreen Recent section (reopen/remove/clear).
 
 **Automated gates (all green on `master`):**
 - `npm run check` → 0 errors (1 pre-existing json-table `TreeNode` `state_referenced_locally` warning).
-- `npm test` → 49 files / 204 tests pass, **0 unhandled errors**.
-- `npm run build` (vite) → OK. `cd src-tauri && cargo check` → OK.
+- `npm test` → 62 files / 279 tests pass, **0 unhandled errors**.
+- `npm run build` (vite) → OK. `cd src-tauri && cargo check` → OK (run after any Rust change).
 
-**Manual GUI verified** (human): records workspace + rich-text switching; card
-preview across all 7 layouts + orientation + style edits + save/reopen.
+**Manual GUI verified** (human): #2 records + rich-text; #3 card preview (7 layouts/orientation/styles/save-reopen). **#5–#8 GUI/network/API-key checks are pending the human morning preview** (see the checklist below and the overnight plan doc).
 
 ## What was built (Foundation)
 
@@ -38,8 +36,15 @@ preview across all 7 layouts + orientation + style edits + save/reopen.
 
 ## HUMAN-pending (not doable by automated gates)
 
-1. `npm run tauri dev` and visually verify: start screen; **New JSON Table** (editor works); **New Flashcards** (placeholder shows project name + schema/record/card counts); open a `.tomoe.json` → flashcards; open a plain data `.json` → json-table; open a **legacy flashcard-creator `.json`** → routes to flashcards (sniff); Save writes each module's own extension; undo/redo isolated per module; theme toggle + dark mode (teal `#2dd4bf`).
-2. `npm run tauri build` → confirm an NSIS installer named **Tomoe** is produced and installs/launches.
+**Morning preview checklist for the overnight specs #5–#8** (network / GUI / API-key — see `docs/superpowers/plans/2026-07-14-overnight-specs-5-8.md`):
+1. **#5 Images** — ✨ open the image field's Search → live Wikimedia results (needs network); pick one; Crop an image (cropperjs canvas).
+2. **#6 Export** — Print button (Cards view) → webview print dialog shows one card per page at the right size → **Save as PDF** produces a correct PDF; app chrome not printed.
+3. **#7 AI** — paste a real Anthropic API key (✨ on a schema) → enter an instruction → Generate → records appear. (Live network + `dangerouslyAllowBrowser` CORS in the webview — the ONLY path automated gates could not exercise.)
+4. **#8 Recent files** — open a couple files, return to / relaunch the Start screen → they show under **Recent** → click reopens; × removes; Clear empties.
+
+**Still from Foundation (re-confirm if not already done):**
+5. `npm run tauri dev`: start screen; New JSON Table; New Flashcards; ext→sniff routing (`.tomoe.json`/plain `.json`/legacy flashcard-creator `.json`); per-module Save extension + isolated undo/redo; theme toggle + dark mode (teal `#2dd4bf`).
+6. `npm run tauri build` → an NSIS installer named **Tomoe** is produced and installs/launches.
 
 ## Deferred minors (address in later specs, non-blocking)
 
@@ -48,19 +53,14 @@ preview across all 7 layouts + orientation + style edits + save/reopen.
 - Toolbar doesn't surface the bound filename (shows module label + dirty dot) — minor UX, optional.
 - `TomoeModule.icon?` is contract surface with no consumer yet (StartScreen could use it).
 
-## Next: spec #4 — Pack/generate + escape-hatch card edit + apply card→record
+## Next — roadmap done; candidate follow-ups (all documented, non-blocking)
 
-Turn records into persisted `Card` objects in the project (spec #3 only renders a
-live preview; it does not create Cards):
-- **Pack/generate** — build real `Card`s from records via a schema's template(s);
-  compound "pack" of multiple records into one card (e.g. `3card`). Port from
-  flashcard-creator `src/js/records/pack.js`.
-- **Escape-hatch card edit** — edit a generated card directly (layout, splits,
-  sections, images) independent of its record.
-- **Apply card→record** — push manual card edits back to the source record.
-- Port from flashcard-creator `src/js/records/pack.js` + card-editing pieces.
-
-Start it by brainstorming spec #4 (superpowers:brainstorming) → writing-plans → subagent-driven-development.
+The eight-spec roadmap is complete. Recorded follow-ups, if the human wants more:
+- **AI (#7) extensions** — OpenAI/other providers; AI **edit/rewrite** of an existing record/field; chat panel; structured-outputs (`output_config.format`); follow-up suggestions. (MVP was Anthropic-only generate-records.)
+- **Export (#6) extensions** — per-schema/selection print scope; page config (margins/headers); a real PDF lib if webview Save-as-PDF proves insufficient.
+- **Polish (#8) deferrals** — **backup-on-save** + **save-time recent recording** (both need a shell-level save chokepoint / module-contract change that doesn't exist yet); multi-language niceties.
+- **Images (#5) deferrals** — Unsplash/others (need keys); attribution capture; per-image background-size/position.
+- Start any of these with brainstorming → writing-plans → subagent-driven-development.
 
 ## Deferred polish / known minors (non-blocking)
 

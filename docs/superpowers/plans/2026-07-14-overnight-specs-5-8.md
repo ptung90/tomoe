@@ -62,4 +62,14 @@ recorded as a follow-up.
 - ✅ #5 Images — merged `9263d98` (searchWikimedia keyless + ImageSearchModal + CropModal cropperjs + ImageField Search/Crop). 251 tests. Human morning: live Wikimedia search (network) + crop canvas. Minor follow-ups noted in the branch ledger (crossOrigin comment, tainted/search toast, modal a11y).
 - ✅ #6 Export — merged `088af3d` (collectPrintCards + PrintView @media-print isolation + Workspace Print button → window.print). 258 tests. Whole-branch review caught + FIXED an Important cross-module bug (persisted global print-hide rule → scoped via `:has(.print-view)`). Human morning: print dialog / Save-as-PDF.
 - ✅ #7 AI — merged `7af8f77` (lib/ai.ts pure prompt+tolerant parse + generateRecords via @anthropic-ai/sdk behind an injectable factory; aiConfig in localStorage — NEVER in the project doc; aiGenerateRecords appends via importRecords→migrateRecordFields; AiGenerateModal + Sparkles action). Anthropic-only, model claude-opus-4-8; OpenAI + AI edit/chat deferred. 268 tests. Whole-branch review: Ready=Yes (secret-isolation + locale-coercion verified); 1 minor fixed (count clamp). Human morning: paste a real Anthropic key + run a generate (live network — unverifiable autonomously).
-- (in progress) #8 Polish
+- ✅ #8 Polish (Recent files) — merged `87c90bc` (shell-level recentFiles store in localStorage — newest-first, cap 10, dedup; recorded at the fileService.openPath chokepoint after a successful open; StartScreen Recent section: reopen via openPath (keeps the unsaved-changes guard) / remove / clear). Shell-isolated, never in a project doc. 279 tests. Whole-branch review: Ready=Yes; 1 minor fixed (drop malformed entries on load). Deferred follow-ups (documented in the spec): backup-on-save + save-time recording (need a shell save chokepoint that doesn't exist yet), multi-language niceties. Human morning: relaunch → recents reopen.
+
+## Done — all four overnight specs merged to master
+
+#5 `9263d98` · #6 `088af3d` · #7 `7af8f77` · #8 `87c90bc`. Final master gate: 279 tests green, `npm run check` 0 errors, `npm run build` OK. Roadmap #1–#8 complete.
+
+**Human morning preview checklist (what automated gates could NOT cover):**
+- #5 Images: live Wikimedia search (network) + crop canvas interaction.
+- #6 Export: click Print → webview dialog → one card per page at correct size → Save-as-PDF.
+- #7 AI: paste a real Anthropic API key (✨ on a schema) → generate records (live network + `dangerouslyAllowBrowser` CORS in the webview).
+- #8 Recent files: open a few files, relaunch/return to Start → they appear under Recent → click reopens; × / Clear behave.
