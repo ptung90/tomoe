@@ -30,7 +30,6 @@
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
-    "@tauri-apps/plugin-http": "^2.5.9",
     "json5": "^2.2.3",
     "lucide-svelte": "^0.460.1"
   }

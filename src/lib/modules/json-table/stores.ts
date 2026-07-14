@@ -2,8 +2,7 @@ import { writable, derived, get, type Readable } from 'svelte/store';
 import { updateAtPath, addArrayItem, removeArrayItem, type JsonValue, type Path } from './jsonModel';
 import * as H from '../../history';
 import { clampPath } from './pathUtils';
-import { loadBool, saveBool, loadTheme } from '../../theme';
-import type { Theme } from '../../theme';
+import { loadBool, saveBool } from '../../theme';
 export { toast, showToast } from '../../shell';
 
 const history = writable<H.History<JsonValue | null>>(H.createHistory(null));
@@ -15,7 +14,6 @@ export const canRedo: Readable<boolean> = derived(history, (h) => H.canRedo(h));
 export const filePath = writable<string | null>(null);
 export const dirty = writable<boolean>(false);
 export const selectedPath = writable<Path>([]);
-export const theme = writable<Theme>(loadTheme());
 export const bigEditorPath = writable<Path | null>(null);
 export const twoLevel = writable<boolean>(loadBool('jte-two-level', true));
 export const editorTab = writable<'form' | 'text'>('form');
@@ -71,5 +69,3 @@ export function closeBigEditor(): void { bigEditorPath.set(null); }
 
 export function setTwoLevel(on: boolean): void { twoLevel.set(on); saveBool('jte-two-level', on); }
 export function setEditorTab(t: 'form' | 'text'): void { editorTab.set(t); }
-
-export function setTheme(t: Theme): void { theme.set(t); }

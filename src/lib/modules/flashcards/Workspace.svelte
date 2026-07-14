@@ -15,7 +15,7 @@
     </span>
   </header>
   <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr`}>
-    <div class="left panel">
+    <div class="left">
       <p class="placeholder">Schemas &amp; records (coming soon)</p>
     </div>
     <div
@@ -25,7 +25,7 @@
       aria-label="resize sidebar"
       use:dragX={(dx) => (leftWidth = Math.max(180, Math.min(600, leftWidth + dx)))}
     ></div>
-    <div class="right panel">
+    <div class="right">
       <p class="placeholder">Cards (coming soon)</p>
     </div>
   </div>

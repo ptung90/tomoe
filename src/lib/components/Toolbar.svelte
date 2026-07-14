@@ -10,7 +10,7 @@
   import SettingsIcon from 'lucide-svelte/icons/settings';
   import { activeModuleId, theme, configOpen, setActiveModule } from '../shell';
   import { getModule } from '../modules/registry';
-  import { pickOpen } from '../fileService';
+  import { pickOpen, confirmDiscardIfDirty } from '../fileService';
   import type { Theme } from '../theme';
 
   const mod = $derived($activeModuleId ? getModule($activeModuleId) : null);
@@ -21,11 +21,15 @@
   const canRedo = $derived(mod?.canRedo);
 
   const nextTheme: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'light' };
+
+  async function handleNew() {
+    if (await confirmDiscardIfDirty()) setActiveModule(null);
+  }
 </script>
 
 <header class="toolbar">
   <div class="grp">
-    <button onclick={() => setActiveModule(null)} title="New / back to start screen">
+    <button onclick={handleNew} title="New / back to start screen">
       <FilePlus size={18} /> New
     </button>
     <button onclick={pickOpen} title="Open (Ctrl+O)"><FolderOpen size={18} /> Open</button>

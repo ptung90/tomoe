@@ -1,11 +1,28 @@
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, confirm } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { setActiveModule, showToast } from './shell';
-import { pickModuleForOpen } from './modules/registry';
+import { get } from 'svelte/store';
+import { activeModuleId, setActiveModule, showToast } from './shell';
+import { pickModuleForOpen, getModule } from './modules/registry';
+
+/**
+ * Guard against silently discarding unsaved edits in the active module.
+ * Returns true if it is safe to proceed (nothing dirty, or the user confirmed).
+ */
+export async function confirmDiscardIfDirty(): Promise<boolean> {
+  const id = get(activeModuleId);
+  if (!id) return true;
+  const mod = getModule(id);
+  if (!get(mod.dirty)) return true;
+  return confirm(
+    'You have unsaved changes. Discard them and open the new file?',
+    { title: 'Unsaved changes', kind: 'warning' },
+  );
+}
 
 export async function openPath(path: string): Promise<void> {
+  if (!(await confirmDiscardIfDirty())) return;
   try {
     const text = await readTextFile(path);
     const mod = pickModuleForOpen(path, text);
