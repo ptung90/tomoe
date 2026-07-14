@@ -21,7 +21,7 @@
 <style>
   .print-view { display:none; }
   @media print {
-    :global(body *) { visibility:hidden !important; }
+    :global(body:has(.print-view) *) { visibility:hidden !important; }
     .print-view, .print-view :global(*) { visibility:visible !important; }
     .print-view { display:block; position:absolute; top:0; left:0; }
     .print-page { break-after:page; page-break-after:always; overflow:hidden; }
