@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Schema } from '../src/lib/modules/flashcards/model';
-import { buildRecordsPrompt, parseGeneratedRecords, extractText } from '../src/lib/modules/flashcards/lib/ai';
+import { buildRecordsPrompt, parseGeneratedRecords, extractText, generateRecords } from '../src/lib/modules/flashcards/lib/ai';
 
 const schema: Schema = {
   id: 's1', name: 'Verbs', cardTemplates: [],
@@ -44,5 +44,23 @@ describe('parseGeneratedRecords', () => {
 describe('extractText', () => {
   it('concatenates text blocks, ignores others', () => {
     expect(extractText([{ type: 'text', text: 'a' }, { type: 'thinking' }, { type: 'text', text: 'b' }])).toBe('ab');
+  });
+});
+
+describe('generateRecords', () => {
+  it('calls the injected factory and returns parsed records (no network)', async () => {
+    let seen: any = null;
+    const fakeFactory = (apiKey: string) => ({
+      messages: {
+        create: async (body: any) => { seen = { apiKey, body }; return { content: [{ type: 'text', text: '[{"word":{"en":"go","vi":"đi"},"note":"v"}]' }] }; },
+      },
+    });
+    const recs = await generateRecords(
+      { apiKey: 'sk-test', model: 'claude-opus-4-8' }, schema, 'verbs', 3, ['en', 'vi'], fakeFactory,
+    );
+    expect(seen.apiKey).toBe('sk-test');
+    expect(seen.body.model).toBe('claude-opus-4-8');
+    expect(recs).toHaveLength(1);
+    expect(recs[0].fields.word).toEqual({ en: 'go', vi: 'đi' });
   });
 });

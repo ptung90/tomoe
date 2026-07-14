@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { type Schema, type RecordItem, type LocalizedText } from '../model';
 
 export const DEFAULT_AI_MODEL = 'claude-opus-4-8';
@@ -57,4 +58,28 @@ function extractJsonArray(raw: string): unknown[] {
   const parsed = JSON.parse(body.slice(start, end + 1));
   if (!Array.isArray(parsed)) throw new Error('AI response is not a JSON array');
   return parsed;
+}
+
+export interface AnthropicLike {
+  messages: { create(body: unknown): Promise<{ content: Array<{ type: string; text?: string }> }> };
+}
+export type AnthropicFactory = (apiKey: string) => AnthropicLike;
+
+const defaultFactory: AnthropicFactory = (apiKey) =>
+  new Anthropic({ apiKey, dangerouslyAllowBrowser: true }) as unknown as AnthropicLike;
+
+/** Generate records for `schema` from `instruction` via Anthropic. Network is behind `factory`. */
+export async function generateRecords(
+  cfg: AiConfig, schema: Schema, instruction: string, count: number, locales: string[],
+  factory: AnthropicFactory = defaultFactory,
+): Promise<RecordItem[]> {
+  const { system, user } = buildRecordsPrompt(schema, instruction, count, locales);
+  const client = factory(cfg.apiKey);
+  const res = await client.messages.create({
+    model: cfg.model || DEFAULT_AI_MODEL,
+    max_tokens: 8192,
+    system,
+    messages: [{ role: 'user', content: user }],
+  });
+  return parseGeneratedRecords(extractText(res.content), schema);
 }
