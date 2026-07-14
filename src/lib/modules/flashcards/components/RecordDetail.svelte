@@ -1,10 +1,12 @@
 <script lang="ts">
   import Copy from 'lucide-svelte/icons/copy';
   import Trash2 from 'lucide-svelte/icons/trash-2';
+  import SquarePen from 'lucide-svelte/icons/square-pen';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, selectedRecordId, setField, deleteRecord, duplicateRecord } from '../stores';
   import { keyedDebounce } from '../../../debounce';
   import RecordField from './RecordField.svelte';
+  import EmptyState from './EmptyState.svelte';
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
@@ -68,9 +70,8 @@
     </div>
   </div>
 {:else}
-  <div class="empty">
-    <p>No record selected. Pick one on the left, or add a new record.</p>
-  </div>
+  <EmptyState icon={SquarePen} title="No record selected"
+    hint="Select a record on the left to edit it, or add a new one." />
 {/if}
 
 <style>
@@ -80,10 +81,11 @@
   .detail-title { font-weight:600; }
   .actions { display:flex; gap:6px; }
   .actions button { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
-    background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; }
+    background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit;
+    transition:background .12s ease, color .12s ease; }
   .actions button:hover { background:var(--accent-weak); color:var(--accent); }
   .actions .danger:hover { background:#fee; color:#b91c1c; }
+  .actions button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .detail-body { flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:14px; }
-  .hint, .empty p { color:var(--text-muted); font-size:13px; }
-  .empty { height:100%; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center; }
+  .hint { color:var(--text-muted); font-size:13px; }
 </style>

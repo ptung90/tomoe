@@ -58,4 +58,14 @@
   .left, .right, .preview-pane { min-height:0; min-width:0; }
   .left { background:var(--sidebar); }
   .right { background:var(--bg); }
+
+  /* Resize handles between panes. The 6px column is the grab zone (widened to
+     ~12px via ::before); a 1px hairline sits centered and thickens to accent on hover/drag. */
+  .divider { position:relative; cursor:col-resize; touch-action:none; }
+  .divider::before { content:''; position:absolute; top:0; bottom:0; left:-3px; right:-3px; z-index:2; }
+  .divider::after {
+    content:''; position:absolute; top:0; bottom:0; left:50%; width:1px; transform:translateX(-50%);
+    background:var(--border); transition:background .12s ease, width .12s ease;
+  }
+  .divider:hover::after, .divider:active::after { background:var(--accent); width:3px; }
 </style>

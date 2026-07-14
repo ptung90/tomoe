@@ -3,6 +3,7 @@
   import Pencil from 'lucide-svelte/icons/pencil';
   import Clipboard from 'lucide-svelte/icons/clipboard';
   import ClipboardPaste from 'lucide-svelte/icons/clipboard-paste';
+  import Layers from 'lucide-svelte/icons/layers';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import {
     project, selectedRecordId, selectRecord, addRecord,
@@ -11,6 +12,7 @@
   import { showToast } from '../../../shell';
   import type { RecordItem, Schema } from '../model';
   import LocaleBar from './LocaleBar.svelte';
+  import EmptyState from './EmptyState.svelte';
 
   function rowLabel(rec: RecordItem, schema: Schema): string {
     const f = schema.fields.find((x) => x.type !== 'image');
@@ -54,10 +56,12 @@
   </div>
 
   {#if $project.schemas.length === 0}
-    <div class="empty">
-      <p>No schemas yet.</p>
-      <button type="button" onclick={() => schemaEditorOpen.set('__new__')}>Create a schema</button>
-    </div>
+    {#snippet createAction()}
+      <button type="button" class="empty-cta" onclick={() => schemaEditorOpen.set('__new__')}>Create a schema</button>
+    {/snippet}
+    <EmptyState icon={Layers} title="No schemas yet"
+      hint="A schema defines the fields your records share. Create one to start."
+      action={createAction} />
   {:else}
     {#each $project.schemas as schema (schema.id)}
       <section class="schema">
@@ -93,8 +97,11 @@
   .list { height:100%; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:12px; background:var(--sidebar); }
   .list-top { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
   .new-schema, .add-rec { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
-    background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px; }
+    background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px;
+    transition:background .12s ease, color .12s ease; }
   .new-schema:hover, .add-rec:hover { background:var(--accent-weak); color:var(--accent); }
+  .new-schema:focus-visible, .add-rec:focus-visible, .rec:focus-visible, .schema-actions button:focus-visible {
+    outline:2px solid var(--accent); outline-offset:1px; }
   .schema { display:flex; flex-direction:column; gap:6px; }
   .schema-head { display:flex; align-items:center; gap:8px; }
   .schema-name { font-weight:600; font-size:13px; }
@@ -104,9 +111,12 @@
   .schema-actions button:hover { background:var(--accent-weak); color:var(--accent); }
   .records { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
   .rec { width:100%; text-align:left; border:none; background:transparent; color:var(--text);
-    border-radius:6px; padding:6px 9px; font:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    border-radius:6px; padding:6px 9px; font:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    transition:background .12s ease, color .12s ease; }
   .rec:hover { background:var(--accent-weak); }
   .rec.sel { background:var(--accent); color:#fff; font-weight:600; }
-  .empty { color:var(--text-muted); font-size:13px; text-align:center; padding:20px 8px; display:flex; flex-direction:column; gap:8px; align-items:center; }
-  .empty button { border:1px solid var(--border); background:transparent; color:var(--text); border-radius:6px; padding:5px 12px; font:inherit; }
+  .empty-cta { border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:600;
+    border-radius:6px; padding:6px 14px; font:inherit; font-size:12px; cursor:pointer; }
+  .empty-cta:hover { opacity:.92; }
+  .empty-cta:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 </style>

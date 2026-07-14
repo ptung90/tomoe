@@ -1,10 +1,23 @@
 <script lang="ts">
   import '../lib/card-render.css';
   import Palette from 'lucide-svelte/icons/palette';
+  import ImageIcon from 'lucide-svelte/icons/image';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
   import { deriveAutoTemplate, recordToCard } from '../cardMapping';
   import { buildCardHTML, LAYOUTS, getPaperPx } from '../lib/card-render';
   import StyleControls from './StyleControls.svelte';
+  import EmptyState from './EmptyState.svelte';
+
+  // Human-readable names for the layout dropdown (values stay the engine ids).
+  const LAYOUT_LABELS: Record<string, string> = {
+    fulltext: 'Text only',
+    fullimage: 'Image only',
+    '2x2': '2×2 grid',
+    '1top-1bot': 'Image top / text bottom',
+    '1top-2bot': '1 top / 2 bottom',
+    '2top-1bot': '2 top / 1 bottom',
+    '3card': '3 mini-cards',
+  };
 
   let paneW = $state(360);
   let showStyle = $state(false);
@@ -17,7 +30,7 @@
     template?.size || $project.settings.paperSize,
     template?.orientation || $project.settings.orientation,
   ));
-  const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 32) / paper.w)));
+  const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const cardHtml = $derived(
     record && schema && template
       ? buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
@@ -34,7 +47,7 @@
   <header class="preview-toolbar">
     <label>Layout
       <select value={template?.layout ?? 'fulltext'} onchange={onLayout} disabled={!schema}>
-        {#each LAYOUTS as l (l)}<option value={l}>{l}</option>{/each}
+        {#each LAYOUTS as l (l)}<option value={l}>{LAYOUT_LABELS[l] ?? l}</option>{/each}
       </select>
     </label>
     <label>Paper
@@ -55,12 +68,15 @@
 
   {#if record && schema}
     <div class="preview-scroll">
-      <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
-        {@html cardHtml}
+      <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
+        <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
+          {@html cardHtml}
+        </div>
       </div>
     </div>
   {:else}
-    <div class="empty"><p>No record selected. Pick one to preview its card.</p></div>
+    <EmptyState icon={ImageIcon} title="No card to preview"
+      hint="Select a record on the left to see its card here." />
   {/if}
 </div>
 
@@ -70,11 +86,37 @@
     background:var(--surface); border-bottom:1px solid var(--border); }
   .preview-toolbar label { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); }
   .preview-toolbar select, .preview-toolbar button { border:1px solid var(--border); border-radius:6px;
-    padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px; }
+    padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px;
+    transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .preview-toolbar button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
+  .preview-toolbar select:not(:disabled):hover { border-color:var(--accent); }
   .preview-toolbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .preview-toolbar select:focus-visible, .preview-toolbar button:focus-visible {
+    outline:2px solid var(--accent); outline-offset:1px; }
   .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
-  .preview-scroll { flex:1; overflow:auto; padding:16px; }
-  .preview-scaler { transform-origin:top left; box-shadow:0 4px 16px rgba(0,0,0,.12); }
-  .empty { flex:1; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center;
-    color:var(--text-muted); font-size:13px; }
+
+  /* Canvas: a recessed stage so the white card reads as a sheet floating on it. */
+  .preview-scroll {
+    flex:1; min-height:0; overflow:auto;
+    padding:20px;
+    display:flex; justify-content:center; align-items:flex-start;
+    background:var(--sidebar);
+    box-shadow:inset 0 1px 0 var(--border);
+  }
+  /* Layout box = scaled size, so flex can center it; the scaler renders the full-size card into it. */
+  .preview-frame {
+    flex:none;
+    border-radius:2px;
+    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.14);
+  }
+  .preview-scaler { transform-origin:top left; }
+
+  /* Slim, unobtrusive scrollbars on the canvas. */
+  .preview-scroll::-webkit-scrollbar { width:10px; height:10px; }
+  .preview-scroll::-webkit-scrollbar-thumb {
+    background:var(--border); border-radius:6px;
+    border:2px solid var(--sidebar); background-clip:padding-box;
+  }
+  .preview-scroll::-webkit-scrollbar-thumb:hover { background:var(--text-muted); background-clip:padding-box; }
+  .preview-scroll::-webkit-scrollbar-track { background:transparent; }
 </style>
