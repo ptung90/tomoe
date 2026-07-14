@@ -3,7 +3,7 @@
   import Palette from 'lucide-svelte/icons/palette';
   import ImageIcon from 'lucide-svelte/icons/image';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
-  import { deriveAutoTemplate, recordToCard } from '../cardMapping';
+  import { deriveAutoTemplate, recordsToCard, cardsPerPage, chunkRecords } from '../cardMapping';
   import { buildCardHTML, LAYOUTS, getPaperPx } from '../lib/card-render';
   import StyleControls from './StyleControls.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -31,12 +31,14 @@
     template?.orientation || $project.settings.orientation,
   ));
   const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
-  const cardHtml = $derived(
-    record && schema && template
-      ? buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
-                      $project.settings, $project.activeLocale)
-      : '',
-  );
+  const cardHtml = $derived.by(() => {
+    if (!record || !schema || !template) return '';
+    const schemaRecords = $project.records.filter((r) => r.schemaId === schema.id);
+    const chunks = chunkRecords(schemaRecords, cardsPerPage(template.layout));
+    const chunk = chunks.find((c) => c.some((r) => r.id === record.id)) ?? [record];
+    return buildCardHTML(recordsToCard(chunk, schema, template, $project.settings, $project.activeLocale),
+                         $project.settings, $project.activeLocale);
+  });
 
   function onLayout(e: Event) {
     if (schema) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value });
