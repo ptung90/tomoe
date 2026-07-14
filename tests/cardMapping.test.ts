@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
-import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch } from '../src/lib/modules/flashcards/cardMapping';
+import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem, type CardTemplate } from '../src/lib/modules/flashcards/model';
+import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, cardsPerPage, chunkRecords, recordsToCard } from '../src/lib/modules/flashcards/cardMapping';
 
 function schema(): Schema {
   return { id: 's1', name: 'Words', cardTemplates: [], fields: [
@@ -72,5 +72,63 @@ describe('applySettings / applyTemplatePatch', () => {
     const p3 = applyTemplatePatch(p2, 's1', { orientation: 'landscape' });
     expect(p3.schemas[0].cardTemplates[0].layout).toBe('2x2'); // preserved
     expect(p3.schemas[0].cardTemplates[0].orientation).toBe('landscape');
+  });
+});
+
+describe('cardsPerPage / chunkRecords', () => {
+  it('3card is 3 per page, single layouts are 1', () => {
+    expect(cardsPerPage('3card')).toBe(3);
+    expect(cardsPerPage('1top-1bot')).toBe(1);
+    expect(cardsPerPage('fulltext')).toBe(1);
+    expect(cardsPerPage('2x2')).toBe(1);
+  });
+  it('chunkRecords splits into consecutive chunks', () => {
+    expect(chunkRecords([1, 2, 3, 4], 3)).toEqual([[1, 2, 3], [4]]);
+    expect(chunkRecords([1, 2], 1)).toEqual([[1], [2]]);
+    expect(chunkRecords([], 3)).toEqual([]);
+    expect(chunkRecords([1, 2], 0)).toEqual([[1], [2]]); // size<1 → 1
+  });
+});
+
+describe('recordsToCard', () => {
+  function schema3(): Schema {
+    return { id: 's1', name: 'Words', cardTemplates: [], fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+      { id: 'f3', key: 'pic', label: 'Pic', type: 'image' },
+    ] };
+  }
+  const tpl = (layout: string): CardTemplate => ({ id: 'tpl1', templateType: layout === '3card' ? 'compound' : 'single', layout, size: null, orientation: undefined, hideTitle: false, hideSectionLabels: false, mapping: {} });
+  const rec = (id: string, t: string, d: string, p = ''): RecordItem =>
+    ({ id, schemaId: 's1', fieldsHash: '', fields: { title: { en: t, vi: '' }, def: { en: d, vi: '' }, pic: p } });
+
+  it('single layout matches recordToCard for one record', () => {
+    const s = schema3();
+    const r = rec('r1', 'Owl', 'a bird', 'http://x/o.png');
+    const single = recordsToCard([r], s, tpl('1top-1bot'), DEFAULT_SETTINGS, 'en');
+    expect(single.title).toBe('Owl');
+    expect(single.sections.map((x) => x.content)).toEqual(['a bird']);
+    expect(single.images[0]).toMatchObject({ slot: 0, url: 'http://x/o.png' });
+    expect(single.recordId).toBe('r1');
+  });
+  it('3card maps 3 records to 3 labelled cells + images', () => {
+    const s = schema3();
+    const card = recordsToCard(
+      [rec('r1', 'Cat', 'meow', 'http://x/1.png'), rec('r2', 'Dog', 'woof', 'http://x/2.png'), rec('r3', 'Cow', 'moo')],
+      s, tpl('3card'), DEFAULT_SETTINGS, 'en',
+    );
+    expect(card.layout).toBe('3card');
+    expect(card.sections).toHaveLength(3);
+    expect(card.sections.map((x) => x.label)).toEqual(['Cat', 'Dog', 'Cow']);
+    expect(card.sections.map((x) => x.content)).toEqual(['meow', 'woof', 'moo']);
+    expect(card.images.map((im) => im.url)).toEqual(['http://x/1.png', 'http://x/2.png']); // r3 has no pic
+    expect(card.packedRecordIds).toEqual(['r1', 'r2', 'r3']);
+  });
+  it('3card pads to 3 cells when the chunk is short', () => {
+    const s = schema3();
+    const card = recordsToCard([rec('r1', 'Cat', 'meow')], s, tpl('3card'), DEFAULT_SETTINGS, 'en');
+    expect(card.sections).toHaveLength(3);
+    expect(card.sections[1]).toMatchObject({ label: '', content: '' });
+    expect(card.packedRecordIds).toEqual(['r1']);
   });
 });

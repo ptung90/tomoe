@@ -1,13 +1,15 @@
 <script lang="ts">
-  import { project, setProjectName } from './stores';
+  import { project, setProjectName, selectRecord } from './stores';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
   import SchemaEditorModal from './components/SchemaEditorModal.svelte';
   import CardPreview from './components/CardPreview.svelte';
+  import CardGallery from './components/CardGallery.svelte';
 
   let leftWidth = $state(300);
   let rightWidth = $state(360);
+  let view = $state<'records' | 'cards'>('records');
 </script>
 
 <div class="workspace">
@@ -22,26 +24,36 @@
       {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
     </span>
+    <div class="view-toggle" aria-label="view">
+      <button type="button" aria-pressed={view === 'records'} class:on={view === 'records'}
+        onclick={() => (view = 'records')}>Records</button>
+      <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
+        onclick={() => (view = 'cards')}>Cards</button>
+    </div>
   </header>
-  <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr 6px ${rightWidth}px`}>
-    <div class="left"><SchemaRecordList /></div>
-    <div
-      class="divider divider-x"
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="resize sidebar"
-      use:dragX={(dx) => (leftWidth = Math.max(220, Math.min(560, leftWidth + dx)))}
-    ></div>
-    <div class="right"><RecordDetail /></div>
-    <div
-      class="divider divider-x"
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="resize preview"
-      use:dragX={(dx) => (rightWidth = Math.max(240, Math.min(720, rightWidth - dx)))}
-    ></div>
-    <div class="preview-pane"><CardPreview /></div>
-  </div>
+  {#if view === 'records'}
+    <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr 6px ${rightWidth}px`}>
+      <div class="left"><SchemaRecordList /></div>
+      <div
+        class="divider divider-x"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="resize sidebar"
+        use:dragX={(dx) => (leftWidth = Math.max(220, Math.min(560, leftWidth + dx)))}
+      ></div>
+      <div class="right"><RecordDetail /></div>
+      <div
+        class="divider divider-x"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="resize preview"
+        use:dragX={(dx) => (rightWidth = Math.max(240, Math.min(720, rightWidth - dx)))}
+      ></div>
+      <div class="preview-pane"><CardPreview /></div>
+    </div>
+  {:else}
+    <div class="cards-body"><CardGallery onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
+  {/if}
   <SchemaEditorModal />
 </div>
 
@@ -54,6 +66,13 @@
   .project-name:hover { border-color:var(--border); }
   .project-name:focus { outline:none; border-color:var(--accent); background:var(--bg); }
   .counts { color:var(--text-muted); font-size:12px; }
+  .view-toggle { margin-left:auto; display:inline-flex; gap:2px; border:1px solid var(--border); border-radius:8px; padding:2px; }
+  .view-toggle button { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px;
+    padding:3px 12px; border-radius:6px; cursor:pointer; transition:background .12s ease, color .12s ease; }
+  .view-toggle button:hover:not(.on) { color:var(--accent); }
+  .view-toggle button.on { background:var(--accent); color:#fff; font-weight:600; }
+  .view-toggle button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .cards-body { flex:1; min-height:0; }
   .body { flex:1; display:grid; min-height:0; }
   .left, .right, .preview-pane { min-height:0; min-width:0; }
   .left { background:var(--sidebar); }
