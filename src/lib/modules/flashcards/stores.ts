@@ -2,7 +2,8 @@ import { writable, derived, get, type Readable, type Writable } from 'svelte/sto
 import * as H from '../../history';
 import { newProject, type Project, type SchemaField, type RecordItem, type Settings, type CardTemplate } from './model';
 import * as ops from './recordOps';
-import * as cardOps from './cardMapping';
+import * as cardMapping from './cardMapping';
+import * as cardOps from './cardOps';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -87,8 +88,19 @@ export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'o
 
 // ── Card/settings actions ───────────────────────────────────────────────
 export function setSettings(patch: Partial<Settings>): void {
-  commit(cardOps.applySettings(get(project), patch));
+  commit(cardMapping.applySettings(get(project), patch));
 }
 export function setTemplateLayout(schemaId: string, patch: Partial<CardTemplate>): void {
-  commit(cardOps.applyTemplatePatch(get(project), schemaId, patch));
+  commit(cardMapping.applyTemplatePatch(get(project), schemaId, patch));
+}
+
+// ── Card pack/regenerate/delete actions ─────────────────────────────────
+export function packAllForSchema(schemaId: string): void {
+  commit(cardOps.packAllForSchema(get(project), schemaId));
+}
+export function regenerateCard(cardId: string): void {
+  commit(cardOps.regenerateCard(get(project), cardId));
+}
+export function deleteCard(cardId: string): void {
+  commit(cardOps.deleteCard(get(project), cardId));
 }
