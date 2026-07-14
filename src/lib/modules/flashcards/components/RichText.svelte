@@ -51,7 +51,7 @@
 </div>
 
 <style>
-  .rt { border:1px solid var(--border); border-radius:8px; background:var(--bg); }
+  .rt { flex:1 1 auto; min-width:0; border:1px solid var(--border); border-radius:8px; background:var(--bg); }
   .rt-toolbar { display:flex; align-items:center; gap:2px; flex-wrap:wrap; padding:4px 6px;
     border-bottom:1px solid var(--border); }
   .rt-toolbar button { border:none; background:transparent; color:var(--text);
