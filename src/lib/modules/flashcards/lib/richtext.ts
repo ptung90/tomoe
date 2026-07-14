@@ -53,6 +53,8 @@ export function createEditor(element: HTMLElement, markdown: string, onUpdate: (
     element,
     extensions: [StarterKit, Underline, TextAlign.configure({ types: ['heading', 'paragraph'] })],
     content: mdToHtml(markdown),
+    // Turn off the webview's native spellcheck red underline in card text.
+    editorProps: { attributes: { spellcheck: 'false' } },
     onUpdate,
   });
 }
