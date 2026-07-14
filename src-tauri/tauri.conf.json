@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "JSON Table Editor",
-  "version": "0.3.0",
-  "identifier": "com.ptung.jsontableeditor",
+  "productName": "Tomoe",
+  "version": "0.1.0",
+  "identifier": "com.ptung.tomoe",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "JSON Table Editor",
+        "title": "Tomoe",
         "width": 1000,
         "height": 700,
         "resizable": true,
@@ -36,9 +36,9 @@
     ],
     "fileAssociations": [
       {
-        "ext": ["json"],
-        "name": "JSON File",
-        "description": "JSON data file",
+        "ext": ["tomoe.json", "json"],
+        "name": "Tomoe Project",
+        "description": "Tomoe project file",
         "role": "Editor"
       }
     ],
