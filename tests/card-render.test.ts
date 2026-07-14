@@ -93,5 +93,10 @@ describe('buildCardHTML 3card', () => {
     expect(html).toContain('http://x/0.png');
     expect(html).toContain('first');
     expect(html).toContain('third');
+    // Guard the compound path: the default grid/fulltext/fullimage branches
+    // always emit a `<div class="fc-text-area">`; build_3card (via
+    // renderCompoundShell) does NOT, and lays out a 3-column grid.
+    expect(html).not.toContain('fc-text-area');
+    expect(html).toContain('repeat(3');
   });
 });
