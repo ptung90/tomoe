@@ -1,6 +1,13 @@
 <script lang="ts">
+  import SearchIcon from 'lucide-svelte/icons/search';
+  import Crop from 'lucide-svelte/icons/crop';
+  import ImageSearchModal from './ImageSearchModal.svelte';
+  import CropModal from './CropModal.svelte';
+
   let { value = '', onChange }: { value?: string; onChange: (url: string) => void } = $props();
   let fileInput: HTMLInputElement;
+  let showSearch = $state(false);
+  let showCrop = $state(false);
 
   function cssUrl(v: string): string {
     // percent-encode chars that would break url("...") — quotes, parens, backslash, whitespace.
@@ -33,11 +40,20 @@
     <div class="btns">
       <button type="button" onclick={() => fileInput.click()}>Pick…</button>
       <button type="button" onclick={paste}>Paste</button>
+      <button type="button" onclick={() => (showSearch = true)}><SearchIcon size={13} /> Search</button>
+      {#if value}<button type="button" onclick={() => (showCrop = true)}><Crop size={13} /> Crop</button>{/if}
       {#if value}<button type="button" onclick={() => onChange('')}>Clear</button>{/if}
     </div>
   </div>
   <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={onFile} />
 </div>
+
+{#if showSearch}
+  <ImageSearchModal onPick={(u) => { onChange(u); showSearch = false; }} onClose={() => (showSearch = false)} />
+{/if}
+{#if showCrop && value}
+  <CropModal src={value} onApply={(d) => { onChange(d); showCrop = false; }} onClose={() => (showCrop = false)} />
+{/if}
 
 <style>
   .imgfield { display:flex; gap:10px; align-items:flex-start; }
