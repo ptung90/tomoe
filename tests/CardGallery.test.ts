@@ -38,3 +38,42 @@ describe('CardGallery', () => {
     expect(getByText(/no cards yet/i)).toBeInTheDocument();
   });
 });
+
+describe('CardGallery — packed cards (compound)', () => {
+  function seed3card(n: number) {
+    S.initProject();
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.setTemplateLayout(sid, { layout: '3card' });
+    for (let i = 0; i < n; i++) S.addRecord(sid);
+    return sid;
+  }
+  it('Pack all creates persisted cards and excludes those records from the auto section', async () => {
+    seed3card(4); // 4 records, 3card → after pack: 2 packed cards, 0 auto (all packed)
+    const { container, getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    await fireEvent.click(getByRole('button', { name: /pack all/i }));
+    expect(get(S.project).cards.length).toBe(2);
+    // all 4 records are packed → no auto thumbnails, only the 2 packed thumbnails
+    expect(container.querySelectorAll('.thumb.packed').length).toBe(2);
+    expect(container.querySelectorAll('.thumb.auto').length).toBe(0);
+  });
+  it('shows a stale badge after a source record changes, cleared by Regenerate', async () => {
+    const sid = seed3card(3);
+    S.packAllForSchema(sid);
+    S.setField(get(S.project).records[0].id, 'title', 'CHANGED', 'en');
+    const { container, getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    expect(container.querySelector('.badge.stale')).toBeInTheDocument();
+    await fireEvent.click(getByRole('button', { name: /regenerate/i }));
+    expect(container.querySelector('.badge.stale')).not.toBeInTheDocument();
+  });
+  it('Delete removes a packed card', async () => {
+    const sid = seed3card(3);
+    S.packAllForSchema(sid);
+    const { getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    await fireEvent.click(getByRole('button', { name: /delete/i }));
+    expect(get(S.project).cards.length).toBe(0);
+  });
+});

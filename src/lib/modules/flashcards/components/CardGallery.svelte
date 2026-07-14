@@ -2,10 +2,14 @@
   import '../lib/card-render.css';
   import Layers from 'lucide-svelte/icons/layers';
   import FilePlus from 'lucide-svelte/icons/file-plus';
-  import { project, schemaEditorOpen } from '../stores';
+  import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import Package from 'lucide-svelte/icons/package';
+  import { project, schemaEditorOpen, packAllForSchema, regenerateCard, deleteCard } from '../stores';
   import { deriveAutoTemplate, recordsToCard, cardsPerPage, chunkRecords } from '../cardMapping';
+  import { isCardStale, schemaForCard } from '../cardOps';
   import { buildCardHTML, getPaperPx } from '../lib/card-render';
-  import type { RecordItem, Schema, CardTemplate } from '../model';
+  import type { RecordItem, Schema, CardTemplate, Card } from '../model';
   import EmptyState from './EmptyState.svelte';
 
   let { onOpen }: { onOpen: (recordId: string) => void } = $props();
@@ -14,11 +18,17 @@
 
   const groups = $derived($project.schemas.map((schema) => {
     const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
+    const compound = cardsPerPage(template.layout) > 1;
     const recs = $project.records.filter((r) => r.schemaId === schema.id);
-    const chunks = chunkRecords(recs, cardsPerPage(template.layout));
+    const packed = compound
+      ? $project.cards.filter((c) => c.packedRecordIds?.length && schemaForCard($project, c)?.id === schema.id)
+      : [];
+    const packedIds = new Set(packed.flatMap((c) => c.packedRecordIds ?? []));
+    const autoRecs = recs.filter((r) => !packedIds.has(r.id));
+    const autoChunks = chunkRecords(autoRecs, cardsPerPage(template.layout));
     const paper = getPaperPx(template.size || $project.settings.paperSize, template.orientation || $project.settings.orientation);
     const scale = Math.min(1, THUMB_W / paper.w);
-    return { schema, template, chunks, paper, scale };
+    return { schema, template, compound, recs, packed, autoChunks, paper, scale };
   }));
 
   const totalRecords = $derived($project.records.length);
@@ -34,9 +44,18 @@
     const first = recLabel(chunk[0], schema);
     return chunk.length > 1 ? `${first} +${chunk.length - 1}` : first;
   }
-  function cardHtml(chunk: RecordItem[], schema: Schema, template: CardTemplate): string {
+  function packedCaption(card: Card): string {
+    const n = card.packedRecordIds?.length ?? 0;
+    const first = card.sections?.[0]?.label;
+    const firstStr = first && typeof first === 'object' ? (first[$project.activeLocale] ?? '') : (typeof first === 'string' ? first : '');
+    return (firstStr.trim() || 'Card') + (n > 1 ? ` +${n - 1}` : '');
+  }
+  function autoHtml(chunk: RecordItem[], schema: Schema, template: CardTemplate): string {
     return buildCardHTML(recordsToCard(chunk, schema, template, $project.settings, $project.activeLocale),
                          $project.settings, $project.activeLocale);
+  }
+  function packedHtml(card: Card): string {
+    return buildCardHTML(card, $project.settings, $project.activeLocale); // render the stored snapshot
   }
 </script>
 
@@ -56,17 +75,47 @@
       <section class="group">
         <header class="group-head">
           <span class="group-name">{g.schema.name}</span>
-          <span class="count">{g.chunks.length} card{g.chunks.length === 1 ? '' : 's'}</span>
+          <span class="count">{g.packed.length + g.autoChunks.length} card{g.packed.length + g.autoChunks.length === 1 ? '' : 's'}</span>
+          {#if g.compound && g.recs.length > 0}
+            <button type="button" class="pack-all" onclick={() => packAllForSchema(g.schema.id)}>
+              <Package size={13} /> Pack all
+            </button>
+          {/if}
         </header>
-        {#if g.chunks.length === 0}
+
+        {#if g.packed.length === 0 && g.autoChunks.length === 0}
           <p class="hint">No records in this schema yet.</p>
         {:else}
           <div class="grid">
-            {#each g.chunks as chunk (chunk[0].id)}
-              <button type="button" class="thumb" title={caption(chunk, g.schema)} onclick={() => onOpen(chunk[0].id)}>
+            <!-- Persisted packed cards (snapshots) -->
+            {#each g.packed as card (card.id)}
+              {@const stale = isCardStale(card, $project)}
+              <div class="thumb packed">
+                <button type="button" class="thumb-open" title={packedCaption(card)}
+                  onclick={() => card.packedRecordIds?.[0] && onOpen(card.packedRecordIds[0])}>
+                  <div class="thumb-frame" style={`width:${Math.round(g.paper.w * g.scale)}px;height:${Math.round(g.paper.h * g.scale)}px;`}>
+                    <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.paper.w}px;height:${g.paper.h}px;`}>
+                      {@html packedHtml(card)}
+                    </div>
+                  </div>
+                </button>
+                <div class="thumb-meta">
+                  <span class="badge {stale ? 'stale' : 'synced'}">{stale ? 'Stale' : 'Synced'}</span>
+                  {#if stale}
+                    <button type="button" class="icon-act" aria-label="regenerate" title="Regenerate from records"
+                      onclick={() => regenerateCard(card.id)}><RefreshCw size={13} /></button>
+                  {/if}
+                  <button type="button" class="icon-act danger" aria-label="delete" title="Delete card"
+                    onclick={() => deleteCard(card.id)}><Trash2 size={13} /></button>
+                </div>
+              </div>
+            {/each}
+            <!-- Auto-derived cards for records not in any packed card -->
+            {#each g.autoChunks as chunk (chunk[0].id)}
+              <button type="button" class="thumb auto" title={caption(chunk, g.schema)} onclick={() => onOpen(chunk[0].id)}>
                 <div class="thumb-frame" style={`width:${Math.round(g.paper.w * g.scale)}px;height:${Math.round(g.paper.h * g.scale)}px;`}>
                   <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.paper.w}px;height:${g.paper.h}px;`}>
-                    {@html cardHtml(chunk, g.schema, g.template)}
+                    {@html autoHtml(chunk, g.schema, g.template)}
                   </div>
                 </div>
                 <span class="thumb-cap">{caption(chunk, g.schema)}</span>
@@ -86,22 +135,38 @@
   .group-head { display:flex; align-items:center; gap:8px; }
   .group-name { font-weight:600; font-size:13px; color:var(--text); }
   .count { font-size:11px; color:var(--text-muted); background:var(--accent-weak); border-radius:10px; padding:0 7px; }
+  .pack-all { margin-left:auto; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
+    background:transparent; color:var(--text); border-radius:6px; padding:4px 10px; font:inherit; font-size:12px;
+    cursor:pointer; transition:background .12s ease, color .12s ease; }
+  .pack-all:hover { background:var(--accent-weak); color:var(--accent); }
+  .pack-all:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .hint { color:var(--text-muted); font-size:12px; margin:0; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px; align-items:start; }
+
   .thumb { display:flex; flex-direction:column; align-items:center; gap:6px; border:none; background:transparent;
-    padding:6px; border-radius:10px; cursor:pointer; font:inherit; transition:background .12s ease; }
-  .thumb:hover { background:var(--accent-weak); }
-  .thumb:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    padding:6px; border-radius:10px; font:inherit; }
+  .thumb.auto { cursor:pointer; transition:background .12s ease; }
+  .thumb.auto:hover { background:var(--accent-weak); }
+  .thumb.auto:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .thumb-open { border:none; background:transparent; padding:0; cursor:pointer; }
   .thumb-frame { flex:none; border-radius:2px; box-shadow:0 1px 2px rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.12);
     overflow:hidden; transition:box-shadow .12s ease, transform .12s ease; }
-  /* Clear hover affordance: accent ring + lift + deeper shadow (accent-weak alone reads faint on the canvas). */
-  .thumb:hover .thumb-frame, .thumb:focus-visible .thumb-frame {
-    transform:translateY(-2px);
-    box-shadow:0 0 0 2px var(--accent), 0 10px 24px rgba(0,0,0,.20); }
-  .thumb:hover .thumb-cap, .thumb:focus-visible .thumb-cap { color:var(--accent); font-weight:600; }
+  .thumb.auto:hover .thumb-frame, .thumb.auto:focus-visible .thumb-frame,
+  .thumb-open:hover .thumb-frame, .thumb-open:focus-visible .thumb-frame {
+    transform:translateY(-2px); box-shadow:0 0 0 2px var(--accent), 0 10px 24px rgba(0,0,0,.20); }
   .thumb-scaler { transform-origin:top left; }
-  .thumb-cap { font-size:12px; color:var(--text); max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    transition:color .12s ease; }
+  .thumb-cap { font-size:12px; color:var(--text); max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .thumb-meta { display:flex; align-items:center; gap:6px; }
+  .badge { font-size:11px; font-weight:600; border-radius:10px; padding:1px 8px; }
+  .badge.synced { color:var(--accent); background:var(--accent-weak); }
+  .badge.stale { color:#b45309; background:#fef3c7; }
+  .icon-act { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
+    color:var(--text-muted); border-radius:6px; padding:3px; cursor:pointer; transition:background .12s ease, color .12s ease; }
+  .icon-act:hover { background:var(--accent-weak); color:var(--accent); }
+  .icon-act.danger:hover { background:#fee; color:#b91c1c; }
+  .icon-act:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
   .cta { border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:600;
     border-radius:6px; padding:6px 14px; font:inherit; font-size:12px; cursor:pointer; }
   .cta:hover { opacity:.92; }
