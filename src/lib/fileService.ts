@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import { get } from 'svelte/store';
 import { activeModuleId, setActiveModule, showToast } from './shell';
 import { pickModuleForOpen, getModule } from './modules/registry';
+import { recordRecent } from './recentFiles';
 
 /**
  * Guard against silently discarding unsaved edits in the active module.
@@ -28,6 +29,7 @@ export async function openPath(path: string): Promise<void> {
     const mod = pickModuleForOpen(path, text);
     setActiveModule(mod.id);
     mod.open(text, path);
+    recordRecent(path);
   } catch (e) {
     showToast(`Cannot open file: ${(e as Error).message}`, 'error');
   }
