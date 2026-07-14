@@ -9,3 +9,11 @@ if (!Element.prototype.animate) {
     onfinish: null,
   } as unknown as Animation);
 }
+
+// jsdom does not implement ResizeObserver; Svelte's `bind:clientWidth`/`clientHeight`
+// (e.g. CardPreview.svelte's scale-to-fit pane) use it to track element size.
+globalThis.ResizeObserver ??= class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;

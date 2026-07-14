@@ -1,0 +1,80 @@
+<script lang="ts">
+  import '../lib/card-render.css';
+  import Palette from 'lucide-svelte/icons/palette';
+  import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
+  import { deriveAutoTemplate, recordToCard } from '../cardMapping';
+  import { buildCardHTML, LAYOUTS, getPaperPx } from '../lib/card-render';
+  import StyleControls from './StyleControls.svelte';
+
+  let paneW = $state(360);
+  let showStyle = $state(false);
+
+  const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
+  const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
+  const template = $derived(schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null);
+
+  const paper = $derived(getPaperPx(
+    template?.size || $project.settings.paperSize,
+    template?.orientation || $project.settings.orientation,
+  ));
+  const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 32) / paper.w)));
+  const cardHtml = $derived(
+    record && schema && template
+      ? buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
+                      $project.settings, $project.activeLocale)
+      : '',
+  );
+
+  function onLayout(e: Event) {
+    if (schema) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value });
+  }
+</script>
+
+<div class="preview" bind:clientWidth={paneW}>
+  <header class="preview-toolbar">
+    <label>Layout
+      <select value={template?.layout ?? 'fulltext'} onchange={onLayout} disabled={!schema}>
+        {#each LAYOUTS as l (l)}<option value={l}>{l}</option>{/each}
+      </select>
+    </label>
+    <label>Paper
+      <select value={$project.settings.paperSize} onchange={(e) => setSettings({ paperSize: (e.target as HTMLSelectElement).value as any })}>
+        {#each ['A4','A5','A6','Letter'] as p (p)}<option value={p}>{p}</option>{/each}
+      </select>
+    </label>
+    <button type="button" class:on={$project.settings.orientation === 'landscape'}
+      onclick={() => setSettings({ orientation: $project.settings.orientation === 'portrait' ? 'landscape' : 'portrait' })}>
+      {$project.settings.orientation === 'landscape' ? 'Landscape' : 'Portrait'}
+    </button>
+    <button type="button" class="style-toggle" class:on={showStyle} aria-label="style" onclick={() => (showStyle = !showStyle)}>
+      <Palette size={15} />
+    </button>
+  </header>
+
+  {#if showStyle}<StyleControls />{/if}
+
+  {#if record && schema}
+    <div class="preview-scroll">
+      <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
+        {@html cardHtml}
+      </div>
+    </div>
+  {:else}
+    <div class="empty"><p>No record selected. Pick one to preview its card.</p></div>
+  {/if}
+</div>
+
+<style>
+  .preview { height:100%; min-width:0; display:flex; flex-direction:column; background:var(--bg); }
+  .preview-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 12px;
+    background:var(--surface); border-bottom:1px solid var(--border); }
+  .preview-toolbar label { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); }
+  .preview-toolbar select, .preview-toolbar button { border:1px solid var(--border); border-radius:6px;
+    padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px; }
+  .preview-toolbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
+  .preview-scroll { flex:1; overflow:auto; padding:16px; }
+  .preview-scaler { transform-origin:top left; box-shadow:0 4px 16px rgba(0,0,0,.12); }
+  .empty { flex:1; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center;
+    color:var(--text-muted); font-size:13px; }
+</style>

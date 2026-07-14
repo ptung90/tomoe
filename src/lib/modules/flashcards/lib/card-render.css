@@ -1,0 +1,35 @@
+/* Card render styles (global). Card interior = fixed white-paper colors, NOT app theme tokens. */
+.fc-card { background:#fff; color:#1a1a1a; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+.fc-image-area { flex-shrink:0; overflow:hidden; }
+.fc-text-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.fc-title { text-align:center; padding:6px 8px 4px; font-size:0.85em; border-bottom:1px solid #e5e7eb; }
+.fc-layout-3card .fc-title { border-bottom:none; }
+.fc-sections { flex:1; overflow:hidden; padding:4px 8px 6px; }
+.fc-section { margin-bottom:4px; }
+.fc-section__label { font-weight:700; }
+.fc-section__content { display:block; }
+.fc-section__content > p { display:block; margin:0 0 2px; }
+.fc-section__content ul, .fc-section__content ol { display:block; padding-left:14px; margin:1px 0 0; }
+.fc-section__content ul { list-style:disc; }
+.fc-section__content ol { list-style:decimal; }
+.fc-section__content ul ul { list-style:circle; }
+.fc-section__content li { margin-bottom:1px; }
+.fc-image-slot { background:#e5e7eb; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
+.fc-image-slot .empty-placeholder { color:#9ca3af; font-size:11px; text-align:center; pointer-events:none; }
+.fc-image-slot > div.img-bg { position:absolute; inset:0; }
+.fc-img-label { padding:2px 5px; font-size:0.78em; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Grid overrides for the in-scope layouts */
+.fc-layout-2top-1bot .fc-image-area { display:grid; grid-template-rows:1fr 1fr; grid-template-columns:1fr 1fr; gap:2px; }
+.fc-layout-2top-1bot .fc-image-slot-0 { grid-column:1; grid-row:1; }
+.fc-layout-2top-1bot .fc-image-slot-1 { grid-column:2; grid-row:1; }
+.fc-layout-2top-1bot .fc-image-slot-2 { grid-column:1 / -1; grid-row:2; }
+.fc-layout-1top-1bot .fc-image-area { display:grid; grid-template-rows:1fr 1fr; grid-template-columns:1fr; gap:2px; }
+.fc-layout-1top-1bot .fc-image-slot-0 { grid-column:1; grid-row:1; }
+.fc-layout-1top-1bot .fc-image-slot-1 { grid-column:1; grid-row:2; }
+.fc-layout-1top-2bot .fc-image-area { display:grid; grid-template-rows:1fr 1fr; grid-template-columns:1fr 1fr; gap:2px; }
+.fc-layout-1top-2bot .fc-image-slot-0 { grid-column:1 / -1; grid-row:1; }
+.fc-layout-1top-2bot .fc-image-slot-1 { grid-column:1; grid-row:2; }
+.fc-layout-1top-2bot .fc-image-slot-2 { grid-column:2; grid-row:2; }
+.fc-layout-2x2 .fc-image-area { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:2px; }
+.fc-layout-fullimage .fc-image-slot { width:100%; height:100%; }

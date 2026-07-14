@@ -19,6 +19,11 @@ describe('Flashcards Workspace', () => {
     expect(screen.getByText('Words')).toBeInTheDocument();       // left pane schema
     expect(screen.getByText('Title')).toBeInTheDocument();       // right pane field (record auto-selected)
   });
+  it('renders the card preview pane alongside list and detail', () => {
+    const { container } = render(Workspace);
+    // record auto-selected in beforeEach → a card renders
+    expect(container.querySelector('.fc-card')).toBeInTheDocument();
+  });
   it('shows the project name in an editable header field', () => {
     render(Workspace);
     expect(screen.getByDisplayValue('Untitled')).toBeInTheDocument();
