@@ -92,9 +92,16 @@
     padding:6px; border-radius:10px; cursor:pointer; font:inherit; transition:background .12s ease; }
   .thumb:hover { background:var(--accent-weak); }
   .thumb:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  .thumb-frame { flex:none; border-radius:2px; box-shadow:0 1px 2px rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.12); overflow:hidden; }
+  .thumb-frame { flex:none; border-radius:2px; box-shadow:0 1px 2px rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.12);
+    overflow:hidden; transition:box-shadow .12s ease, transform .12s ease; }
+  /* Clear hover affordance: accent ring + lift + deeper shadow (accent-weak alone reads faint on the canvas). */
+  .thumb:hover .thumb-frame, .thumb:focus-visible .thumb-frame {
+    transform:translateY(-2px);
+    box-shadow:0 0 0 2px var(--accent), 0 10px 24px rgba(0,0,0,.20); }
+  .thumb:hover .thumb-cap, .thumb:focus-visible .thumb-cap { color:var(--accent); font-weight:600; }
   .thumb-scaler { transform-origin:top left; }
-  .thumb-cap { font-size:12px; color:var(--text); max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .thumb-cap { font-size:12px; color:var(--text); max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    transition:color .12s ease; }
   .cta { border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:600;
     border-radius:6px; padding:6px 14px; font:inherit; font-size:12px; cursor:pointer; }
   .cta:hover { opacity:.92; }
