@@ -60,6 +60,6 @@ recorded as a follow-up.
 ## Progress log (updated as specs land)
 
 - ✅ #5 Images — merged `9263d98` (searchWikimedia keyless + ImageSearchModal + CropModal cropperjs + ImageField Search/Crop). 251 tests. Human morning: live Wikimedia search (network) + crop canvas. Minor follow-ups noted in the branch ledger (crossOrigin comment, tainted/search toast, modal a11y).
-- (pending) #6 Export
+- ✅ #6 Export — merged `088af3d` (collectPrintCards + PrintView @media-print isolation + Workspace Print button → window.print). 258 tests. Whole-branch review caught + FIXED an Important cross-module bug (persisted global print-hide rule → scoped via `:has(.print-view)`). Human morning: print dialog / Save-as-PDF.
 - (pending) #7 AI
 - (pending) #8 Polish
