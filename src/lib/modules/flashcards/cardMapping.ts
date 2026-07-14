@@ -11,7 +11,7 @@ export function deriveAutoTemplate(schema: Schema): CardTemplate {
     templateType: 'single',
     layout,
     size: null,
-    orientation: 'portrait',
+    orientation: undefined,
     hideTitle: false,
     hideSectionLabels: false,
     mapping: {},

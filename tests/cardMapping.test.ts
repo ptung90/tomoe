@@ -48,6 +48,12 @@ describe('recordToCard', () => {
     expect(c.title).toBe('');
     expect(c.sections[0].content).toBe('');
   });
+  it('falls through to the live settings.orientation when the template has no explicit orientation (auto-derived template)', () => {
+    const t = deriveAutoTemplate(schema());
+    const settings = { ...DEFAULT_SETTINGS, orientation: 'landscape' as const };
+    const c = recordToCard(rec, schema(), t, settings, 'en');
+    expect(c.orientation).toBe('landscape');
+  });
 });
 
 describe('applySettings / applyTemplatePatch', () => {

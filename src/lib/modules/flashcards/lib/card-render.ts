@@ -122,52 +122,6 @@ function _scopeCardCss(css: string, cardId: string): string {
 }
 
 // ── Compound layouts ───────────────────────────────────────────────
-interface CompoundCellOptions {
-  paddingPx?: number;
-  borderWidth?: number;
-  borderCss?: string;
-  borderRadiusPx?: number;
-  overflow?: string;
-  background?: string;
-}
-
-function buildCompoundCellStyle(baseStyle: string, options: CompoundCellOptions = {}): string {
-  const {
-    paddingPx = 0,
-    borderWidth = 0,
-    borderCss = '',
-    borderRadiusPx = 0,
-    overflow = 'auto',
-    background = 'white',
-  } = options;
-  return (
-    baseStyle +
-    'box-sizing:border-box;' +
-    'background:' + background + ';' +
-    'padding:' + paddingPx + 'px;' +
-    'overflow:' + overflow + ';' +
-    'border:' + borderWidth + 'px ' + borderCss + ';' +
-    'border-radius:' + borderRadiusPx + 'px;'
-  );
-}
-
-function buildSectionCellHtml(section: CardSection | null | undefined, hideLabels: boolean, locale: string): string {
-  if (!section) return '<div class="fc-section fc-section--empty"></div>';
-  const _label = resolveLocale(section.label, locale);
-  const _content = resolveLocale(section.content, locale);
-  return (
-    `<div class="fc-section${section.customClass ? ` ${esc(section.customClass)}` : ''}">` +
-    (!hideLabels && _label ? '<span class="fc-section__label"' + (section.labelSize ? ` style="font-size:${section.labelSize}px"` : '') + '>• ' + mdInline(_label) + ': </span>' : '') +
-    '<div class="fc-section__content"' + ((section.fontSize || section.textAlign) ? ` style="${section.fontSize ? `font-size:${section.fontSize}px;` : ''}${section.textAlign ? `text-align:${section.textAlign};` : ''}"` : '') + '>' +
-    mdBlock(_content) +
-    '</div></div>'
-  );
-}
-
-function titleBlock(showTitle: boolean, titleStyle: string, resolvedTitle: string): string {
-  return showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '';
-}
-
 interface CompoundShellArgs {
   cardStyleTag: string;
   cls: string;
