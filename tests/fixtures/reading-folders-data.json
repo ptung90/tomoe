@@ -1,0 +1,898 @@
+{
+  "title": "Reading Folders",
+  "source": "Reading Folders words.pdf (Montessori phonics material)",
+  "markerConvention": {
+    "syntax": "Target grapheme(s) wrapped in square brackets inside each word string.",
+    "examples": {
+      "b[ai]t": "b + <span class='sound'>ai</span> + t",
+      "c[a]k[e]": "split digraph a-e -> highlight both 'a' and 'e'"
+    },
+    "html": "Split each word on /\\[([^\\]]+)\\]/; wrap captured groups in <span class=\"sound\"> (red). Strip brackets to get the plain word."
+  },
+  "legend": {
+    "green": "key letter written on the folder cover",
+    "red": "sound written on cards and word booklets",
+    "blue": "key sound written on the back of each card"
+  },
+  "notes": [
+    "Folders/graphemes follow the sound-family list in the PDF (ai, ee, ie, oa, ue, or, er, ou, oy, s, j, f, e, shun).",
+    "Only words whose card grapheme is actually present are included, so every marker is valid. PDF words mis-filed under the wrong grapheme were dropped.",
+    "Words are lowercased and de-duplicated per card.",
+    "Several folders/cards are empty because the PDF listed no (usable) words for them (oa, or/au, er, ou, oy, cy, plain s, plain j, f, e, shun)."
+  ],
+  "folders": [
+    {
+      "keySound": "ai",
+      "graphemes": [
+        "ai",
+        "ay",
+        "ei",
+        "a-e"
+      ],
+      "cards": [
+        {
+          "grapheme": "ai",
+          "words": [
+            "b[ai]t",
+            "r[ai]l",
+            "g[ai]n",
+            "[ai]m",
+            "h[ai]r",
+            "j[ai]l",
+            "m[ai]l",
+            "p[ai]n",
+            "r[ai]n",
+            "r[ai]lway",
+            "s[ai]l",
+            "t[ai]l",
+            "w[ai]t",
+            "m[ai]d",
+            "f[ai]r",
+            "m[ai]n",
+            "br[ai]n",
+            "ch[ai]n",
+            "f[ai]l",
+            "tr[ai]n",
+            "[ai]d",
+            "st[ai]rway"
+          ]
+        },
+        {
+          "grapheme": "ay",
+          "words": [
+            "st[ay]",
+            "ess[ay]",
+            "sw[ay]",
+            "subw[ay]",
+            "pl[ay]",
+            "mond[ay]",
+            "cl[ay]",
+            "gatew[ay]",
+            "pr[ay]",
+            "midw[ay]",
+            "sl[ay]",
+            "runw[ay]",
+            "tr[ay]",
+            "stairw[ay]",
+            "d[ay]",
+            "railw[ay]",
+            "w[ay]",
+            "overst[ay]",
+            "b[ay]",
+            "s[ay]",
+            "fr[ay]",
+            "m[ay]",
+            "p[ay]",
+            "l[ay]",
+            "r[ay]",
+            "str[ay]",
+            "displ[ay]",
+            "arr[ay]"
+          ]
+        },
+        {
+          "grapheme": "ei",
+          "words": [
+            "v[ei]n",
+            "b[ei]ge",
+            "r[ei]n",
+            "r[ei]ndeer",
+            "surv[ei]llance",
+            "v[ei]l",
+            "s[ei]smic",
+            "f[ei]gned",
+            "d[ei]ty",
+            "f[ei]stiness"
+          ]
+        },
+        {
+          "grapheme": "a-e",
+          "words": [
+            "w[a]v[e]",
+            "p[a]l[e]",
+            "c[a]k[e]",
+            "s[a]l[e]",
+            "v[a]s[e]",
+            "bl[a]z[e]",
+            "ch[a]s[e]",
+            "fl[a]k[e]",
+            "br[a]v[e]",
+            "br[a]k[e]",
+            "s[a]f[e]",
+            "d[a]t[e]",
+            "pl[a]n[e]",
+            "fr[a]m[e]",
+            "gr[a]v[e]",
+            "sn[a]k[e]",
+            "sk[a]t[e]",
+            "r[a]k[e]",
+            "sp[a]r[e]",
+            "cr[a]t[e]",
+            "fl[a]m[e]",
+            "r[a]t[e]",
+            "st[a]l[e]",
+            "sc[a]l[e]",
+            "st[a]t[e]",
+            "sl[a]t[e]",
+            "t[a]m[e]",
+            "c[a]n[e]",
+            "sp[a]c[e]"
+          ]
+        }
+      ]
+    },
+    {
+      "keySound": "ee",
+      "graphemes": [
+        "ee",
+        "ea",
+        "y",
+        "ie",
+        "e-e"
+      ],
+      "cards": [
+        {
+          "grapheme": "ee",
+          "words": [
+            "s[ee]",
+            "tr[ee]",
+            "fr[ee]",
+            "b[ee]",
+            "f[ee]d",
+            "n[ee]d",
+            "s[ee]d",
+            "m[ee]t",
+            "f[ee]t",
+            "sl[ee]p",
+            "sw[ee]p",
+            "sh[ee]p",
+            "d[ee]p",
+            "k[ee]p",
+            "cr[ee]p",
+            "st[ee]p",
+            "gr[ee]n",
+            "thr[ee]",
+            "sp[ee]d",
+            "sw[ee]t",
+            "gr[ee]t",
+            "str[ee]t",
+            "b[ee]t",
+            "fl[ee]t",
+            "wh[ee]l",
+            "st[ee]l",
+            "p[ee]l",
+            "sp[ee]ch",
+            "scr[ee]n",
+            "l[ee]k",
+            "r[ee]f",
+            "w[ee]k",
+            "qu[ee]n",
+            "refer[ee]",
+            "eight[ee]n"
+          ]
+        },
+        {
+          "grapheme": "ea",
+          "words": [
+            "s[ea]",
+            "sn[ea]k",
+            "t[ea]",
+            "b[ea]d",
+            "r[ea]d",
+            "l[ea]d",
+            "s[ea]t",
+            "m[ea]t",
+            "b[ea]t",
+            "h[ea]t",
+            "n[ea]t",
+            "p[ea]ch",
+            "r[ea]ch",
+            "t[ea]ch",
+            "b[ea]ch",
+            "cl[ea]n",
+            "dr[ea]m",
+            "d[ea]l",
+            "h[ea]l",
+            "m[ea]l",
+            "r[ea]l",
+            "sp[ea]k",
+            "st[ea]m",
+            "str[ea]m",
+            "scr[ea]m",
+            "l[ea]k",
+            "w[ea]k",
+            "pl[ea]d",
+            "l[ea]f",
+            "l[ea]st",
+            "p[ea]ce",
+            "[ea]se",
+            "st[ea]l",
+            "tr[ea]t",
+            "ch[ea]t",
+            "bl[ea]k",
+            "gl[ea]m",
+            "h[ea]ve",
+            "w[ea]ve",
+            "cr[ea]m",
+            "s[ea]l"
+          ]
+        },
+        {
+          "grapheme": "y",
+          "words": [
+            "happ[y]",
+            "bab[y]",
+            "cand[y]",
+            "funn[y]",
+            "pupp[y]",
+            "lad[y]",
+            "jell[y]",
+            "sill[y]",
+            "cit[y]",
+            "tin[y]",
+            "penn[y]",
+            "bus[y]",
+            "bell[y]",
+            "bod[y]",
+            "luck[y]",
+            "part[y]",
+            "prett[y]",
+            "stick[y]",
+            "eas[y]",
+            "berr[y]",
+            "read[y]",
+            "stud[y]",
+            "dais[y]",
+            "stor[y]",
+            "sorr[y]",
+            "tumm[y]",
+            "fanc[y]",
+            "glor[y]",
+            "earl[y]",
+            "momm[y]",
+            "dadd[y]",
+            "kitt[y]",
+            "coz[y]",
+            "shin[y]",
+            "scar[y]",
+            "nann[y]",
+            "eight[y]"
+          ]
+        },
+        {
+          "grapheme": "ie",
+          "words": [
+            "p[ie]ce",
+            "ch[ie]f",
+            "th[ie]f",
+            "br[ie]f",
+            "f[ie]ld",
+            "sh[ie]ld",
+            "gr[ie]f",
+            "bel[ie]f",
+            "rel[ie]f",
+            "y[ie]ld",
+            "pr[ie]st",
+            "s[ie]ge",
+            "f[ie]nd",
+            "n[ie]ce",
+            "shr[ie]k",
+            "pr[ie]sthood",
+            "hyg[ie]ne",
+            "retr[ie]ve",
+            "ach[ie]ve",
+            "rel[ie]ve",
+            "misbel[ie]f",
+            "d[ie]sel",
+            "repr[ie]ve"
+          ]
+        },
+        {
+          "grapheme": "e-e",
+          "words": [
+            "sc[e]n[e]",
+            "th[e]m[e]",
+            "extr[e]m[e]",
+            "del[e]t[e]",
+            "comp[e]t[e]",
+            "compl[e]t[e]",
+            "concr[e]t[e]",
+            "g[e]n[e]",
+            "obsc[e]n[e]",
+            "rec[e]d[e]",
+            "athl[e]t[e]",
+            "discr[e]t[e]"
+          ]
+        }
+      ]
+    },
+    {
+      "keySound": "ie",
+      "graphemes": [
+        "ie",
+        "igh",
+        "y",
+        "i-e"
+      ],
+      "cards": [
+        {
+          "grapheme": "ie",
+          "words": [
+            "cr[ie]d",
+            "t[ie]d",
+            "fr[ie]d",
+            "tr[ie]d",
+            "sp[ie]d",
+            "d[ie]d",
+            "l[ie]d",
+            "fl[ie]s",
+            "fr[ie]s",
+            "cr[ie]s",
+            "dr[ie]d",
+            "pr[ie]d",
+            "appl[ie]d",
+            "occup[ie]d",
+            "suppl[ie]d",
+            "den[ie]d",
+            "env[ie]d",
+            "repl[ie]d",
+            "unt[ie]d",
+            "outcr[ie]d",
+            "def[ie]d",
+            "dignif[ie]d",
+            "qualif[ie]d",
+            "simplif[ie]d",
+            "verif[ie]d",
+            "amplif[ie]d",
+            "glorif[ie]d",
+            "intensif[ie]d",
+            "mortif[ie]d",
+            "satisf[ie]d",
+            "specif[ie]d",
+            "terrif[ie]d",
+            "unif[ie]d",
+            "vilif[ie]d"
+          ]
+        },
+        {
+          "grapheme": "igh",
+          "words": [
+            "br[igh]t",
+            "l[igh]t",
+            "n[igh]t",
+            "s[igh]",
+            "s[igh]t",
+            "t[igh]t",
+            "fl[igh]t",
+            "fr[igh]t",
+            "sl[igh]t",
+            "he[igh]t",
+            "m[igh]t",
+            "pl[igh]t",
+            "r[igh]t",
+            "al[igh]t",
+            "del[igh]t",
+            "ins[igh]t",
+            "br[igh]ten",
+            "enl[igh]ten",
+            "fortn[igh]t",
+            "h[igh]l[igh]t",
+            "overfl[igh]t",
+            "moonl[igh]t",
+            "kn[igh]t",
+            "fre[igh]t",
+            "n[igh]ttime",
+            "s[igh]tseeing",
+            "midn[igh]t",
+            "outr[igh]t",
+            "sunl[igh]t",
+            "t[igh]ten",
+            "upt[igh]t",
+            "dayl[igh]t",
+            "copyr[igh]t"
+          ]
+        },
+        {
+          "grapheme": "y",
+          "words": [
+            "appl[y]",
+            "den[y]",
+            "suppl[y]",
+            "repl[y]",
+            "def[y]",
+            "identif[y]",
+            "modif[y]",
+            "clarif[y]",
+            "multipl[y]",
+            "satisf[y]",
+            "verif[y]",
+            "simplif[y]",
+            "terrif[y]",
+            "glorif[y]",
+            "amplif[y]",
+            "specif[y]",
+            "mystif[y]",
+            "intensif[y]",
+            "testif[y]",
+            "justif[y]",
+            "pacif[y]",
+            "beautif[y]",
+            "diversif[y]",
+            "electrif[y]",
+            "exemplif[y]",
+            "nullif[y]",
+            "objectif[y]",
+            "personif[y]",
+            "rectif[y]",
+            "sanctif[y]",
+            "solidif[y]",
+            "vilif[y]",
+            "fortif[y]",
+            "crucif[y]"
+          ]
+        },
+        {
+          "grapheme": "i-e",
+          "words": [
+            "ab[i]d[e]",
+            "ar[i]s[e]",
+            "as[i]d[e]",
+            "br[i]d[e]",
+            "ch[i]d[e]",
+            "cr[i]m[e]",
+            "dec[i]d[e]",
+            "def[i]n[e]",
+            "descr[i]b[e]",
+            "depr[i]v[e]",
+            "dev[i]s[e]",
+            "dr[i]v[e]",
+            "ent[i]c[e]",
+            "ent[i]r[e]",
+            "exc[i]t[e]",
+            "gl[i]d[e]",
+            "h[i]d[e]",
+            "inv[i]t[e]",
+            "imb[i]b[e]",
+            "kn[i]f[e]",
+            "l[i]m[e]",
+            "l[i]th[e]",
+            "m[i]c[e]",
+            "n[i]c[e]",
+            "outs[i]d[e]",
+            "prov[i]d[e]",
+            "r[i]f[e]",
+            "r[i]d[e]",
+            "s[i]d[e]",
+            "sl[i]d[e]",
+            "sm[i]t[e]",
+            "sp[i]n[e]",
+            "str[i]v[e]",
+            "surpr[i]s[e]",
+            "thr[i]v[e]",
+            "t[i]d[e]",
+            "t[i]m[e]",
+            "w[i]d[e]"
+          ]
+        }
+      ]
+    },
+    {
+      "keySound": "oa",
+      "graphemes": [
+        "oa",
+        "ow",
+        "oe",
+        "o-e"
+      ],
+      "cards": [
+        {
+          "grapheme": "oa",
+          "words": []
+        },
+        {
+          "grapheme": "ow",
+          "words": []
+        },
+        {
+          "grapheme": "oe",
+          "words": []
+        },
+        {
+          "grapheme": "o-e",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "ue",
+      "graphemes": [
+        "ue",
+        "oo",
+        "ew",
+        "u-e"
+      ],
+      "cards": [
+        {
+          "grapheme": "ue",
+          "words": [
+            "bl[ue]",
+            "tr[ue]",
+            "val[ue]",
+            "cl[ue]",
+            "resc[ue]",
+            "arg[ue]",
+            "d[ue]",
+            "s[ue]",
+            "tiss[ue]",
+            "aven[ue]"
+          ]
+        },
+        {
+          "grapheme": "oo",
+          "words": [
+            "m[oo]n",
+            "f[oo]d",
+            "m[oo]d",
+            "br[oo]m",
+            "n[oo]n",
+            "sh[oo]t",
+            "s[oo]n",
+            "t[oo]th",
+            "c[oo]l",
+            "ch[oo]se"
+          ]
+        },
+        {
+          "grapheme": "ew",
+          "words": [
+            "bl[ew]",
+            "ch[ew]",
+            "d[ew]",
+            "n[ew]",
+            "fl[ew]",
+            "dr[ew]",
+            "gr[ew]",
+            "shr[ew]d"
+          ]
+        },
+        {
+          "grapheme": "u-e",
+          "words": [
+            "r[u]l[e]",
+            "c[u]b[e]",
+            "[u]s[e]",
+            "c[u]t[e]",
+            "m[u]l[e]",
+            "f[u]m[e]",
+            "h[u]g[e]",
+            "m[u]t[e]",
+            "t[u]b[e]",
+            "t[u]n[e]",
+            "j[u]n[e]"
+          ]
+        }
+      ]
+    },
+    {
+      "keySound": "or",
+      "graphemes": [
+        "or",
+        "au",
+        "ough",
+        "aw"
+      ],
+      "cards": [
+        {
+          "grapheme": "or",
+          "words": [
+            "f[or]"
+          ]
+        },
+        {
+          "grapheme": "au",
+          "words": []
+        },
+        {
+          "grapheme": "ough",
+          "words": [
+            "b[ough]t",
+            "f[ough]t",
+            "[ough]t",
+            "th[ough]t",
+            "s[ough]t"
+          ]
+        },
+        {
+          "grapheme": "aw",
+          "words": [
+            "[aw]l"
+          ]
+        }
+      ]
+    },
+    {
+      "keySound": "er",
+      "graphemes": [
+        "er",
+        "ir",
+        "ur"
+      ],
+      "cards": [
+        {
+          "grapheme": "er",
+          "words": []
+        },
+        {
+          "grapheme": "ir",
+          "words": []
+        },
+        {
+          "grapheme": "ur",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "ou",
+      "graphemes": [
+        "ou",
+        "ow"
+      ],
+      "cards": [
+        {
+          "grapheme": "ou",
+          "words": []
+        },
+        {
+          "grapheme": "ow",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "oy",
+      "graphemes": [
+        "oy",
+        "oi"
+      ],
+      "cards": [
+        {
+          "grapheme": "oy",
+          "words": []
+        },
+        {
+          "grapheme": "oi",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "s",
+      "graphemes": [
+        "ce",
+        "ci",
+        "cy",
+        "s"
+      ],
+      "cards": [
+        {
+          "grapheme": "ce",
+          "words": [
+            "spi[ce]",
+            "twi[ce]",
+            "voi[ce]",
+            "sli[ce]",
+            "senten[ce]",
+            "ra[ce]",
+            "pla[ce]",
+            "pri[ce]",
+            "prin[ce]",
+            "fen[ce]",
+            "fa[ce]",
+            "dan[ce]",
+            "surveillan[ce]"
+          ]
+        },
+        {
+          "grapheme": "ci",
+          "words": [
+            "medi[ci]ne",
+            "pen[ci]l",
+            "re[ci]pe",
+            "[ci]ty",
+            "de[ci]de",
+            "ex[ci]ted",
+            "[ci]der",
+            "[ci]rcle",
+            "[ci]rcus",
+            "ran[ci]d",
+            "[ci]rcumstance",
+            "pa[ci]fic"
+          ]
+        },
+        {
+          "grapheme": "cy",
+          "words": []
+        },
+        {
+          "grapheme": "s",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "j",
+      "graphemes": [
+        "ge",
+        "gi",
+        "j"
+      ],
+      "cards": [
+        {
+          "grapheme": "ge",
+          "words": [
+            "rid[ge]",
+            "ca[ge]",
+            "nud[ge]",
+            "[ge]nerate",
+            "pled[ge]",
+            "grud[ge]",
+            "lod[ge]",
+            "dod[ge]",
+            "wa[ge]",
+            "[ge]ntle",
+            "a[ge]nt",
+            "bud[ge]t",
+            "an[ge]l",
+            "dan[ge]r",
+            "emer[ge]ncy",
+            "[ge]rm",
+            "[ge]l",
+            "le[ge]nd",
+            "in[ge]st",
+            "[ge]m",
+            "ur[ge]nt",
+            "a[ge]",
+            "enga[ge]",
+            "hu[ge]",
+            "brid[ge]",
+            "fled[ge]",
+            "cartrid[ge]",
+            "knowled[ge]",
+            "bil[ge]",
+            "crin[ge]",
+            "plun[ge]",
+            "dislod[ge]",
+            "challen[ge]",
+            "frin[ge]",
+            "sled[ge]",
+            "oran[ge]",
+            "smud[ge]",
+            "sin[ge]",
+            "for[ge]",
+            "hin[ge]",
+            "dischar[ge]",
+            "emer[ge]",
+            "enlar[ge]",
+            "ur[ge]",
+            "gor[ge]",
+            "lar[ge]",
+            "bei[ge]"
+          ]
+        },
+        {
+          "grapheme": "gi",
+          "words": [
+            "a[gi]le",
+            "aller[gi]c",
+            "apolo[gi]se",
+            "di[gi]t",
+            "[gi]st",
+            "eli[gi]ble",
+            "[gi]raffe",
+            "en[gi]ne",
+            "en[gi]neer",
+            "fra[gi]le",
+            "[gi]nseng",
+            "fu[gi]tive",
+            "[gi]ant",
+            "mar[gi]n",
+            "[gi]gantic",
+            "ima[gi]nation",
+            "[gi]ngerly",
+            "le[gi]on",
+            "le[gi]slature",
+            "lo[gi]c",
+            "hy[gi]ene",
+            "ille[gi]ble",
+            "ori[gi]nal",
+            "pla[gi]arize",
+            "reli[gi]on",
+            "strate[gi]c",
+            "lon[gi]tude",
+            "vi[gi]lant",
+            "vi[gi]lante",
+            "sur[gi]cal",
+            "tra[gi]c",
+            "re[gi]on"
+          ]
+        },
+        {
+          "grapheme": "j",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "f",
+      "graphemes": [
+        "f",
+        "ph"
+      ],
+      "cards": [
+        {
+          "grapheme": "f",
+          "words": []
+        },
+        {
+          "grapheme": "ph",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "e",
+      "graphemes": [
+        "e",
+        "ea"
+      ],
+      "cards": [
+        {
+          "grapheme": "e",
+          "words": []
+        },
+        {
+          "grapheme": "ea",
+          "words": []
+        }
+      ]
+    },
+    {
+      "keySound": "shun",
+      "graphemes": [
+        "tion",
+        "sion"
+      ],
+      "cards": [
+        {
+          "grapheme": "tion",
+          "words": []
+        },
+        {
+          "grapheme": "sion",
+          "words": []
+        }
+      ]
+    }
+  ]
+}
