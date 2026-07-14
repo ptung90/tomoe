@@ -73,4 +73,16 @@ describe('deleteCard / schemaForCard', () => {
     const p = ops.packAllForSchema(proj('3card', 3), 's1');
     expect(ops.schemaForCard(p, p.cards[0])?.id).toBe('s1');
   });
+  it('schemaForCard resolves via a surviving record when the first packed record is deleted (no orphaned card)', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const card = p.cards[0];
+    expect(card.packedRecordIds).toEqual(['r0', 'r1', 'r2']);
+    // Delete the FIRST packed record — schemaForCard must fall back to a surviving one.
+    p = { ...p, records: p.records.filter((r) => r.id !== 'r0') };
+    expect(ops.schemaForCard(p, card)?.id).toBe('s1');
+    expect(ops.isCardStale(card, p)).toBe(true);
+    // Repacking must replace the orphaned card, not accumulate alongside it.
+    const repacked = ops.packAllForSchema(p, 's1');
+    expect(repacked.cards).toHaveLength(1);
+  });
 });

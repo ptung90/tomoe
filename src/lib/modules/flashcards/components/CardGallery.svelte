@@ -46,9 +46,9 @@
   }
   function packedCaption(card: Card): string {
     const n = card.packedRecordIds?.length ?? 0;
-    const first = card.sections?.[0]?.label;
-    const firstStr = first && typeof first === 'object' ? (first[$project.activeLocale] ?? '') : (typeof first === 'string' ? first : '');
-    return (firstStr.trim() || 'Card') + (n > 1 ? ` +${n - 1}` : '');
+    // Compound-card section labels come from recordsToCard as plain (already-resolved) strings.
+    const first = (card.sections?.[0]?.label as string) ?? '';
+    return (first.trim() || 'Card') + (n > 1 ? ` +${n - 1}` : '');
   }
   function autoHtml(chunk: RecordItem[], schema: Schema, template: CardTemplate): string {
     return buildCardHTML(recordsToCard(chunk, schema, template, $project.settings, $project.activeLocale),

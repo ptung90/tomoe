@@ -6,12 +6,14 @@ function templateFor(schema: Schema): CardTemplate {
   return schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
 }
 
-/** Resolve a packed card's schema via its first packed record (robust to template-id drift). */
+/** Resolve a packed card's schema via the first surviving packed record (robust to template-id
+ *  drift and to earlier packed records having since been deleted). */
 export function schemaForCard(project: Project, card: Card): Schema | null {
-  const firstId = card.packedRecordIds?.[0];
-  if (!firstId) return null;
-  const rec = project.records.find((r) => r.id === firstId);
-  return rec ? (project.schemas.find((s) => s.id === rec.schemaId) ?? null) : null;
+  for (const id of card.packedRecordIds ?? []) {
+    const rec = project.records.find((r) => r.id === id);
+    if (rec) return project.schemas.find((s) => s.id === rec.schemaId) ?? null;
+  }
+  return null;
 }
 
 export function packRecords(project: Project, schemaId: string, recordIds: string[]): Project {
