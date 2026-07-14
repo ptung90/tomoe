@@ -5,7 +5,10 @@
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Package from 'lucide-svelte/icons/package';
-  import { project, schemaEditorOpen, packAllForSchema, regenerateCard, deleteCard } from '../stores';
+  import Pencil from 'lucide-svelte/icons/pencil';
+  import Upload from 'lucide-svelte/icons/upload';
+  import { confirm } from '@tauri-apps/plugin-dialog';
+  import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
   import { deriveAutoTemplate, recordsToCard, cardsPerPage, chunkRecords } from '../cardMapping';
   import { isCardStale, schemaForCard } from '../cardOps';
   import { buildCardHTML, getPaperPx } from '../lib/card-render';
@@ -57,6 +60,12 @@
   function packedHtml(card: Card): string {
     return buildCardHTML(card, $project.settings, $project.activeLocale); // render the stored snapshot
   }
+  async function onApply(cardId: string) {
+    if (await confirm("Apply this card's content back to its records? This overwrites the record fields.",
+                      { title: 'Apply to records', kind: 'warning' })) {
+      applyCardToRecords(cardId);
+    }
+  }
 </script>
 
 {#if $project.schemas.length === 0}
@@ -90,6 +99,7 @@
             <!-- Persisted packed cards (snapshots) -->
             {#each g.packed as card (card.id)}
               {@const stale = isCardStale(card, $project)}
+              {@const edited = !!card.edited}
               <div class="thumb packed">
                 <button type="button" class="thumb-open" title={packedCaption(card)}
                   onclick={() => card.packedRecordIds?.[0] && onOpen(card.packedRecordIds[0])}>
@@ -100,8 +110,14 @@
                   </div>
                 </button>
                 <div class="thumb-meta">
-                  <span class="badge {stale ? 'stale' : 'synced'}">{stale ? 'Stale' : 'Synced'}</span>
-                  {#if stale}
+                  <span class="badge {edited ? 'edited' : stale ? 'stale' : 'synced'}">{edited ? 'Edited' : stale ? 'Stale' : 'Synced'}</span>
+                  <button type="button" class="icon-act" aria-label="edit card" title="Edit card"
+                    onclick={() => cardEditorOpen.set(card.id)}><Pencil size={13} /></button>
+                  {#if edited}
+                    <button type="button" class="icon-act" aria-label="apply to records" title="Apply to records"
+                      onclick={() => onApply(card.id)}><Upload size={13} /></button>
+                  {/if}
+                  {#if stale || edited}
                     <button type="button" class="icon-act" aria-label="regenerate" title="Regenerate from records"
                       onclick={() => regenerateCard(card.id)}><RefreshCw size={13} /></button>
                   {/if}
@@ -161,6 +177,7 @@
   .badge { font-size:11px; font-weight:600; border-radius:10px; padding:1px 8px; }
   .badge.synced { color:var(--accent); background:var(--accent-weak); }
   .badge.stale { color:#b45309; background:#fef3c7; }
+  .badge.edited { color:#1d4ed8; background:#dbeafe; }
   .icon-act { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
     color:var(--text-muted); border-radius:6px; padding:3px; cursor:pointer; transition:background .12s ease, color .12s ease; }
   .icon-act:hover { background:var(--accent-weak); color:var(--accent); }

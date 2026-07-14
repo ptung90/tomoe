@@ -4,6 +4,7 @@
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
   import SchemaEditorModal from './components/SchemaEditorModal.svelte';
+  import CardEditorModal from './components/CardEditorModal.svelte';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
 
@@ -55,6 +56,7 @@
     <div class="cards-body"><CardGallery onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
   {/if}
   <SchemaEditorModal />
+  <CardEditorModal />
 </div>
 
 <style>
