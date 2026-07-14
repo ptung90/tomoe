@@ -30,7 +30,7 @@
     template?.size || $project.settings.paperSize,
     template?.orientation || $project.settings.orientation,
   ));
-  const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 32) / paper.w)));
+  const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const cardHtml = $derived(
     record && schema && template
       ? buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
@@ -68,8 +68,10 @@
 
   {#if record && schema}
     <div class="preview-scroll">
-      <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
-        {@html cardHtml}
+      <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
+        <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
+          {@html cardHtml}
+        </div>
       </div>
     </div>
   {:else}
@@ -92,6 +94,29 @@
   .preview-toolbar select:focus-visible, .preview-toolbar button:focus-visible {
     outline:2px solid var(--accent); outline-offset:1px; }
   .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
-  .preview-scroll { flex:1; overflow:auto; padding:16px; }
-  .preview-scaler { transform-origin:top left; box-shadow:0 4px 16px rgba(0,0,0,.12); }
+
+  /* Canvas: a recessed stage so the white card reads as a sheet floating on it. */
+  .preview-scroll {
+    flex:1; min-height:0; overflow:auto;
+    padding:20px;
+    display:flex; justify-content:center; align-items:flex-start;
+    background:var(--sidebar);
+    box-shadow:inset 0 1px 0 var(--border);
+  }
+  /* Layout box = scaled size, so flex can center it; the scaler renders the full-size card into it. */
+  .preview-frame {
+    flex:none;
+    border-radius:2px;
+    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.14);
+  }
+  .preview-scaler { transform-origin:top left; }
+
+  /* Slim, unobtrusive scrollbars on the canvas. */
+  .preview-scroll::-webkit-scrollbar { width:10px; height:10px; }
+  .preview-scroll::-webkit-scrollbar-thumb {
+    background:var(--border); border-radius:6px;
+    border:2px solid var(--sidebar); background-clip:padding-box;
+  }
+  .preview-scroll::-webkit-scrollbar-thumb:hover { background:var(--text-muted); background-clip:padding-box; }
+  .preview-scroll::-webkit-scrollbar-track { background:transparent; }
 </style>
