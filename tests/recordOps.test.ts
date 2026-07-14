@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, type Project, type Schema } from '../src/lib/modules/flashcards/model';
+import type { SchemaField } from '../src/lib/modules/flashcards/model';
 import * as ops from '../src/lib/modules/flashcards/recordOps';
 
 function withSchema(): { p: Project; schema: Schema } {
@@ -56,6 +57,55 @@ describe('recordOps record CRUD', () => {
     const { p } = withSchema();
     const { project, id } = ops.addRecord(p, 's1');
     const p2 = ops.deleteRecord(project, id);
+    expect(p2.records).toHaveLength(0);
+  });
+});
+
+describe('recordOps schema ops', () => {
+  it('addSchema appends an empty schema and returns its id', () => {
+    const p = newProject();
+    const { project, id } = ops.addSchema(p, 'Phrases');
+    expect(project.schemas).toHaveLength(1);
+    expect(project.schemas[0]).toMatchObject({ id, name: 'Phrases', fields: [], cardTemplates: [] });
+  });
+
+  it('migrateRecordFields adds new fields empty and drops removed fields', () => {
+    const { p } = withSchema();
+    const added = ops.addRecord(p, 's1');
+    const filled = ops.setField(added.project, added.id, 'title', 'Owl', 'en');
+    // Remove 'note', add 'extra'
+    const newFields: SchemaField[] = [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f4', key: 'extra', label: 'Extra', type: 'text', multilingual: true },
+      { id: 'f3', key: 'pic', label: 'Pic', type: 'image' },
+    ];
+    const p2 = ops.updateSchema(filled, 's1', { fields: newFields });
+    const r = p2.records[0];
+    expect(r.fields.title).toEqual({ en: 'Owl', vi: '' }); // preserved
+    expect(r.fields.extra).toEqual({ en: '', vi: '' });     // new
+    expect('note' in r.fields).toBe(false);                 // dropped
+  });
+
+  it('migrateRecordFields converts a string into a multilingual object', () => {
+    const p = newProject();
+    p.schemas.push({ id: 's1', name: 'X', cardTemplates: [],
+      fields: [{ id: 'f1', key: 'title', label: 'T', type: 'text', multilingual: true }] });
+    p.records.push({ id: 'r1', schemaId: 's1', fieldsHash: '', fields: { title: 'hi' } });
+    const p2 = ops.migrateRecordFields(p);
+    expect(p2.records[0].fields.title).toEqual({ en: 'hi', vi: 'hi' });
+  });
+
+  it('updateSchema can rename', () => {
+    const { p } = withSchema();
+    const p2 = ops.updateSchema(p, 's1', { name: 'Renamed' });
+    expect(p2.schemas[0].name).toBe('Renamed');
+  });
+
+  it('deleteSchema removes the schema and its records', () => {
+    const { p } = withSchema();
+    const added = ops.addRecord(p, 's1');
+    const p2 = ops.deleteSchema(added.project, 's1');
+    expect(p2.schemas).toHaveLength(0);
     expect(p2.records).toHaveLength(0);
   });
 });
