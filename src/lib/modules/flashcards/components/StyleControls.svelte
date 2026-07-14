@@ -17,7 +17,7 @@
       </select>
     </label>
     <label>Color <input type="color" value={s.border.color}
-      onchange={(e) => setSettings({ border: { ...s.border, color: str(e) } })} /></label>
+      oninput={(e) => setSettings({ border: { ...s.border, color: str(e) } })} /></label>
     <label>Radius <input type="number" min="0" value={s.border.radius}
       onchange={(e) => setSettings({ border: { ...s.border, radius: num(e) } })} /></label>
   </fieldset>
@@ -27,7 +27,7 @@
     <label>Title font size <input type="number" min="1" value={s.titleFont.size}
       onchange={(e) => setSettings({ titleFont: { ...s.titleFont, size: num(e) } })} /></label>
     <label>Color <input type="color" value={s.titleFont.color}
-      onchange={(e) => setSettings({ titleFont: { ...s.titleFont, color: str(e) } })} /></label>
+      oninput={(e) => setSettings({ titleFont: { ...s.titleFont, color: str(e) } })} /></label>
   </fieldset>
 
   <fieldset>
@@ -35,7 +35,7 @@
     <label>Content font size <input type="number" min="1" value={s.contentFont.size}
       onchange={(e) => setSettings({ contentFont: { ...s.contentFont, size: num(e) } })} /></label>
     <label>Color <input type="color" value={s.contentFont.color}
-      onchange={(e) => setSettings({ contentFont: { ...s.contentFont, color: str(e) } })} /></label>
+      oninput={(e) => setSettings({ contentFont: { ...s.contentFont, color: str(e) } })} /></label>
   </fieldset>
 </div>
 
