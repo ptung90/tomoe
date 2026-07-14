@@ -15,7 +15,7 @@ export const filePath: Writable<string | null> = writable(null);
 export function initProject(): void {
   history.set(H.createHistory(newProject()));
   filePath.set(null); dirty.set(false);
-  selectedRecordId.set(null); activeSchemaId.set(null); schemaEditorOpen.set(null);
+  selectedRecordId.set(null); activeSchemaId.set(null); schemaEditorOpen.set(null); cardEditorOpen.set(null);
 }
 export function loadProject(p: Project, path: string | null): void {
   history.set(H.createHistory(p));
@@ -23,6 +23,7 @@ export function loadProject(p: Project, path: string | null): void {
   selectedRecordId.set(null);
   activeSchemaId.set(p.schemas[0]?.id ?? null);
   schemaEditorOpen.set(null);
+  cardEditorOpen.set(null);
 }
 export function commit(next: Project): void { history.update((h) => H.push(h, next)); dirty.set(true); }
 export function undo(): void { history.update((h) => H.undo(h)); dirty.set(true); }
@@ -34,6 +35,7 @@ export function setProjectName(name: string): void { commit({ ...get(project), p
 export const selectedRecordId = writable<string | null>(null);
 export const activeSchemaId = writable<string | null>(null);
 export const schemaEditorOpen = writable<string | '__new__' | null>(null);
+export const cardEditorOpen = writable<string | null>(null);
 
 export function selectRecord(id: string | null): void { selectedRecordId.set(id); }
 
@@ -103,4 +105,12 @@ export function regenerateCard(cardId: string): void {
 }
 export function deleteCard(cardId: string): void {
   commit(cardOps.deleteCard(get(project), cardId));
+}
+
+// ── Card edit actions ──────────────────────────────────────────────────────
+export function setCardCell(cardId: string, i: number, patch: { label?: string; content?: string; image?: string }): void {
+  commit(cardOps.setCardCell(get(project), cardId, i, patch));
+}
+export function applyCardToRecords(cardId: string): void {
+  commit(cardOps.applyCardToRecords(get(project), cardId));
 }
