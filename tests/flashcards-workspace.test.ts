@@ -46,4 +46,17 @@ describe('Flashcards Workspace', () => {
     await fireEvent.click(getByRole('button', { name: /records/i }));
     expect(screen.getByText('Title')).toBeInTheDocument();
   });
+  it('Print button calls window.print and is disabled with no cards', async () => {
+    const printSpy = vi.fn();
+    (window as unknown as { print: () => void }).print = printSpy;
+    const { getByRole, unmount } = render(Workspace);
+    const btn = getByRole('button', { name: /print/i });
+    await fireEvent.click(btn);
+    expect(printSpy).toHaveBeenCalled();
+    unmount();
+    // now empty → disabled
+    S.initProject();
+    const second = render(Workspace);
+    expect(second.getByRole('button', { name: /print/i })).toBeDisabled();
+  });
 });

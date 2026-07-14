@@ -7,10 +7,14 @@
   import CardEditorModal from './components/CardEditorModal.svelte';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
+  import PrintView from './components/PrintView.svelte';
+  import { collectPrintCards } from './lib/printCards';
+  import Printer from 'lucide-svelte/icons/printer';
 
   let leftWidth = $state(300);
   let rightWidth = $state(360);
   let view = $state<'records' | 'cards'>('records');
+  const printCount = $derived(collectPrintCards($project).length);
 </script>
 
 <div class="workspace">
@@ -31,6 +35,10 @@
       <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
         onclick={() => (view = 'cards')}>Cards</button>
     </div>
+    <button type="button" class="print-btn" disabled={printCount === 0}
+      onclick={() => window.print()} title="Print / Export PDF">
+      <Printer size={14} /> Print
+    </button>
   </header>
   {#if view === 'records'}
     <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr 6px ${rightWidth}px`}>
@@ -57,6 +65,7 @@
   {/if}
   <SchemaEditorModal />
   <CardEditorModal />
+  <PrintView />
 </div>
 
 <style>
@@ -74,6 +83,12 @@
   .view-toggle button:hover:not(.on) { color:var(--accent); }
   .view-toggle button.on { background:var(--accent); color:#fff; font-weight:600; }
   .view-toggle button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .print-btn { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
+    background:transparent; color:var(--text); border-radius:6px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer;
+    transition:background .12s ease, color .12s ease; }
+  .print-btn:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
+  .print-btn:disabled { opacity:.5; cursor:default; }
+  .print-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .cards-body { flex:1; min-height:0; }
   .body { flex:1; display:grid; min-height:0; }
   .left, .right, .preview-pane { min-height:0; min-width:0; }
