@@ -5,7 +5,7 @@
   import ClipboardPaste from 'lucide-svelte/icons/clipboard-paste';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import {
-    project, selectedRecordId, selectRecord, addRecord, addSchema,
+    project, selectedRecordId, selectRecord, addRecord,
     schemaEditorOpen, importRecords,
   } from '../stores';
   import { showToast } from '../../../shell';

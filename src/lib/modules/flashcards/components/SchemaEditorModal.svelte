@@ -135,7 +135,7 @@
     color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px; }
   .add:hover { background:var(--accent-weak); color:var(--accent); }
   .field-row { display:flex; align-items:center; gap:6px; }
-  .field-row input[type=text], .field-row input:not([type]), .field-row select { padding:5px 7px;
+  .field-row input:not([type]), .field-row select { padding:5px 7px;
     border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font:inherit; font-size:13px; }
   .field-row > input { flex:1; min-width:0; }
   .field-row > button { border:1px solid var(--border); background:transparent; color:var(--text-muted);

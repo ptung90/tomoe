@@ -26,9 +26,16 @@
 
   async function onDelete() {
     if (!record) return;
+    debounced.flushAll();
     if (await confirm('Delete this record?', { title: 'Delete record', kind: 'warning' })) {
       deleteRecord(record.id);
     }
+  }
+
+  function onDuplicate() {
+    if (!record) return;
+    debounced.flushAll();
+    duplicateRecord(record.id);
   }
 </script>
 
@@ -37,7 +44,7 @@
     <header class="detail-header">
       <span class="detail-title">Edit record</span>
       <div class="actions">
-        <button type="button" onclick={() => duplicateRecord(record.id)} title="Duplicate record">
+        <button type="button" onclick={onDuplicate} title="Duplicate record">
           <Copy size={15} /> Duplicate
         </button>
         <button type="button" class="danger" onclick={onDelete} title="Delete record">
@@ -46,16 +53,18 @@
       </div>
     </header>
     <div class="detail-body">
-      {#each schema.fields as f (f.id)}
-        <RecordField
-          field={f}
-          value={record.fields[f.key] ?? ''}
-          locales={$project.locales}
-          onChange={(val, locale) => onFieldChange(f.key, val, locale)} />
-      {/each}
-      {#if schema.fields.length === 0}
-        <p class="hint">This schema has no fields yet. Edit the schema to add some.</p>
-      {/if}
+      {#key record.id}
+        {#each schema.fields as f (f.id)}
+          <RecordField
+            field={f}
+            value={record.fields[f.key] ?? ''}
+            locales={$project.locales}
+            onChange={(val, locale) => onFieldChange(f.key, val, locale)} />
+        {/each}
+        {#if schema.fields.length === 0}
+          <p class="hint">This schema has no fields yet. Edit the schema to add some.</p>
+        {/if}
+      {/key}
     </div>
   </div>
 {:else}
