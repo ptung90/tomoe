@@ -24,10 +24,10 @@
       {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
     </span>
-    <div class="view-toggle" role="tablist" aria-label="view">
-      <button type="button" role="tab" aria-selected={view === 'records'} class:on={view === 'records'}
+    <div class="view-toggle" aria-label="view">
+      <button type="button" aria-pressed={view === 'records'} class:on={view === 'records'}
         onclick={() => (view = 'records')}>Records</button>
-      <button type="button" role="tab" aria-selected={view === 'cards'} class:on={view === 'cards'}
+      <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
         onclick={() => (view = 'cards')}>Cards</button>
     </div>
   </header>

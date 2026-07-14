@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { render, fireEvent } from '@testing-library/svelte';
 import CardGallery from '../src/lib/modules/flashcards/components/CardGallery.svelte';

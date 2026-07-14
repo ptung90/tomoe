@@ -40,10 +40,10 @@ describe('Flashcards Workspace', () => {
     const { getByRole, container } = render(Workspace);
     // default: Records view shows the detail form field
     expect(screen.getByText('Title')).toBeInTheDocument();
-    await fireEvent.click(getByRole('tab', { name: /cards/i }));
+    await fireEvent.click(getByRole('button', { name: /cards/i }));
     // Cards view shows gallery thumbnails
     expect(container.querySelector('.thumb')).toBeInTheDocument();
-    await fireEvent.click(getByRole('tab', { name: /records/i }));
+    await fireEvent.click(getByRole('button', { name: /records/i }));
     expect(screen.getByText('Title')).toBeInTheDocument();
   });
 });
