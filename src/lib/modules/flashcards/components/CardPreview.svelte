@@ -1,10 +1,23 @@
 <script lang="ts">
   import '../lib/card-render.css';
   import Palette from 'lucide-svelte/icons/palette';
+  import ImageIcon from 'lucide-svelte/icons/image';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
   import { deriveAutoTemplate, recordToCard } from '../cardMapping';
   import { buildCardHTML, LAYOUTS, getPaperPx } from '../lib/card-render';
   import StyleControls from './StyleControls.svelte';
+  import EmptyState from './EmptyState.svelte';
+
+  // Human-readable names for the layout dropdown (values stay the engine ids).
+  const LAYOUT_LABELS: Record<string, string> = {
+    fulltext: 'Text only',
+    fullimage: 'Image only',
+    '2x2': '2×2 grid',
+    '1top-1bot': 'Image top / text bottom',
+    '1top-2bot': '1 top / 2 bottom',
+    '2top-1bot': '2 top / 1 bottom',
+    '3card': '3 mini-cards',
+  };
 
   let paneW = $state(360);
   let showStyle = $state(false);
@@ -34,7 +47,7 @@
   <header class="preview-toolbar">
     <label>Layout
       <select value={template?.layout ?? 'fulltext'} onchange={onLayout} disabled={!schema}>
-        {#each LAYOUTS as l (l)}<option value={l}>{l}</option>{/each}
+        {#each LAYOUTS as l (l)}<option value={l}>{LAYOUT_LABELS[l] ?? l}</option>{/each}
       </select>
     </label>
     <label>Paper
@@ -60,7 +73,8 @@
       </div>
     </div>
   {:else}
-    <div class="empty"><p>No record selected. Pick one to preview its card.</p></div>
+    <EmptyState icon={ImageIcon} title="No card to preview"
+      hint="Select a record on the left to see its card here." />
   {/if}
 </div>
 
@@ -70,11 +84,14 @@
     background:var(--surface); border-bottom:1px solid var(--border); }
   .preview-toolbar label { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); }
   .preview-toolbar select, .preview-toolbar button { border:1px solid var(--border); border-radius:6px;
-    padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px; }
+    padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px;
+    transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .preview-toolbar button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
+  .preview-toolbar select:not(:disabled):hover { border-color:var(--accent); }
   .preview-toolbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .preview-toolbar select:focus-visible, .preview-toolbar button:focus-visible {
+    outline:2px solid var(--accent); outline-offset:1px; }
   .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
   .preview-scroll { flex:1; overflow:auto; padding:16px; }
   .preview-scaler { transform-origin:top left; box-shadow:0 4px 16px rgba(0,0,0,.12); }
-  .empty { flex:1; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center;
-    color:var(--text-muted); font-size:13px; }
 </style>

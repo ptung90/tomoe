@@ -21,7 +21,7 @@ describe('CardPreview', () => {
   it('shows an empty state when no record is selected', () => {
     S.selectRecord(null);
     render(CardPreview);
-    expect(screen.getByText(/no record selected/i)).toBeInTheDocument();
+    expect(screen.getByText(/no card to preview/i)).toBeInTheDocument();
   });
   it('offers the in-scope layouts in the layout selector', () => {
     render(CardPreview);
