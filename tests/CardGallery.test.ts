@@ -4,6 +4,8 @@ import { render, fireEvent } from '@testing-library/svelte';
 import CardGallery from '../src/lib/modules/flashcards/components/CardGallery.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 
+vi.mock('@tauri-apps/plugin-dialog', () => ({ confirm: vi.fn(async () => true) }));
+
 function seed(layout: string, n: number) {
   S.initProject();
   const sid = S.addSchema('Words');
@@ -75,5 +77,39 @@ describe('CardGallery — packed cards (compound)', () => {
     const { getByRole } = render(CardGallery, { onOpen: vi.fn() });
     await fireEvent.click(getByRole('button', { name: /delete/i }));
     expect(get(S.project).cards.length).toBe(0);
+  });
+});
+
+describe('CardGallery — edit + apply', () => {
+  function seed3card(n: number) {
+    S.initProject();
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.setTemplateLayout(sid, { layout: '3card' });
+    for (let i = 0; i < n; i++) S.addRecord(sid);
+    return sid;
+  }
+  it('Edit button opens the card editor', async () => {
+    const sid = seed3card(3);
+    S.packAllForSchema(sid);
+    const { getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    await fireEvent.click(getByRole('button', { name: /^edit/i }));
+    expect(get(S.cardEditorOpen)).toBe(get(S.project).cards[0].id);
+    S.cardEditorOpen.set(null);
+  });
+  it('Apply shows when edited and writes back to records + clears Edited', async () => {
+    const sid = seed3card(3);
+    S.packAllForSchema(sid);
+    const cardId = get(S.project).cards[0].id;
+    const r0 = get(S.project).cards[0].packedRecordIds![0];
+    S.setCardCell(cardId, 0, { label: 'Owl' });
+    const { container, getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    expect(container.querySelector('.badge.edited')).toBeInTheDocument();
+    await fireEvent.click(getByRole('button', { name: /apply/i }));
+    expect((get(S.project).records.find((r) => r.id === r0)!.fields.title as Record<string, string>).en).toBe('Owl');
+    expect(container.querySelector('.badge.edited')).not.toBeInTheDocument();
   });
 });

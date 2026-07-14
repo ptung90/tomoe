@@ -46,3 +46,37 @@ describe('card pack stores', () => {
     expect(get(S.project).cards.length).toBe(0);
   });
 });
+
+describe('card edit stores', () => {
+  function seed3cardImg() {
+    S.initProject();
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.setTemplateLayout(sid, { layout: '3card' });
+    S.addRecord(sid); S.addRecord(sid); S.addRecord(sid);
+    return sid;
+  }
+  it('setCardCell edits + marks edited (undoable); applyCardToRecords writes back', () => {
+    const sid = seed3cardImg();
+    S.packAllForSchema(sid);
+    const cardId = get(S.project).cards[0].id;
+    const r0 = get(S.project).cards[0].packedRecordIds![0];
+    S.setCardCell(cardId, 0, { label: 'Owl', content: 'a bird' });
+    expect(get(S.project).cards[0].edited).toBe(true);
+    S.applyCardToRecords(cardId);
+    const rec = get(S.project).records.find((r) => r.id === r0)!;
+    expect((rec.fields.title as Record<string, string>).en).toBe('Owl');
+    expect(get(S.project).cards[0].edited).toBe(false);
+    S.undo(); // undo the apply
+    expect(get(S.project).cards[0].edited).toBe(true);
+  });
+  it('cardEditorOpen toggles', () => {
+    S.cardEditorOpen.set('abc');
+    expect(get(S.cardEditorOpen)).toBe('abc');
+    S.cardEditorOpen.set(null);
+    expect(get(S.cardEditorOpen)).toBeNull();
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, type Project, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
+import { newProject, serializeProject, parseProject, type Project, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
 import * as ops from '../src/lib/modules/flashcards/cardOps';
 
 function proj(layout = '3card', n = 4): Project {
@@ -84,5 +84,74 @@ describe('deleteCard / schemaForCard', () => {
     // Repacking must replace the orphaned card, not accumulate alongside it.
     const repacked = ops.packAllForSchema(p, 's1');
     expect(repacked.cards).toHaveLength(1);
+  });
+});
+
+describe('setCardCell / applyCardToRecords', () => {
+  it('setCardCell edits a cell and marks the card edited', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 0, { label: 'NEWLABEL', content: 'NEWBODY', image: 'http://x/z.png' });
+    const c = p.cards[0];
+    expect(c.sections[0].label).toBe('NEWLABEL');
+    expect(c.sections[0].content).toBe('NEWBODY');
+    expect(c.images.find((im) => im.slot === 0)?.url).toBe('http://x/z.png');
+    expect(c.edited).toBe(true);
+  });
+  it('setCardCell with empty image removes that cell image', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 0, { image: 'http://x/z.png' });
+    p = ops.setCardCell(p, id, 0, { image: '' });
+    expect(p.cards[0].images.find((im) => im.slot === 0)).toBeUndefined();
+  });
+  it('applyCardToRecords writes label→1st text field, content→2nd, image→image field of the mapped record', () => {
+    // proj: fields title(text), def(text); add an image field so apply can write it
+    let p = proj('3card', 3);
+    p.schemas[0].fields.push({ id: 'f3', key: 'pic', label: 'Pic', type: 'image' });
+    p.records.forEach((r) => { r.fields.pic = ''; });
+    p = ops.packAllForSchema(p, 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 0, { label: 'Owl', content: 'a bird', image: 'http://x/o.png' });
+    p = ops.applyCardToRecords(p, id);
+    const r0 = p.records.find((r) => r.id === 'r0')!;
+    expect((r0.fields.title as Record<string, string>).en).toBe('Owl');   // 1st text field, active locale (en)
+    expect((r0.fields.def as Record<string, string>).en).toBe('a bird');  // 2nd text field
+    expect(r0.fields.pic).toBe('http://x/o.png');                          // image field (plain string)
+    expect(p.cards[0].edited).toBe(false);                                 // cleared
+    expect(ops.isCardStale(p.cards[0], p)).toBe(false);                    // restamped → synced
+  });
+  it('applyCardToRecords skips a cell whose source record was deleted', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 1, { label: 'X' });
+    p = { ...p, records: p.records.filter((r) => r.id !== 'r1') }; // delete the cell-1 record
+    expect(() => ops.applyCardToRecords(p, id)).not.toThrow();
+    expect(p.records.find((r) => r.id === 'r1')).toBeUndefined();
+  });
+  it('regenerateCard clears the edited flag', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 0, { label: 'X' });
+    expect(p.cards[0].edited).toBe(true);
+    p = ops.regenerateCard(p, id);
+    expect(p.cards[0].edited).toBeFalsy();
+  });
+});
+
+describe('serializeProject / parseProject round-trip', () => {
+  it('preserves a packed card\'s edited flag + edited section content', () => {
+    let p = ops.packAllForSchema(proj('3card', 3), 's1');
+    const id = p.cards[0].id;
+    p = ops.setCardCell(p, id, 0, { label: 'Owl', content: 'a bird' });
+    expect(p.cards[0].edited).toBe(true);
+
+    const roundTripped = parseProject(serializeProject(p));
+
+    const card = roundTripped.cards.find((c) => c.id === id)!;
+    expect(card.edited).toBe(true);
+    expect(card.sections[0].label).toBe('Owl');
+    expect(card.sections[0].content).toBe('a bird');
+    expect(card.packedRecordIds).toEqual(p.cards[0].packedRecordIds);
   });
 });
