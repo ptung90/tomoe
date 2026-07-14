@@ -21,4 +21,11 @@ describe('ImageField', () => {
     render(ImageField, { value: '', onChange: vi.fn() });
     expect(screen.queryByRole('button', { name: /clear/i })).not.toBeInTheDocument();
   });
+  it('escapes single quotes in the thumbnail url', () => {
+    const { container } = render(ImageField, { value: "http://x/o'brien.png", onChange: vi.fn() });
+    const style = container.querySelector('.thumb')!.getAttribute('style') ?? '';
+    expect(style).toMatch(/background-image:\s*url\(/);
+    expect(style).toContain('%27');
+    expect(style).not.toContain("o'brien");
+  });
 });

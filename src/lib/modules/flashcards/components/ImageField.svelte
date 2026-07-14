@@ -2,6 +2,12 @@
   let { value = '', onChange }: { value?: string; onChange: (url: string) => void } = $props();
   let fileInput: HTMLInputElement;
 
+  function cssUrl(v: string): string {
+    // percent-encode chars that would break url("...") — quotes, parens, backslash, whitespace.
+    // NB: encodeURIComponent leaves ' ( ) ! * ~ unescaped, so encode by char code instead.
+    return v.replace(/["'()\\\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
+  }
+
   function onFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -19,7 +25,7 @@
 
 <div class="imgfield">
   <div class="thumb" class:empty={!value}
-       style={value ? `background-image:url('${value}')` : ''}></div>
+       style={value ? `background-image:url("${cssUrl(value)}")` : ''}></div>
   <div class="body">
     <input class="url" type="text" placeholder="Image URL or data URL"
            value={value}
