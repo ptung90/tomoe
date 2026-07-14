@@ -1,7 +1,8 @@
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
 import * as H from '../../history';
-import { newProject, type Project, type SchemaField, type RecordItem } from './model';
+import { newProject, type Project, type SchemaField, type RecordItem, type Settings, type CardTemplate } from './model';
 import * as ops from './recordOps';
+import * as cardOps from './cardMapping';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -82,4 +83,12 @@ export function setActiveLocale(l: string): void { commit(ops.setActiveLocale(ge
 // ── Import ─────────────────────────────────────────────────────────────
 export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'overwrite' | 'append'): void {
   commit(ops.importRecords(get(project), schemaId, incoming, mode));
+}
+
+// ── Card/settings actions ───────────────────────────────────────────────
+export function setSettings(patch: Partial<Settings>): void {
+  commit(cardOps.applySettings(get(project), patch));
+}
+export function setTemplateLayout(schemaId: string, patch: Partial<CardTemplate>): void {
+  commit(cardOps.applyTemplatePatch(get(project), schemaId, patch));
 }
