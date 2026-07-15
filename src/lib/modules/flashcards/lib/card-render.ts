@@ -214,6 +214,20 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     );
   }
 
+  // title-img-text: title on TOP, then the image, then the text (vocab-card / old 3card cell order)
+  if (card.layout === 'title-img-text') {
+    return (
+      cardStyleTag +
+      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
+      '" style="' + sizeStyle + borderStyle + '">' +
+      (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '') +
+      '<div class="fc-image-area" style="height:' + imgH + 'px;position:relative;">' + slots + handles + '</div>' +
+      '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
+      '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' + sectionsHtml + '</div>' +
+      '</div></div>'
+    );
+  }
+
   // fulltext: text fills entire card, no image area
   if (card.layout === 'fulltext') {
     return (

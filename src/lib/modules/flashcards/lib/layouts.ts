@@ -9,6 +9,7 @@ export const LAYOUTS: LayoutDef[] = [
   { id: 'fulltext',    label: 'Text only',                slots: 0, split: { row: 0,   col: 50, inner: 50 }, hideTitle: true },
   { id: 'fullimage',   label: 'Image only',               slots: 1, split: { row: 100, col: 100, inner: 50 }, hideTitle: true },
   { id: '1full',       label: 'Image + text',             slots: 1, split: { row: 100, col: 100, inner: 50 } },
+  { id: 'title-img-text', label: 'Title / image / text',  slots: 1, split: { row: 50,  col: 50, inner: 50 } },
   { id: '1top-1bot',   label: 'Image top / text bottom',  slots: 2, split: { row: 50,  col: 50, inner: 50 } },
   { id: '2x2',         label: '2×2 grid',                 slots: 4, split: { row: 50,  col: 50, inner: 50 } },
   { id: '1top-2bot',   label: '1 top / 2 bottom',         slots: 3, split: { row: 50,  col: 50, inner: 50 } },

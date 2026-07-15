@@ -54,6 +54,22 @@ describe('buildCardHTML grid/fulltext/fullimage', () => {
     expect(html).toContain('fc-image-slot-0');
     expect(html).toContain('http://x/a.png');
   });
+  it('title-img-text renders title BEFORE the image area, then the content, with 1 image slot', () => {
+    const html = buildCardHTML(card({
+      layout: 'title-img-text', title: 'Owl',
+      images: [{ slot: 0, url: 'http://x/o.png' }],
+      sections: [{ id: 's1', label: '', content: 'a bird' }],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('fc-layout-title-img-text');
+    const titleIdx = html.indexOf('fc-title');
+    const imgIdx = html.indexOf('fc-image-area');
+    const secIdx = html.indexOf('fc-sections');
+    expect(titleIdx).toBeGreaterThan(-1);
+    expect(titleIdx).toBeLessThan(imgIdx);   // title above image
+    expect(imgIdx).toBeLessThan(secIdx);      // image above content
+    expect((html.match(/fc-image-slot-\d/g) || []).length).toBe(1);
+    expect(html).toContain('http://x/o.png');
+  });
   it('resolves the requested locale for title/sections', () => {
     const html = buildCardHTML(card({
       layout: 'fulltext',
