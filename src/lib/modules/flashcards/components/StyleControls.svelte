@@ -43,7 +43,7 @@
   // Cards/page (N-up tiling): Fixed grid (cardsPerPage) or Auto-fit (real-size cardSize).
   const orient = $derived(template?.orientation || s.orientation);
   const resolvedPerPage = $derived(template ? sheetLayout(template, s.paperSize, orient).perPage : 0);
-  const CARDS_PER_PAGE = [1, 2, 3, 4, 6, 8, 9];
+  const CARDS_PER_PAGE = [1, 2, 3, 4, 6, 8, 9, 12];
   const CARD_SIZES = ['A5', 'A6', 'A7', 'A8'];
   function onAutoFitMode(autoFit: boolean) {
     if (schema) setTemplateLayout(schema.id, { autoFit });
@@ -134,7 +134,7 @@
                 {#each CARD_SIZES as sz (sz)}<option value={sz}>{sz}</option>{/each}
               </select>
             </span>
-            <span class="hint">≈ {resolvedPerPage}/trang</span>
+            <span class="hint">≈ {resolvedPerPage}/page</span>
           {/if}
         </div>
       {/if}

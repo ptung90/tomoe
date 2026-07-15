@@ -25,8 +25,9 @@
   const lay = $derived(template ? sheetLayout(template, $project.settings.paperSize, orient) : null);
 
   const cardPaper = $derived(getPaperPx(template?.size || $project.settings.paperSize, orient));
-  const sheetPaper = $derived(getPaperPx($project.settings.paperSize, orient));
-  const paper = $derived(mode === 'sheet' && lay ? sheetPaper : cardPaper);
+  // Sheet-mode frame sizes from `lay` (single source of truth, consistent with the grid) —
+  // not a re-derived getPaperPx that could disagree with `lay` after an orientation flip.
+  const paper = $derived(mode === 'sheet' && lay ? { w: lay.sheetW, h: lay.sheetH } : cardPaper);
   const fitScale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const scale = $derived(userZoom ?? fitScale);
 

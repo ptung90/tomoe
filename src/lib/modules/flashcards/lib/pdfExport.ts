@@ -3,7 +3,7 @@ import { toCanvas } from 'html-to-image';
 import './card-render.css';
 import type { Project } from '../model';
 import { collectPrintSheets } from './printCards';
-import { buildSheetHTML, getPaperPx, PAPER_MM } from './card-render';
+import { buildSheetHTML, PAPER_MM } from './card-render';
 
 /** Slug + timestamp filename, e.g. "vong-tuan-hoan-20260715-1042.pdf". Vietnamese-safe. Pure. */
 export function pdfFileName(projectName: string, stamp: string): string {
@@ -32,7 +32,6 @@ export async function exportCardsPdf(project: Project): Promise<Uint8Array | nul
   if (!sheets.length) return null;
 
   const s = project.settings;
-  const portrait = PAPER_MM[s.paperSize] ?? PAPER_MM.A4;
   const scale = s.pdfScale || 2;
   const usePng = s.pdfImageFormat === 'png';
   const fmt: 'PNG' | 'JPEG' = usePng ? 'PNG' : 'JPEG';
@@ -46,11 +45,13 @@ export async function exportCardsPdf(project: Project): Promise<Uint8Array | nul
   let pdf: jsPDF | null = null;
   try {
     for (const sheet of sheets) {
-      const orient = (sheet.cards[0]?.orientation as string) || s.orientation;
-      const landscape = orient === 'landscape';
-      const px = getPaperPx(s.paperSize, orient);
-      const pageW = landscape ? portrait.h : portrait.w;
-      const pageH = landscape ? portrait.w : portrait.h;
+      // The sheet's own paper size/orientation, from `lay` (single source of truth —
+      // matches the grid buildSheetHTML actually renders, not a re-derivation from card data).
+      const paperMm = PAPER_MM[s.paperSize] ?? PAPER_MM.A4;
+      const landscape = sheet.lay.orient === 'landscape';
+      const pageW = landscape ? paperMm.h : paperMm.w;
+      const pageH = landscape ? paperMm.w : paperMm.h;
+      const px = { w: sheet.lay.sheetW, h: sheet.lay.sheetH };
 
       host.innerHTML = buildSheetHTML(sheet.cards, sheet.lay, s, project.activeLocale, true, px);
       const page = host.firstElementChild as HTMLElement;
@@ -61,8 +62,8 @@ export async function exportCardsPdf(project: Project): Promise<Uint8Array | nul
       const canvas = await toCanvas(page, { pixelRatio: scale, backgroundColor: '#ffffff', cacheBust: false });
       const data = canvas.toDataURL(mime, quality);
 
-      if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [portrait.w, portrait.h], orientation: landscape ? 'l' : 'p' });
-      else pdf.addPage([portrait.w, portrait.h], landscape ? 'l' : 'p');
+      if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [pageW, pageH], orientation: landscape ? 'l' : 'p' });
+      else pdf.addPage([pageW, pageH], landscape ? 'l' : 'p');
       pdf.addImage(data, fmt, 0, 0, pageW, pageH);
     }
     return pdf ? new Uint8Array(pdf.output('arraybuffer')) : null;

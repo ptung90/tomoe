@@ -1,18 +1,15 @@
 <script lang="ts">
   import '../lib/card-render.css';
   import { project } from '../stores';
-  import { collectPrintSheets, type Sheet } from '../lib/printCards';
-  import { buildSheetHTML, getPaperPx } from '../lib/card-render';
+  import { collectPrintSheets } from '../lib/printCards';
+  import { buildSheetHTML } from '../lib/card-render';
 
   const sheets = $derived(collectPrintSheets($project));
-  const paper = (sheet: Sheet) =>
-    getPaperPx($project.settings.paperSize, sheet.cards[0]?.orientation || $project.settings.orientation);
 </script>
 
 <div class="print-view" aria-hidden="true">
   {#each sheets as sheet, i (i)}
-    {@const p = paper(sheet)}
-    <div class="print-page" style={`width:${p.w}px;height:${p.h}px;`}>
+    <div class="print-page" style={`width:${sheet.lay.sheetW}px;height:${sheet.lay.sheetH}px;`}>
       {@html buildSheetHTML(sheet.cards, sheet.lay, $project.settings, $project.activeLocale, true)}
     </div>
   {/each}

@@ -258,7 +258,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
 }
 
 // ── N-up sheet tiling (fixed grid + auto-fit) ──────────────────────
-const SHEET_GRID: Record<number, [number, number]> = { 1:[1,1], 2:[1,2], 3:[1,3], 4:[2,2], 6:[2,3], 8:[2,4], 9:[3,3] };
+const SHEET_GRID: Record<number, [number, number]> = { 1:[1,1], 2:[1,2], 3:[1,3], 4:[2,2], 6:[2,3], 8:[2,4], 9:[3,3], 12:[3,4] };
 /** Columns×rows for a fixed N-per-sheet; landscape swaps. Pure. */
 export function sheetGrid(n: number, orientation: string): { cols: number; rows: number } {
   let [cols, rows] = SHEET_GRID[n] ?? [1, Math.max(1, n)];
@@ -270,21 +270,23 @@ export function sheetGrid(n: number, orientation: string): { cols: number; rows:
 export function sheetLayout(
   opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number },
   sheetSize: string, orientation: string,
-): { cols: number; rows: number; cellW: number; cellH: number; perPage: number; fillCell: boolean } {
+): { cols: number; rows: number; cellW: number; cellH: number; perPage: number; fillCell: boolean; sheetW: number; sheetH: number; orient: string } {
   const sheet = getPaperPx(sheetSize, orientation);
   if (opts.autoFit) {
     const card = getPaperPx(opts.cardSize || 'A7', orientation);
     const cols = Math.max(1, Math.floor(sheet.w / card.w));
     const rows = Math.max(1, Math.floor(sheet.h / card.h));
-    return { cols, rows, cellW: card.w, cellH: card.h, perPage: cols * rows, fillCell: false };
+    return { cols, rows, cellW: card.w, cellH: card.h, perPage: cols * rows, fillCell: false, sheetW: sheet.w, sheetH: sheet.h, orient: orientation };
   }
   const { cols, rows } = sheetGrid(Math.max(1, opts.cardsPerPage || 1), orientation);
-  return { cols, rows, cellW: Math.floor(sheet.w / cols), cellH: Math.floor(sheet.h / rows), perPage: cols * rows, fillCell: true };
+  return { cols, rows, cellW: Math.floor(sheet.w / cols), cellH: Math.floor(sheet.h / rows), perPage: cols * rows, fillCell: true, sheetW: sheet.w, sheetH: sheet.h, orient: orientation };
 }
-/** Tile cards into a sheet per a resolved `sheetLayout`. Each cell = buildCardHTML at cell px. */
-export function buildSheetHTML(cards: Card[], lay: { cols: number; rows: number; cellW: number; cellH: number; fillCell: boolean }, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
-  const orient = (cards[0]?.orientation as string) || settings.orientation;
-  const { w, h } = overridePx || getPaperPx(settings.paperSize, orient);
+/** Tile cards into a sheet per a resolved `sheetLayout`. Each cell = buildCardHTML at cell px.
+ *  `lay` is the single source of truth for the sheet's own px size (`sheetW`/`sheetH`) — the
+ *  container is never re-derived from `cards[0].orientation`, which can go stale vs. `lay`
+ *  after the user flips orientation without re-packing. */
+export function buildSheetHTML(cards: Card[], lay: { cols: number; rows: number; cellW: number; cellH: number; fillCell: boolean; sheetW: number; sheetH: number }, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
+  const { w, h } = overridePx ?? { w: lay.sheetW, h: lay.sheetH };
   const { cols, rows, cellW, cellH } = lay;
   const cells = Array.from({ length: cols * rows }, (_, i) => {
     const card = cards[i];
