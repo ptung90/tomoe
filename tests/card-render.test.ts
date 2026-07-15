@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getPaperPx, mmToPx, esc, resolveLocale } from '../src/lib/modules/flashcards/lib/card-render';
-import { buildCardHTML } from '../src/lib/modules/flashcards/lib/card-render';
+import { buildCardHTML, sheetGrid, sheetLayout, buildSheetHTML } from '../src/lib/modules/flashcards/lib/card-render';
 import { LAYOUT_SLOTS } from '../src/lib/modules/flashcards/lib/layouts';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
 
@@ -129,5 +129,88 @@ describe('buildCardHTML new 5 layouts', () => {
     expect(html).toContain('fc-image-area');
     expect(html).toContain('fc-image-slot-0');
     expect(html).not.toContain('fc-image-slot-1');
+  });
+});
+
+describe('sheetGrid', () => {
+  it('presets for common cardsPerPage values (portrait)', () => {
+    expect(sheetGrid(1, 'portrait')).toEqual({ cols: 1, rows: 1 });
+    expect(sheetGrid(2, 'portrait')).toEqual({ cols: 1, rows: 2 });
+    expect(sheetGrid(3, 'portrait')).toEqual({ cols: 1, rows: 3 });
+    expect(sheetGrid(4, 'portrait')).toEqual({ cols: 2, rows: 2 });
+    expect(sheetGrid(6, 'portrait')).toEqual({ cols: 2, rows: 3 });
+    expect(sheetGrid(8, 'portrait')).toEqual({ cols: 2, rows: 4 });
+    expect(sheetGrid(9, 'portrait')).toEqual({ cols: 3, rows: 3 });
+  });
+  it('landscape swaps cols/rows', () => {
+    expect(sheetGrid(6, 'landscape')).toEqual({ cols: 3, rows: 2 });
+    expect(sheetGrid(4, 'landscape')).toEqual({ cols: 2, rows: 2 });
+  });
+  it('unknown n falls back to a 1-col grid', () => {
+    expect(sheetGrid(1, 'landscape')).toEqual({ cols: 1, rows: 1 });
+    expect(sheetGrid(5, 'portrait')).toEqual({ cols: 1, rows: 5 });
+  });
+});
+
+describe('sheetLayout — fixed grid', () => {
+  it('cardsPerPage 6 on an A4 sheet → 2x3 grid, perPage 6, fillCell true, cells fill the sheet', () => {
+    const lay = sheetLayout({ cardsPerPage: 6 }, 'A4', 'portrait');
+    expect(lay.cols).toBe(2);
+    expect(lay.rows).toBe(3);
+    expect(lay.perPage).toBe(6);
+    expect(lay.fillCell).toBe(true);
+    const sheet = getPaperPx('A4', 'portrait');
+    expect(lay.cellW).toBe(Math.floor(sheet.w / 2));
+    expect(lay.cellH).toBe(Math.floor(sheet.h / 3));
+  });
+  it('defaults cardsPerPage to 1 when omitted', () => {
+    const lay = sheetLayout({}, 'A4', 'portrait');
+    expect(lay.perPage).toBe(1);
+    expect(lay.cols).toBe(1);
+    expect(lay.rows).toBe(1);
+  });
+});
+
+describe('sheetLayout — auto-fit', () => {
+  it('packs real-size A7 cards onto an A4 sheet (portrait), fillCell false', () => {
+    const lay = sheetLayout({ autoFit: true, cardSize: 'A7' }, 'A4', 'portrait');
+    expect(lay.perPage).toBe(lay.cols * lay.rows);
+    expect(lay.cols).toBeGreaterThanOrEqual(1);
+    expect(lay.rows).toBeGreaterThanOrEqual(1);
+    expect(lay.fillCell).toBe(false);
+    const cardPx = getPaperPx('A7', 'portrait');
+    expect(lay.cellW).toBe(cardPx.w);
+    expect(lay.cellH).toBe(cardPx.h);
+  });
+  it('defaults cardSize to A7 when omitted', () => {
+    const lay = sheetLayout({ autoFit: true }, 'A4', 'portrait');
+    const cardPx = getPaperPx('A7', 'portrait');
+    expect(lay.cellW).toBe(cardPx.w);
+    expect(lay.cellH).toBe(cardPx.h);
+  });
+});
+
+describe('buildSheetHTML', () => {
+  it('fixed grid: uses 1fr tracks sized to cols x rows, and reuses buildCardHTML per cell', () => {
+    const lay = sheetLayout({ cardsPerPage: 4 }, 'A4', 'portrait');
+    const cards: Card[] = [
+      card({ id: 'c1', title: 'One' }),
+      card({ id: 'c2', title: 'Two' }),
+    ];
+    const html = buildSheetHTML(cards, lay, DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('fc-sheet');
+    expect(html).toContain('grid-template-columns:repeat(2,1fr)');
+    expect(html).toContain('grid-template-rows:repeat(2,1fr)');
+    expect(html).toContain('One');
+    expect(html).toContain('Two');
+    expect(html.match(/fc-sheet-cell/g) || []).toHaveLength(4);
+  });
+  it('auto-fit: uses fixed-px tracks and justify/align-content:start', () => {
+    const lay = sheetLayout({ autoFit: true, cardSize: 'A7' }, 'A4', 'portrait');
+    const cards: Card[] = [card({ id: 'c1', title: 'One' })];
+    const html = buildSheetHTML(cards, lay, DEFAULT_SETTINGS, 'en');
+    expect(html).toContain(`grid-template-columns:repeat(${lay.cols},${lay.cellW}px)`);
+    expect(html).toContain(`grid-template-rows:repeat(${lay.rows},${lay.cellH}px)`);
+    expect(html).toContain('justify-content:start;align-content:start;');
   });
 });

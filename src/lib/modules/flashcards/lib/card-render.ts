@@ -7,7 +7,8 @@ export { LAYOUTS, LAYOUT_IDS, LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS, HIDE_TITLE_LA
 export type { LayoutDef } from './layouts';
 
 export const PAPER_MM: Record<string, { w: number; h: number }> = {
-  A4: { w: 210, h: 297 }, A5: { w: 148, h: 210 }, A6: { w: 105, h: 148 }, Letter: { w: 216, h: 279 },
+  A4: { w: 210, h: 297 }, A5: { w: 148, h: 210 }, A6: { w: 105, h: 148 },
+  A7: { w: 74, h: 105 }, A8: { w: 52, h: 74 }, Letter: { w: 216, h: 279 },
 };
 
 export function getPaperPx(paperSize: string, orientation: string): { w: number; h: number } {
@@ -254,4 +255,45 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     sectionsHtml +
     '</div></div></div>'
   );
+}
+
+// ── N-up sheet tiling (fixed grid + auto-fit) ──────────────────────
+const SHEET_GRID: Record<number, [number, number]> = { 1:[1,1], 2:[1,2], 3:[1,3], 4:[2,2], 6:[2,3], 8:[2,4], 9:[3,3] };
+/** Columns×rows for a fixed N-per-sheet; landscape swaps. Pure. */
+export function sheetGrid(n: number, orientation: string): { cols: number; rows: number } {
+  let [cols, rows] = SHEET_GRID[n] ?? [1, Math.max(1, n)];
+  if (orientation === 'landscape') [cols, rows] = [rows, cols];
+  return { cols, rows };
+}
+/** Resolve grid + cell px for a template's tiling on a sheet. Pure.
+ *  fixed grid → cells fill the sheet (fillCell=true); auto-fit → real-size cards packed floor(sheet/card). */
+export function sheetLayout(
+  opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number },
+  sheetSize: string, orientation: string,
+): { cols: number; rows: number; cellW: number; cellH: number; perPage: number; fillCell: boolean } {
+  const sheet = getPaperPx(sheetSize, orientation);
+  if (opts.autoFit) {
+    const card = getPaperPx(opts.cardSize || 'A7', orientation);
+    const cols = Math.max(1, Math.floor(sheet.w / card.w));
+    const rows = Math.max(1, Math.floor(sheet.h / card.h));
+    return { cols, rows, cellW: card.w, cellH: card.h, perPage: cols * rows, fillCell: false };
+  }
+  const { cols, rows } = sheetGrid(Math.max(1, opts.cardsPerPage || 1), orientation);
+  return { cols, rows, cellW: Math.floor(sheet.w / cols), cellH: Math.floor(sheet.h / rows), perPage: cols * rows, fillCell: true };
+}
+/** Tile cards into a sheet per a resolved `sheetLayout`. Each cell = buildCardHTML at cell px. */
+export function buildSheetHTML(cards: Card[], lay: { cols: number; rows: number; cellW: number; cellH: number; fillCell: boolean }, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
+  const orient = (cards[0]?.orientation as string) || settings.orientation;
+  const { w, h } = overridePx || getPaperPx(settings.paperSize, orient);
+  const { cols, rows, cellW, cellH } = lay;
+  const cells = Array.from({ length: cols * rows }, (_, i) => {
+    const card = cards[i];
+    const inner = card ? buildCardHTML(card, settings, locale, forPrint, { w: cellW, h: cellH }) : '';
+    return `<div class="fc-sheet-cell" style="width:${cellW}px;height:${cellH}px;overflow:hidden;">${inner}</div>`;
+  }).join('');
+  // fixed grid fills the sheet (1fr tracks); auto-fit uses real-size px tracks packed from the top-left.
+  const colTrack = lay.fillCell ? 'repeat(' + cols + ',1fr)' : 'repeat(' + cols + ',' + cellW + 'px)';
+  const rowTrack = lay.fillCell ? 'repeat(' + rows + ',1fr)' : 'repeat(' + rows + ',' + cellH + 'px)';
+  const justify = lay.fillCell ? '' : 'justify-content:start;align-content:start;';
+  return `<div class="fc-sheet" style="width:${w}px;height:${h}px;display:grid;grid-template-columns:${colTrack};grid-template-rows:${rowTrack};${justify}background:#fff;overflow:hidden;">${cells}</div>`;
 }
