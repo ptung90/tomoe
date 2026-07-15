@@ -24,10 +24,12 @@
   const orient = $derived(template?.orientation || $project.settings.orientation);
   const lay = $derived(template ? sheetLayout(template, $project.settings.paperSize, orient) : null);
 
-  const cardPaper = $derived(getPaperPx(template?.size || $project.settings.paperSize, orient));
-  // Sheet-mode frame sizes from `lay` (single source of truth, consistent with the grid) —
-  // not a re-derived getPaperPx that could disagree with `lay` after an orientation flip.
-  const paper = $derived(mode === 'sheet' && lay ? { w: lay.sheetW, h: lay.sheetH } : cardPaper);
+  // A single card is one CELL of the sheet — its real cut size (e.g. A4/3 for a 3-up sheet),
+  // NOT the full sheet. cellW/cellH come from `lay`; for cardsPerPage=1 the cell IS the full sheet.
+  const cellPx = $derived(lay ? { w: lay.cellW, h: lay.cellH } : getPaperPx(template?.size || $project.settings.paperSize, orient));
+  // Sheet-mode frame sizes from `lay` (single source of truth, consistent with the grid);
+  // card mode from the cell size, so what you see is the actual card you'll cut out.
+  const paper = $derived(mode === 'sheet' && lay ? { w: lay.sheetW, h: lay.sheetH } : cellPx);
   const fitScale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const scale = $derived(userZoom ?? fitScale);
 
@@ -67,7 +69,7 @@
   const cardHtml = $derived.by(() => {
     if (!record || !schema || !template) return '';
     return buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
-                         $project.settings, $project.activeLocale);
+                         $project.settings, $project.activeLocale, false, cellPx);
   });
 
   // Sheet mode: every record of the schema mapped to a card (packed-or-derived, same as
