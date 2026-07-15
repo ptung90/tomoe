@@ -60,7 +60,7 @@ export function recordToCard(
   };
 }
 
-export function applySettings(p: Project, patch: Partial<Settings>): Project {
+export function applySettings(p: Project, patch: Partial<Settings> | StyleOverrides): Project {
   const s = p.settings;
   return { ...p, settings: {
     ...s, ...patch,

@@ -133,7 +133,7 @@ export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'o
 }
 
 // ── Card/settings actions ───────────────────────────────────────────────
-export function setSettings(patch: Partial<Settings>): void {
+export function setSettings(patch: Partial<Settings> | StyleOverrides): void {
   commit(cardMapping.applySettings(get(project), patch));
 }
 export function setTemplateLayout(schemaId: string, patch: Partial<CardTemplate>): void {

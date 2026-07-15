@@ -13,12 +13,16 @@
   import ImageIcon from 'lucide-svelte/icons/image';
   import MoveVertical from 'lucide-svelte/icons/move-vertical';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
-  import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
+  import X from 'lucide-svelte/icons/x';
+  import {
+    project, selectedRecordId, setSettings, setTemplateLayout,
+    setTemplateStyle, setCardStyle, clearStyleOverride,
+  } from '../stores';
   import { deriveAutoTemplate } from '../cardMapping';
   import { sheetLayout } from '../lib/card-render';
-  import type { FontSpec } from '../model';
+  import { resolveStyle } from '../lib/style';
+  import type { FontSpec, StyleOverrides } from '../model';
 
-  const s = $derived($project.settings);
   const num = (e: Event) => Number((e.target as HTMLInputElement).value);
   const str = (e: Event) => (e.target as HTMLInputElement | HTMLSelectElement).value;
 
@@ -33,7 +37,30 @@
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((x) => x.id === record.schemaId) ?? null) : null);
   const template = $derived(schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null);
+  // The selected record's packed card (if it has been generated) — style overrides can only be written
+  // onto a real card, so "This card" scope is only available once one exists.
+  const card = $derived(record ? ($project.cards.find((c) => c.recordId === record.id) ?? null) : null);
   const imgHeightApplies = $derived(!!template && template.layout !== 'fulltext' && template.layout !== 'fullimage');
+
+  // ── Cascade scope: Global (settings) → This type (template.style) → This card (card.style) ──
+  let scope = $state<'global' | 'schema' | 'card'>('global');
+  const eff = $derived(resolveStyle($project.settings, template?.style, card?.style));
+  // The override object at the CURRENT scope — used to show "set here" vs "inherited" + drive reset.
+  const scopeStyle = $derived<StyleOverrides | undefined>(
+    scope === 'global' ? undefined : scope === 'schema' ? template?.style : card?.style,
+  );
+  function write(patch: StyleOverrides): void {
+    if (scope === 'global') setSettings(patch);
+    else if (scope === 'schema' && schema) setTemplateStyle(schema.id, patch);
+    else if (scope === 'card' && card) setCardStyle(card.id, patch);
+  }
+  function hasOverride(key: keyof StyleOverrides): boolean {
+    return scope !== 'global' && !!scopeStyle && scopeStyle[key] !== undefined;
+  }
+  function resetOverride(key: keyof StyleOverrides): void {
+    if (scope === 'schema' && schema) clearStyleOverride('schema', schema.id, key);
+    else if (scope === 'card' && card) clearStyleOverride('card', card.id, key);
+  }
   function onImageHeight(e: Event) {
     if (!schema) return;
     const v = Math.round(Number((e.target as HTMLInputElement).value)) || 50;
@@ -41,8 +68,8 @@
   }
 
   // Cards/page (N-up tiling): Fixed grid (cardsPerPage) or Auto-fit (real-size cardSize).
-  const orient = $derived(template?.style?.orientation ?? template?.orientation ?? s.orientation);
-  const resolvedPerPage = $derived(template ? sheetLayout(template, s.paperSize, orient).perPage : 0);
+  const orient = $derived(eff.orientation);
+  const resolvedPerPage = $derived(template ? sheetLayout(template, eff.paperSize, orient).perPage : 0);
   const CARDS_PER_PAGE = [1, 2, 3, 4, 6, 8, 9, 12];
   const CARD_SIZES = ['A5', 'A6', 'A7', 'A8'];
   function onAutoFitMode(autoFit: boolean) {
@@ -68,6 +95,14 @@
 </script>
 
 <div class="style-controls">
+  <div class="scope-switch" role="tablist" aria-label="Style scope">
+    <button type="button" role="tab" aria-selected={scope === 'global'} class:on={scope === 'global'}
+      onclick={() => (scope = 'global')}>Global</button>
+    <button type="button" role="tab" aria-selected={scope === 'schema'} class:on={scope === 'schema'}
+      disabled={!schema} onclick={() => (scope = 'schema')}>This type</button>
+    <button type="button" role="tab" aria-selected={scope === 'card'} class:on={scope === 'card'}
+      disabled={!card} onclick={() => (scope = 'card')}>This card</button>
+  </div>
   <div class="tabs" role="tablist" aria-label="Style sections">
     <button type="button" role="tab" aria-selected={tab === 'text'} class:on={tab === 'text'} onclick={() => (tab = 'text')}>Text</button>
     <button type="button" role="tab" aria-selected={tab === 'card'} class:on={tab === 'card'} onclick={() => (tab = 'card')}>Card</button>
@@ -81,9 +116,9 @@
     </div>
     <div class="panel" role="tabpanel">
       {#if textSub === 'title'}
-        {@render fontTools(s.titleFont, (p) => setSettings({ titleFont: { ...s.titleFont, ...p } }))}
+        {@render fontTools(eff.titleFont, 'titleFont', (p) => write({ titleFont: p }))}
       {:else}
-        {@render fontTools(s.contentFont, (p) => setSettings({ contentFont: { ...s.contentFont, ...p } }))}
+        {@render fontTools(eff.contentFont, 'contentFont', (p) => write({ contentFont: p }))}
       {/if}
     </div>
   {:else if tab === 'card'}
@@ -96,31 +131,36 @@
     <div class="panel" role="tabpanel">
       {#if cardSub === 'border'}
         <div class="toolbar">
-          <span class="tool" title="Border width"><Square size={14} /><input aria-label="Width" type="number" min="0" value={s.border.width}
-            onchange={(e) => setSettings({ border: { ...s.border, width: num(e) } })} /></span>
+          <span class="tool" title="Border width"><Square size={14} /><input aria-label="Width" type="number" min="0" value={eff.border.width}
+            onchange={(e) => write({ border: { width: num(e) } })} /></span>
           <span class="tool" title="Border style"><SquareDashed size={14} />
-            <select aria-label="Style" value={s.border.style} onchange={(e) => setSettings({ border: { ...s.border, style: str(e) } })}>
+            <select aria-label="Style" value={eff.border.style} onchange={(e) => write({ border: { style: str(e) } })}>
               {#each ['solid','dashed','dotted','double','none'] as st (st)}<option value={st}>{st}</option>{/each}
             </select>
           </span>
-          <span class="tool" title="Border color"><input aria-label="Border color" type="color" value={s.border.color}
-            oninput={(e) => setSettings({ border: { ...s.border, color: str(e) } })} /></span>
-          <span class="tool" title="Corner radius"><Spline size={14} /><input aria-label="Radius" type="number" min="0" value={s.border.radius}
-            onchange={(e) => setSettings({ border: { ...s.border, radius: num(e) } })} /></span>
+          <span class="tool" title="Border color"><input aria-label="Border color" type="color" value={eff.border.color}
+            oninput={(e) => write({ border: { color: str(e) } })} /></span>
+          <span class="tool" title="Corner radius"><Spline size={14} /><input aria-label="Radius" type="number" min="0" value={eff.border.radius}
+            onchange={(e) => write({ border: { radius: num(e) } })} /></span>
+          {@render resetBtn('border')}
         </div>
       {:else if cardSub === 'spacing'}
         <div class="toolbar">
-          <span class="tool" title="Card margin (mm)"><ScanLine size={14} /><input aria-label="Card margin (mm)" type="number" min="0" value={s.margin}
-            onchange={(e) => setSettings({ margin: num(e) })} /></span>
-          <span class="tool" title="Padding (mm)"><SquareDashed size={14} /><input aria-label="Padding (mm)" type="number" min="0" value={s.padding}
-            onchange={(e) => setSettings({ padding: num(e) })} /></span>
-          <span class="tool" title="Image padding (mm)"><ImageIcon size={14} /><input aria-label="Image padding (mm)" type="number" min="0" value={s.imgPadding}
-            onchange={(e) => setSettings({ imgPadding: num(e) })} /></span>
+          <span class="tool" title="Card margin (mm)"><ScanLine size={14} /><input aria-label="Card margin (mm)" type="number" min="0" value={eff.margin}
+            onchange={(e) => write({ margin: num(e) })} /></span>
+          {@render resetBtn('margin')}
+          <span class="tool" title="Padding (mm)"><SquareDashed size={14} /><input aria-label="Padding (mm)" type="number" min="0" value={eff.padding}
+            onchange={(e) => write({ padding: num(e) })} /></span>
+          {@render resetBtn('padding')}
+          <span class="tool" title="Image padding (mm)"><ImageIcon size={14} /><input aria-label="Image padding (mm)" type="number" min="0" value={eff.imgPadding}
+            onchange={(e) => write({ imgPadding: num(e) })} /></span>
+          {@render resetBtn('imgPadding')}
           <span class="tool" title="Vertical text align"><MoveVertical size={14} />
-            <select aria-label="Vertical text align" value={s.textVAlign} onchange={(e) => setSettings({ textVAlign: str(e) as 'top'|'middle'|'bottom' })}>
+            <select aria-label="Vertical text align" value={eff.textVAlign} onchange={(e) => write({ textVAlign: str(e) as 'top'|'middle'|'bottom' })}>
               {#each ['top','middle','bottom'] as v (v)}<option value={v}>{v}</option>{/each}
             </select>
           </span>
+          {@render resetBtn('textVAlign')}
         </div>
       {:else if cardSub === 'page'}
         <div class="toolbar">
@@ -164,21 +204,30 @@
             value={template?.imageHeightPercent ?? 50} onchange={onImageHeight} /></span>
         {/if}
         <span class="tool" title="Image fit"><ScanLine size={14} />
-          <select aria-label="Fit" value={s.image.backgroundSize} onchange={(e) => setSettings({ image: { ...s.image, backgroundSize: str(e) } })}>
+          <select aria-label="Fit" value={eff.image.backgroundSize} onchange={(e) => write({ image: { backgroundSize: str(e) } })}>
             {#each ['cover','contain','auto'] as v (v)}<option value={v}>{v}</option>{/each}
           </select>
         </span>
         <span class="tool" title="Image position"><MoveVertical size={14} />
-          <select aria-label="Position" value={s.image.backgroundPosition} onchange={(e) => setSettings({ image: { ...s.image, backgroundPosition: str(e) } })}>
+          <select aria-label="Position" value={eff.image.backgroundPosition} onchange={(e) => write({ image: { backgroundPosition: str(e) } })}>
             {#each ['center','top','bottom','left','right'] as v (v)}<option value={v}>{v}</option>{/each}
           </select>
         </span>
+        {@render resetBtn('image')}
       </div>
     </div>
   {/if}
 </div>
 
-{#snippet fontTools(f: FontSpec, patch: (p: Partial<FontSpec>) => void)}
+{#snippet resetBtn(key: keyof StyleOverrides)}
+  {#if hasOverride(key)}
+    <button type="button" class="reset" title="Reset to inherited" aria-label={`Reset ${key}`} onclick={() => resetOverride(key)}>
+      <X size={12} />
+    </button>
+  {/if}
+{/snippet}
+
+{#snippet fontTools(f: FontSpec, key: 'titleFont' | 'contentFont', patch: (p: Partial<FontSpec>) => void)}
   <div class="toolbar">
     <span class="tool" title="Font family"><Type size={14} />
       <select aria-label="Family" value={f.family} onchange={(e) => patch({ family: str(e) })}>
@@ -203,6 +252,7 @@
           onclick={() => patch({ textAlign: a })}><Icon size={14} /></button>
       {/each}
     </div>
+    {@render resetBtn(key)}
   </div>
 {/snippet}
 
@@ -245,4 +295,21 @@
   .seg button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
   .seg button.on { background:var(--accent); color:#fff; }
   .seg button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+
+  /* Scope switcher — Global / This type / This card. */
+  .scope-switch { display:flex; gap:4px; padding:6px 10px; flex:none; border-bottom:1px solid var(--border); }
+  .scope-switch button { flex:1; border:1px solid var(--border); background:var(--bg); color:var(--text-muted); font:inherit;
+    font-size:11px; font-weight:600; padding:4px 8px; border-radius:6px; cursor:pointer;
+    transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .scope-switch button:hover:not(.on):not(:disabled) { border-color:var(--accent); color:var(--accent); }
+  .scope-switch button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .scope-switch button:disabled { opacity:.4; cursor:not-allowed; }
+  .scope-switch button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
+  /* Reset-to-inherited — shown next to a group's controls once this scope has its own override. */
+  .reset { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; flex:none;
+    border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text-muted); cursor:pointer;
+    transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .reset:hover { border-color:var(--accent); color:var(--accent); }
+  .reset:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 </style>
