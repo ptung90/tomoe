@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { project, setProjectName, selectRecord } from './stores';
+  import { project, setProjectName, selectRecord, schemaLibraryOpen } from './stores';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
   import SchemaEditorModal from './components/SchemaEditorModal.svelte';
+  import SchemaLibraryModal from './components/SchemaLibraryModal.svelte';
   import CardEditorModal from './components/CardEditorModal.svelte';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
@@ -17,6 +18,7 @@
   import FileDown from 'lucide-svelte/icons/file-down';
   import PanelLeft from 'lucide-svelte/icons/panel-left';
   import PanelRight from 'lucide-svelte/icons/panel-right';
+  import Library from 'lucide-svelte/icons/library';
 
   let leftWidth = $state(250);
   let rightWidth = $state(540);
@@ -82,6 +84,9 @@
       <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
         onclick={() => (view = 'cards')}>Cards</button>
     </div>
+    <button type="button" class="print-btn" onclick={() => schemaLibraryOpen.set(true)} title="Schema library">
+      <Library size={14} /> Library
+    </button>
     <button type="button" class="print-btn" disabled={printCount === 0}
       onclick={() => window.print()} title="Print (system dialog)">
       <Printer size={14} /> Print
@@ -117,6 +122,7 @@
     <div class="cards-body"><CardGallery onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
   {/if}
   <SchemaEditorModal />
+  <SchemaLibraryModal />
   <CardEditorModal />
   <PrintView />
 </div>

@@ -136,6 +136,7 @@ export const activeSchemaId = writable<string | null>(null);
 export const schemaEditorOpen = writable<string | '__new__' | null>(null);
 export const cardEditorOpen = writable<string | null>(null);
 export const activeViewId: Writable<string | null> = writable(null);
+export const schemaLibraryOpen: Writable<boolean> = writable(false);
 
 export function selectView(id: string | null): void { activeViewId.set(id); }
 
