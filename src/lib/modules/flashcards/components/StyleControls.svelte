@@ -318,7 +318,7 @@
 {/snippet}
 
 <style>
-  .style-controls { display:flex; flex-direction:column; height:186px;
+  .style-controls { display:flex; flex-direction:column; height:252px;
     background:var(--surface); border-bottom:1px solid var(--border); }
   .tabs { display:flex; gap:2px; padding:6px 8px 0; border-bottom:1px solid var(--border); flex:none;
     flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
