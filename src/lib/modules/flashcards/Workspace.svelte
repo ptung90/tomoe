@@ -17,7 +17,7 @@
   const printCount = $derived(collectPrintCards($project).length);
 </script>
 
-<div class="workspace">
+<div class="workspace mod-flashcards">
   <header class="header">
     <input
       class="project-name"

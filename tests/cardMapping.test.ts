@@ -131,4 +131,11 @@ describe('recordsToCard', () => {
     expect(card.sections[1]).toMatchObject({ label: '', content: '' });
     expect(card.packedRecordIds).toEqual(['r1']);
   });
+  it('honors template.imageHeightPercent (defaults to 50) for single and compound', () => {
+    const s = schema3();
+    const r = rec('r1', 'Owl', 'a bird', 'http://x/o.png');
+    expect(recordsToCard([r], s, tpl('1top-1bot'), DEFAULT_SETTINGS, 'en').imageHeightPercent).toBe(50);
+    expect(recordsToCard([r], s, { ...tpl('1top-1bot'), imageHeightPercent: 30 }, DEFAULT_SETTINGS, 'en').imageHeightPercent).toBe(30);
+    expect(recordsToCard([r], s, { ...tpl('3card'), imageHeightPercent: 70 }, DEFAULT_SETTINGS, 'en').imageHeightPercent).toBe(70);
+  });
 });
