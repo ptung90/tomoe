@@ -136,4 +136,28 @@ describe('insertSchema (pure)', () => {
     insertSchema(p, entry());
     expect(p).toEqual(before);
   });
+
+  it('preserves each view\'s layout/fields/gridCols/gridRows/style — only ids differ', () => {
+    const p = newProject();
+    const e = entry({
+      schema: {
+        name: 'Words',
+        fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }],
+        cardTemplates: [{
+          id: 'tpl_src', templateType: 'single', layout: '1top-1bot', size: null,
+          fields: ['w'], gridCols: 3, gridRows: 2,
+          style: { border: { width: 7, style: 'dashed', color: '#123456', radius: 4 } },
+          mapping: { titleSlot: 'w' },
+        }],
+      },
+    });
+    const next = insertSchema(p, e);
+    const view = next.schemas[0].cardTemplates[0];
+    expect(view.id).not.toBe('tpl_src');
+    expect(view.layout).toBe('1top-1bot');
+    expect(view.fields).toEqual(['w']);
+    expect(view.gridCols).toBe(3);
+    expect(view.gridRows).toBe(2);
+    expect(view.style).toEqual({ border: { width: 7, style: 'dashed', color: '#123456', radius: 4 } });
+  });
 });

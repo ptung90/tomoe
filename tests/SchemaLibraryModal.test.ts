@@ -140,4 +140,14 @@ describe('SchemaLibraryModal', () => {
     expect(get(S.schemaLibrary)).toHaveLength(0);
     expect(showToast).toHaveBeenCalledWith('Not a valid Tomoe schema file', 'error');
   });
+
+  it('Import from file shows an error toast (no throw) when the file cannot be read', async () => {
+    openDialog.mockResolvedValue('/in/gone.schema.json');
+    readTextFile.mockRejectedValue(new Error('file not found'));
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /import from file/i }));
+    expect(get(S.schemaLibrary)).toHaveLength(0);
+    expect(showToast).toHaveBeenCalledWith('Could not import: file not found', 'error');
+  });
 });

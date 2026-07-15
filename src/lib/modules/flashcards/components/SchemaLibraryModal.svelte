@@ -33,12 +33,16 @@
   }
 
   async function onImport() {
-    const path = await openDialog({ multiple: false, filters: [{ name: 'Tomoe Schema', extensions: ['schema.json'] }] });
-    if (typeof path !== 'string') return;
-    const text = await readTextFile(path);
-    const res = importSchemaFileText(text);
-    if (res.ok) showToast(`Added '${res.name}' to the schema library`);
-    else showToast(res.error ?? 'Not a valid Tomoe schema file', 'error');
+    try {
+      const path = await openDialog({ multiple: false, filters: [{ name: 'Tomoe Schema', extensions: ['schema.json'] }] });
+      if (typeof path !== 'string') return;
+      const text = await readTextFile(path);
+      const res = importSchemaFileText(text);
+      if (res.ok) showToast(`Added '${res.name}' to the schema library`);
+      else showToast(res.error ?? 'Not a valid Tomoe schema file', 'error');
+    } catch (e) {
+      showToast(`Could not import: ${(e as Error).message}`, 'error');
+    }
   }
 
   function onInsert(entry: SchemaLibraryEntry) {
