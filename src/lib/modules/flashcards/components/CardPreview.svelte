@@ -3,15 +3,17 @@
   import Palette from 'lucide-svelte/icons/palette';
   import ImageIcon from 'lucide-svelte/icons/image';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
-  import { deriveAutoTemplate, recordToCard } from '../cardMapping';
-  import { buildCardHTML, getPaperPx } from '../lib/card-render';
+  import { deriveAutoTemplate, recordToCard, chunkRecords } from '../cardMapping';
+  import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
   import { LAYOUTS } from '../lib/layouts';
   import { zoomStep } from '../lib/zoom';
   import StyleControls from './StyleControls.svelte';
   import EmptyState from './EmptyState.svelte';
+  import type { Card } from '../model';
 
   let paneW = $state(440);
   let showStyle = $state(false);
+  let mode = $state<'card' | 'sheet'>('card');
   // null = auto-fit; a number = explicit user zoom (Ctrl/⌘ + wheel). Double-click resets.
   let userZoom = $state<number | null>(null);
   let dragging = $state(false);
@@ -19,11 +21,12 @@
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
   const template = $derived(schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null);
+  const orient = $derived(template?.orientation || $project.settings.orientation);
+  const lay = $derived(template ? sheetLayout(template, $project.settings.paperSize, orient) : null);
 
-  const paper = $derived(getPaperPx(
-    template?.size || $project.settings.paperSize,
-    template?.orientation || $project.settings.orientation,
-  ));
+  const cardPaper = $derived(getPaperPx(template?.size || $project.settings.paperSize, orient));
+  const sheetPaper = $derived(getPaperPx($project.settings.paperSize, orient));
+  const paper = $derived(mode === 'sheet' && lay ? sheetPaper : cardPaper);
   const fitScale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const scale = $derived(userZoom ?? fitScale);
 
@@ -66,6 +69,27 @@
                          $project.settings, $project.activeLocale);
   });
 
+  // Sheet mode: every record of the schema mapped to a card (packed-or-derived, same as
+  // collectPrintSheets), chunked by the resolved per-page count; show the chunk that
+  // contains the currently selected record.
+  const schemaCards = $derived.by(() => {
+    if (!schema || !template) return [] as Card[];
+    return $project.records
+      .filter((r) => r.schemaId === schema.id)
+      .map((r) => $project.cards.find((c) => c.recordId === r.id) ??
+        recordToCard(r, schema, template, $project.settings, $project.activeLocale));
+  });
+  const sheetChunk = $derived.by(() => {
+    if (!lay || !record) return [] as Card[];
+    const chunks = chunkRecords(schemaCards, lay.perPage);
+    return chunks.find((chunk) => chunk.some((c) => c.recordId === record.id)) ?? chunks[0] ?? [];
+  });
+  const sheetHtml = $derived.by(() => {
+    if (!lay) return '';
+    return buildSheetHTML(sheetChunk, lay, $project.settings, $project.activeLocale);
+  });
+  const displayHtml = $derived(mode === 'sheet' ? sheetHtml : cardHtml);
+
   function onLayout(e: Event) {
     if (schema) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value });
   }
@@ -87,6 +111,10 @@
       onclick={() => setSettings({ orientation: $project.settings.orientation === 'portrait' ? 'landscape' : 'portrait' })}>
       {$project.settings.orientation === 'landscape' ? 'Landscape' : 'Portrait'}
     </button>
+    <div class="seg mode-toggle" role="tablist" aria-label="Preview mode">
+      <button type="button" role="tab" aria-selected={mode === 'card'} class:on={mode === 'card'} onclick={() => (mode = 'card')}>Card</button>
+      <button type="button" role="tab" aria-selected={mode === 'sheet'} class:on={mode === 'sheet'} onclick={() => (mode = 'sheet')}>Sheet</button>
+    </div>
     <button type="button" class="style-toggle" class:on={showStyle} aria-label="style" onclick={() => (showStyle = !showStyle)}>
       <Palette size={15} />
     </button>
@@ -99,7 +127,7 @@
       title="Ctrl/⌘ + scroll to zoom · drag to pan · double-click to fit">
       <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
         <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
-          {@html cardHtml}
+          {@html displayHtml}
         </div>
       </div>
     </div>
@@ -123,6 +151,14 @@
   .preview-toolbar select:focus-visible, .preview-toolbar button:focus-visible {
     outline:2px solid var(--accent); outline-offset:1px; }
   .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
+
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+  .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 10px; cursor:pointer;
+    font:inherit; font-size:12px; transition:background .12s ease, color .12s ease; }
+  .seg button:not(:last-child) { border-right:1px solid var(--border); }
+  .seg button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
+  .seg button.on { background:var(--accent); color:#fff; }
+  .seg button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 
   /* Canvas: a recessed stage so the white card reads as a sheet floating on it. */
   .preview-scroll {

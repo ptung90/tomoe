@@ -2,8 +2,8 @@ import { jsPDF } from 'jspdf';
 import { toCanvas } from 'html-to-image';
 import './card-render.css';
 import type { Project } from '../model';
-import { collectPrintCards } from './printCards';
-import { buildCardHTML, getPaperPx, PAPER_MM } from './card-render';
+import { collectPrintSheets } from './printCards';
+import { buildSheetHTML, getPaperPx, PAPER_MM } from './card-render';
 
 /** Slug + timestamp filename, e.g. "vong-tuan-hoan-20260715-1042.pdf". Vietnamese-safe. Pure. */
 export function pdfFileName(projectName: string, stamp: string): string {
@@ -22,14 +22,14 @@ export function pdfStamp(d: Date): string {
 }
 
 /**
- * Render every gallery card to a bitmap (html-to-image, WYSIWYG with the preview) and
- * pack one card per page into a PDF at real paper size. Returns the PDF bytes, or null
- * if there are no cards. Browser/webview only (uses DOM + canvas). Throws on a tainted
- * canvas (a non-CORS remote image) — the caller surfaces that.
+ * Render every printed sheet (N-up tiled, html-to-image, WYSIWYG with the preview) and
+ * pack one sheet per PDF page at the sheet's real paper size. Returns the PDF bytes, or
+ * null if there are no sheets. Browser/webview only (uses DOM + canvas). Throws on a
+ * tainted canvas (a non-CORS remote image) — the caller surfaces that.
  */
 export async function exportCardsPdf(project: Project): Promise<Uint8Array | null> {
-  const cards = collectPrintCards(project);
-  if (!cards.length) return null;
+  const sheets = collectPrintSheets(project);
+  if (!sheets.length) return null;
 
   const s = project.settings;
   const portrait = PAPER_MM[s.paperSize] ?? PAPER_MM.A4;
@@ -45,17 +45,14 @@ export async function exportCardsPdf(project: Project): Promise<Uint8Array | nul
 
   let pdf: jsPDF | null = null;
   try {
-    for (const card of cards) {
-      const orient = (card.orientation as string) || s.orientation;
+    for (const sheet of sheets) {
+      const orient = (sheet.cards[0]?.orientation as string) || s.orientation;
       const landscape = orient === 'landscape';
       const px = getPaperPx(s.paperSize, orient);
       const pageW = landscape ? portrait.h : portrait.w;
       const pageH = landscape ? portrait.w : portrait.h;
 
-      host.innerHTML =
-        `<div style="width:${px.w}px;height:${px.h}px;background:#fff;overflow:hidden;">` +
-        buildCardHTML(card, s, project.activeLocale, true, px) +
-        `</div>`;
+      host.innerHTML = buildSheetHTML(sheet.cards, sheet.lay, s, project.activeLocale, true, px);
       const page = host.firstElementChild as HTMLElement;
 
       await document.fonts?.ready;

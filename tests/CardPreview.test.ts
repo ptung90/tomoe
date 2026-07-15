@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent, within } from '@testing-library/svelte';
 import CardPreview from '../src/lib/modules/flashcards/components/CardPreview.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 import { get } from 'svelte/store';
@@ -27,5 +27,43 @@ describe('CardPreview', () => {
     render(CardPreview);
     const sel = screen.getByLabelText(/layout/i) as HTMLSelectElement;
     expect(sel.querySelectorAll('option').length).toBe(11);
+  });
+
+  it('Sheet toggle renders a .fc-sheet', async () => {
+    const { container } = render(CardPreview);
+    await fireEvent.click(screen.getByRole('tab', { name: 'Sheet' }));
+    expect(container.querySelector('.fc-sheet')).toBeInTheDocument();
+    expect(container.querySelector('.fc-sheet-cell')).toBeInTheDocument();
+  });
+
+  it('Card mode (default) shows the single card, not a sheet', () => {
+    const { container } = render(CardPreview);
+    expect(container.querySelector('.fc-card')).toBeInTheDocument();
+    expect(container.querySelector('.fc-sheet')).not.toBeInTheDocument();
+  });
+
+  it('Fixed: changing Cards/page commits cardsPerPage via setTemplateLayout', async () => {
+    const sid = get(S.project).schemas[0].id;
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'style' }));
+    await fireEvent.click(within(screen.getByRole('tablist', { name: 'Style sections' })).getByRole('tab', { name: 'Card' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Page' }));
+    await fireEvent.change(screen.getByLabelText('Cards per page'), { target: { value: '6' } });
+    const tpl = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates[0];
+    expect(tpl.cardsPerPage).toBe(6);
+    expect(tpl.autoFit).toBeFalsy();
+  });
+
+  it('Auto-fit: switching mode + choosing a card size commits autoFit + cardSize', async () => {
+    const sid = get(S.project).schemas[0].id;
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'style' }));
+    await fireEvent.click(within(screen.getByRole('tablist', { name: 'Style sections' })).getByRole('tab', { name: 'Card' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Page' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Auto-fit' }));
+    await fireEvent.change(screen.getByLabelText('Card size'), { target: { value: 'A7' } });
+    const tpl = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates[0];
+    expect(tpl.autoFit).toBe(true);
+    expect(tpl.cardSize).toBe('A7');
   });
 });
