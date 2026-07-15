@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import CardPreview from '../src/lib/modules/flashcards/components/CardPreview.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 import { get } from 'svelte/store';
@@ -48,5 +48,23 @@ describe('CardPreview', () => {
     expect(text).toContain('Cat');
     expect(text).toContain('Dog'); // a neighbour in the same page — proves the chunk renders
     expect(text).toContain('Cow');
+  });
+  it('image layout shows an Image % control that sets template.imageHeightPercent', async () => {
+    S.initProject();
+    const sid = S.addSchema('Cards');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+    ] });
+    S.addRecord(sid); // selects it; auto layout is 1top-1bot (has an image field)
+    render(CardPreview);
+    const input = screen.getByLabelText(/image %/i) as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    await fireEvent.change(input, { target: { value: '30' } });
+    expect(get(S.project).schemas[0].cardTemplates[0].imageHeightPercent).toBe(30);
+  });
+  it('text-only layout hides the Image % control', () => {
+    render(CardPreview); // beforeEach schema is text-only → fulltext
+    expect(screen.queryByLabelText(/image %/i)).not.toBeInTheDocument();
   });
 });

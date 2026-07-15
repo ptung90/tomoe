@@ -24,6 +24,7 @@
   let showStyle = $state(false);
   // null = auto-fit; a number = explicit user zoom (Ctrl/⌘ + wheel). Double-click resets.
   let userZoom = $state<number | null>(null);
+  let dragging = $state(false);
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
@@ -35,19 +36,42 @@
   ));
   const fitScale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const scale = $derived(userZoom ?? fitScale);
+  // Image-size (image-area height %) only applies to layouts that share space
+  // between an image area and text (not text-only or image-only).
+  const showImageSize = $derived(!!template && template.layout !== 'fulltext' && template.layout !== 'fullimage');
 
-  // Ctrl/⌘ + wheel zooms the canvas; a non-passive listener lets us preventDefault
-  // (so the webview doesn't page-zoom). Double-click resets to auto-fit.
-  function wheelZoom(node: HTMLElement) {
+  // Ctrl/⌘ + wheel zooms the canvas (non-passive so we can preventDefault the
+  // webview's page-zoom); drag pans the scroll when zoomed in; double-click refits.
+  function zoomPan(node: HTMLElement) {
+    let sx = 0, sy = 0, sl = 0, st = 0;
     const onWheel = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
       userZoom = zoomStep(scale, e.deltaY);
     };
-    const onDblClick = () => { userZoom = null; }; // reset to auto-fit
+    const onDblClick = () => { userZoom = null; };
+    const onDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      if (node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight) return; // nothing to pan
+      dragging = true; sx = e.clientX; sy = e.clientY; sl = node.scrollLeft; st = node.scrollTop;
+      e.preventDefault();
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      node.scrollLeft = sl - (e.clientX - sx);
+      node.scrollTop = st - (e.clientY - sy);
+    };
+    const onUp = () => { dragging = false; };
     node.addEventListener('wheel', onWheel, { passive: false });
     node.addEventListener('dblclick', onDblClick);
-    return { destroy() { node.removeEventListener('wheel', onWheel); node.removeEventListener('dblclick', onDblClick); } };
+    node.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return { destroy() {
+      node.removeEventListener('wheel', onWheel); node.removeEventListener('dblclick', onDblClick);
+      node.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+    } };
   }
   const cardHtml = $derived.by(() => {
     if (!record || !schema || !template) return '';
@@ -61,6 +85,11 @@
   function onLayout(e: Event) {
     if (schema) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value });
   }
+  function onImageHeight(e: Event) {
+    if (!schema) return;
+    const v = Math.round(Number((e.target as HTMLInputElement).value)) || 50;
+    setTemplateLayout(schema.id, { imageHeightPercent: Math.min(95, Math.max(5, v)) });
+  }
 </script>
 
 <div class="preview" bind:clientWidth={paneW}>
@@ -70,6 +99,11 @@
         {#each LAYOUTS as l (l)}<option value={l}>{LAYOUT_LABELS[l] ?? l}</option>{/each}
       </select>
     </label>
+    {#if showImageSize}
+      <label title="Height of the image area, as a % of the card">Image %
+        <input type="number" min="5" max="95" value={template?.imageHeightPercent ?? 50} onchange={onImageHeight} disabled={!schema} />
+      </label>
+    {/if}
     <label>Paper
       <select value={$project.settings.paperSize} onchange={(e) => setSettings({ paperSize: (e.target as HTMLSelectElement).value as any })}>
         {#each ['A4','A5','A6','Letter'] as p (p)}<option value={p}>{p}</option>{/each}
@@ -87,8 +121,8 @@
   {#if showStyle}<StyleControls />{/if}
 
   {#if record && schema}
-    <div class="preview-scroll" use:wheelZoom
-      title="Ctrl/⌘ + scroll to zoom · double-click to fit">
+    <div class="preview-scroll" class:panable={userZoom !== null} class:grabbing={dragging} use:zoomPan
+      title="Ctrl/⌘ + scroll to zoom · drag to pan · double-click to fit">
       <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
         <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
           {@html cardHtml}
@@ -106,9 +140,12 @@
   .preview-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 12px;
     background:var(--surface); border-bottom:1px solid var(--border); }
   .preview-toolbar label { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); }
-  .preview-toolbar select, .preview-toolbar button { border:1px solid var(--border); border-radius:6px;
+  .preview-toolbar select, .preview-toolbar button, .preview-toolbar input { border:1px solid var(--border); border-radius:6px;
     padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px;
     transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .preview-toolbar input[type=number] { width:56px; }
+  .preview-toolbar input:hover { border-color:var(--accent); }
+  .preview-toolbar input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .preview-toolbar button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
   .preview-toolbar select:not(:disabled):hover { border-color:var(--accent); }
   .preview-toolbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -124,6 +161,9 @@
     background:var(--sidebar);
     box-shadow:inset 0 1px 0 var(--border);
   }
+  /* When zoomed (userZoom set), the canvas is draggable to pan. */
+  .preview-scroll.panable { cursor:grab; }
+  .preview-scroll.grabbing { cursor:grabbing; }
   /* Layout box = scaled size, so flex can center it; the scaler renders the full-size card into it. */
   .preview-frame {
     flex:none;
