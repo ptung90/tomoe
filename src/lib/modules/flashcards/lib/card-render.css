@@ -2,7 +2,7 @@
 .fc-card { background:#fff; color:#1a1a1a; display:flex; flex-direction:column; overflow:hidden; position:relative; }
 .fc-image-area { flex-shrink:0; overflow:hidden; }
 .fc-text-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }
-.fc-title { text-align:center; padding:6px 8px 4px; font-size:0.85em; border-bottom:1px solid #e5e7eb; }
+.fc-title { text-align:center; padding:6px 8px 4px; font-size:0.85em; }
 .fc-sections { flex:1; overflow:hidden; padding:4px 8px 6px; }
 .fc-section { margin-bottom:4px; }
 .fc-section__label { font-weight:700; }
