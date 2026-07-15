@@ -118,11 +118,8 @@
   function onCardSize(e: Event) {
     if (schema && template) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true }, template.id);
   }
-  // Fields: show/hide the card title (first text field) and the "• label:" prefix on each field.
-  // These are visibility toggles for the whole card — distinct from the per-view field checklist below.
-  function toggleTitle() {
-    if (schema && template) setTemplateLayout(schema.id, { hideTitle: !template.hideTitle }, template.id);
-  }
+  // "Labels" = show/hide the "• label:" prefix on each section (a styling toggle, distinct from the
+  // per-view field checklist). Hiding the title field is done by unchecking it in the checklist.
   function toggleLabels() {
     if (schema && template) setTemplateLayout(schema.id, { hideSectionLabels: !template.hideSectionLabels }, template.id);
   }
@@ -255,11 +252,6 @@
       <div class="display-group" role="group" aria-label="Show on card">
         <span class="group-label">Show on card</span>
         <div class="toolbar">
-          <button type="button" class="eye-toggle" class:off={template?.hideTitle} aria-label="Show title"
-            aria-pressed={!template?.hideTitle} disabled={!schema}
-            title="Show the card title (the record's first text field)" onclick={toggleTitle}>
-            {#if template?.hideTitle}<EyeOff size={13} />{:else}<Eye size={13} />{/if} Title
-          </button>
           <button type="button" class="eye-toggle" class:off={template?.hideSectionLabels} aria-label="Show field labels"
             aria-pressed={!template?.hideSectionLabels} disabled={!schema}
             title="Show the “• label:” prefix before each field's value" onclick={toggleLabels}>

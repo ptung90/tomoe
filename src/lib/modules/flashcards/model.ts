@@ -75,6 +75,15 @@ function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
   }
   return out;
 }
+/** Legacy `hideTitle: true` → drop the schema's title field from the view's field selection.
+ *  Title visibility is now controlled by the field checklist (uncheck the title field), not a
+ *  separate flag — so the old flag is migrated away while preserving the "title hidden" result. */
+function migrateHideTitle(t: any, fields: SchemaField[], titleKey: string | null): CardTemplate {
+  if (!t?.hideTitle || !titleKey) { const { hideTitle: _drop, ...rest } = t ?? {}; return rest as CardTemplate; }
+  const cur: string[] = Array.isArray(t.fields) && t.fields.length ? t.fields : fields.map((f) => f.key);
+  const { hideTitle: _drop, ...rest } = t;
+  return { ...rest, fields: cur.filter((k) => k !== titleKey) } as CardTemplate;
+}
 
 export function parseProject(text: string): Project {
   const raw = JSON.parse(text) as any; const base = newProject();
@@ -88,8 +97,10 @@ export function parseProject(text: string): Project {
   const normSchema = (sc: any): Schema => {
     const fields = Array.isArray(sc.fields) ? sc.fields : [];
     const schemaHasImage = fields.some((f: SchemaField) => f.type === 'image');
+    const titleKey = fields.find((f: SchemaField) => f.type !== 'image')?.key ?? null;
     const cardTemplates = (Array.isArray(sc.cardTemplates) ? sc.cardTemplates : [])
-      .map((t: any) => migrateTemplate(t, schemaHasImage));
+      .map((t: any) => migrateTemplate(t, schemaHasImage))
+      .map((t: CardTemplate) => migrateHideTitle(t, fields, titleKey));
     return { ...sc, id: sc.id || uid('sch'), name: sc.name || 'Records', fields, cardTemplates };
   };
   // Legacy flashcard-creator single-schema files use `schema` (object) instead of `schemas`.

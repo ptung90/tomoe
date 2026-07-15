@@ -87,18 +87,16 @@ describe('StyleControls (tabbed)', () => {
     expect(get(S.project).settings.contentFont.family).toBe('monospace');
   });
 
-  it('Card → Fields: toggling off Labels / Title sets hideSectionLabels / hideTitle on the template', async () => {
+  it('Card → Fields: toggling Labels sets hideSectionLabels (there is no separate Title toggle — hide the title field via the checklist)', async () => {
     const sid = S.addSchema('W');
     S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
     S.addRecord(sid); // selects it → the schema's template exists
     render(StyleControls);
     await tab('Fields');
-    // "Show on card" toggles are eye chips (buttons), visually distinct from the field checklist.
+    // "Show on card" has only the Labels eye toggle now; the Title toggle was removed (redundant with the field checklist).
+    expect(screen.queryByRole('button', { name: 'Show title' })).not.toBeInTheDocument();
     await fireEvent.click(screen.getByRole('button', { name: 'Show field labels' }));
-    await fireEvent.click(screen.getByRole('button', { name: 'Show title' }));
-    const tpl = get(S.project).schemas[0].cardTemplates[0];
-    expect(tpl.hideSectionLabels).toBe(true);
-    expect(tpl.hideTitle).toBe(true);
+    expect(get(S.project).schemas[0].cardTemplates[0].hideSectionLabels).toBe(true);
   });
 });
 
