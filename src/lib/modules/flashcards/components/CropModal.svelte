@@ -7,9 +7,15 @@
 
   let cropper: Cropper | undefined;
   function mount(node: HTMLImageElement) {
-    node.crossOrigin = 'anonymous'; // Wikimedia serves CORS; keeps the canvas untainted
-    cropper = new Cropper(node, { viewMode: 1, autoCropArea: 1, background: false });
-    return { destroy() { cropper?.destroy(); cropper = undefined; } };
+    // Set crossOrigin BEFORE src (Wikimedia serves CORS → keeps the canvas untainted),
+    // and init cropper only once the image has loaded so it sizes to the container, not
+    // the natural size (which would overflow the modal and hide the right handle).
+    node.crossOrigin = 'anonymous';
+    const init = () => { if (!cropper) cropper = new Cropper(node, { viewMode: 1, autoCropArea: 1, background: false }); };
+    node.addEventListener('load', init, { once: true });
+    node.src = src;
+    if (node.complete && node.naturalWidth) init();
+    return { destroy() { node.removeEventListener('load', init); cropper?.destroy(); cropper = undefined; } };
   }
   const setAspect = (r: number) => cropper?.setAspectRatio(r);
   function apply() {
@@ -23,7 +29,7 @@
 <div class="overlay" role="dialog" aria-modal="true">
   <div class="modal">
     <header class="head"><span>Crop image</span><button type="button" aria-label="close" onclick={onClose}><X size={16} /></button></header>
-    <div class="crop-area"><img {src} use:mount alt="" /></div>
+    <div class="crop-area"><img use:mount alt="" /></div>
     <div class="aspects">
       <button type="button" onclick={() => setAspect(NaN)}>Free</button>
       <button type="button" onclick={() => setAspect(1)}>1:1</button>
@@ -43,8 +49,9 @@
     width:min(680px,94vw); max-height:88vh; display:flex; flex-direction:column; }
   .head { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); font-weight:600; }
   .head button { border:none; background:transparent; color:var(--text-muted); }
-  .crop-area { padding:12px 14px; max-height:60vh; overflow:hidden; }
-  .crop-area img { max-width:100%; display:block; }
+  .crop-area { padding:12px 14px; height:58vh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  /* Constrain on BOTH axes so cropperjs sizes its canvas to fit the modal (handles stay reachable). */
+  .crop-area img { display:block; max-width:100%; max-height:100%; }
   .aspects { display:flex; gap:6px; padding:0 14px 10px; }
   .aspects button { border:1px solid var(--border); background:transparent; color:var(--text); border-radius:6px; padding:4px 10px; font:inherit; font-size:12px; }
   .aspects button:hover { background:var(--accent-weak); color:var(--accent); }

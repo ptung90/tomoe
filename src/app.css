@@ -24,7 +24,13 @@
   :root:not([data-theme="light"]) .mod-flashcards { --accent:#2dd4bf; --accent-weak:color-mix(in srgb, #2dd4bf 22%, var(--surface)); }
 }
 :root[data-theme="dark"] .mod-flashcards { --accent:#2dd4bf; --accent-weak:color-mix(in srgb, #2dd4bf 22%, var(--surface)); }
-* { box-sizing: border-box; }
+/* Slim, theme-aware scrollbars everywhere (webview default is chunky + white track in dark mode). */
+* { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-corner { background: transparent; }
 body { margin:0; background:var(--bg); color:var(--text); }
 button { font: inherit; color: inherit; cursor: pointer; }
 input, select { font: inherit; color: var(--text); background: var(--surface);

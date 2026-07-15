@@ -155,13 +155,4 @@
     box-shadow:0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.14);
   }
   .preview-scaler { transform-origin:top left; }
-
-  /* Slim, unobtrusive scrollbars on the canvas. */
-  .preview-scroll::-webkit-scrollbar { width:10px; height:10px; }
-  .preview-scroll::-webkit-scrollbar-thumb {
-    background:var(--border); border-radius:6px;
-    border:2px solid var(--sidebar); background-clip:padding-box;
-  }
-  .preview-scroll::-webkit-scrollbar-thumb:hover { background:var(--text-muted); background-clip:padding-box; }
-  .preview-scroll::-webkit-scrollbar-track { background:transparent; }
 </style>
