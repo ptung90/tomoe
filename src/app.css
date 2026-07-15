@@ -18,6 +18,12 @@
   --text:#ece7de; --text-muted:#8a8073; --border:#3a352d;
   --accent:#e0703f; --accent-weak:#3a2a22;
 }
+/* Flashcards module uses the teal Tomoe accent; json-table + shell keep the terracotta default. */
+.mod-flashcards { --accent:#0d9488; --accent-weak:color-mix(in srgb, #0d9488 10%, var(--surface)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mod-flashcards { --accent:#2dd4bf; --accent-weak:color-mix(in srgb, #2dd4bf 22%, var(--surface)); }
+}
+:root[data-theme="dark"] .mod-flashcards { --accent:#2dd4bf; --accent-weak:color-mix(in srgb, #2dd4bf 22%, var(--surface)); }
 * { box-sizing: border-box; }
 body { margin:0; background:var(--bg); color:var(--text); }
 button { font: inherit; color: inherit; cursor: pointer; }
