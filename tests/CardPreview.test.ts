@@ -42,14 +42,14 @@ describe('CardPreview', () => {
     expect(container.querySelector('.fc-sheet')).not.toBeInTheDocument();
   });
 
-  it('status bar shows a zoom readout: auto-fit by default, explicit after zooming, Fit resets it', async () => {
+  it('status bar shows a zoom readout: 100% by default, explicit after zooming, Fit resets to auto', async () => {
     render(CardPreview);
     const pct = screen.getByRole('button', { name: 'Fit to pane' });
-    expect(pct).toHaveTextContent('%');
-    expect(pct.className).toContain('auto');              // auto-fit initially
+    expect(pct).toHaveTextContent('100%');
+    expect(pct.className).not.toContain('auto');           // opens at explicit 100%, not auto-fit
     await fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-    expect(pct.className).not.toContain('auto');          // now an explicit user zoom
-    await fireEvent.click(pct);                            // click % = Fit to pane
+    expect(pct.className).not.toContain('auto');           // still an explicit user zoom
+    await fireEvent.click(pct);                             // click % = Fit to pane
     expect(pct.className).toContain('auto');
   });
 
@@ -94,24 +94,27 @@ describe('CardPreview', () => {
 });
 
 describe('CardPreview — views', () => {
-  it('shows a "View 1" chip by default (single implicit view) and exactly one .fc-card', () => {
+  it('shows exactly one .fc-card by default (single implicit view), named in its column header', () => {
     const { container } = render(CardPreview);
-    expect(screen.getByRole('tab', { name: 'View 1' })).toBeInTheDocument();
     expect(container.querySelectorAll('.fc-card')).toHaveLength(1);
+    expect(container.querySelector('.view-col-label')?.textContent).toBe('View 1');
   });
 
-  it('Add view (+) adds a 2nd view, shown side by side, and makes it active', async () => {
+  it('the "Add view" tile adds a 2nd view, shown side by side, and makes it active', async () => {
     const { container } = render(CardPreview);
     await fireEvent.click(screen.getByRole('button', { name: 'Add view' }));
     expect(container.querySelectorAll('.fc-card')).toHaveLength(2);
-    expect(screen.getByRole('tab', { name: 'View 2' })).toHaveAttribute('aria-selected', 'true');
+    const cols = container.querySelectorAll('.view-col');
+    expect(cols).toHaveLength(2);
+    expect(cols[1].classList.contains('active')).toBe(true);
   });
 
-  it('clicking a view chip makes it active; the layout dropdown then targets that view only', async () => {
+  it('clicking a view column makes it active; the layout dropdown then targets that view only', async () => {
     const sid = get(S.project).schemas[0].id;
-    render(CardPreview);
+    const { container } = render(CardPreview);
     await fireEvent.click(screen.getByRole('button', { name: 'Add view' })); // active view is now View 2
-    await fireEvent.click(screen.getByRole('tab', { name: 'View 1' }));       // switch back to View 1
+    const cols = container.querySelectorAll('.view-col');
+    await fireEvent.click(cols[0]); // switch back to View 1
     await fireEvent.change(screen.getByLabelText(/layout/i), { target: { value: '2x2' } });
     const tpls = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates;
     expect(tpls[0].layout).toBe('2x2');
@@ -134,10 +137,35 @@ describe('CardPreview — views', () => {
     expect(cols[1].classList.contains('active')).toBe(true);
 
     await fireEvent.click(cols[0]); // click the inactive (View 1) column
-    expect(screen.getByRole('tab', { name: 'View 1' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'View 2' })).toHaveAttribute('aria-selected', 'false');
     const colsAfter = container.querySelectorAll('.view-col');
     expect(colsAfter[0].classList.contains('active')).toBe(true);
     expect(colsAfter[1].classList.contains('active')).toBe(false);
+  });
+
+  it('Rename (via the ⋯ menu) commits the new name through renameView', async () => {
+    const sid = get(S.project).schemas[0].id;
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'View 1 options' }));
+    await fireEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+    const input = screen.getByRole('textbox', { name: /rename view 1/i });
+    await fireEvent.input(input, { target: { value: 'Front' } });
+    await fireEvent.blur(input);
+    const tpl = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates[0];
+    expect(tpl.name).toBe('Front');
+    expect(screen.getByText('Front')).toBeInTheDocument();
+  });
+
+  it('Delete (via the ⋯ menu) removes a view; the last remaining view has no delete affordance', async () => {
+    const sid = get(S.project).schemas[0].id;
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add view' }));
+    expect(get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates).toHaveLength(2);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'View 2 options' }));
+    await fireEvent.click(screen.getByRole('menuitem', { name: 'Delete View 2' }));
+    expect(get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates).toHaveLength(1);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'View 1 options' }));
+    expect(screen.getByRole('menuitem', { name: 'Delete View 1' })).toBeDisabled();
   });
 });

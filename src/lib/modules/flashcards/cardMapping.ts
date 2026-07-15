@@ -171,10 +171,10 @@ export function addView(p: Project, schemaId: string): { project: Project; id: s
   return { project, id: created.id };
 }
 
+/** Renames a view. Materializes a virgin schema's synthetic auto-derived view first (same as
+ *  applyTemplatePatch) — a schema with no persisted cardTemplates yet must still be renamable. */
 export function renameView(p: Project, schemaId: string, templateId: string, name: string): Project {
-  return { ...p, schemas: p.schemas.map((s) => (s.id !== schemaId ? s : {
-    ...s, cardTemplates: s.cardTemplates.map((t) => (t.id === templateId ? { ...t, name } : t)),
-  })) };
+  return applyTemplatePatch(p, schemaId, templateId, { name });
 }
 
 /** Refuses to delete a schema's last remaining view — a schema must always keep >=1 once it has any.

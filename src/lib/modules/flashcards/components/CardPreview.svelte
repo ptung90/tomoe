@@ -3,7 +3,10 @@
   import Palette from 'lucide-svelte/icons/palette';
   import ImageIcon from 'lucide-svelte/icons/image';
   import Plus from 'lucide-svelte/icons/plus';
-  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView } from '../stores';
+  import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
+  import Pencil from 'lucide-svelte/icons/pencil';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, renameView, deleteView } from '../stores';
   import { deriveAutoTemplate, recordToCard, chunkRecords, viewLabel } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
   import { resolveStyle } from '../lib/style';
@@ -16,9 +19,13 @@
   let paneW = $state(440);
   let showStyle = $state(false);
   let mode = $state<'card' | 'sheet'>('card');
-  // null = auto-fit; a number = explicit user zoom (Ctrl/⌘ + wheel). Double-click resets.
-  let userZoom = $state<number | null>(null);
+  // null = auto-fit; a number = explicit user zoom (Ctrl/⌘ + wheel, +/- buttons). Opens at 100%;
+  // double-click / the status-bar "Fit to pane" % button reset to auto-fit (null).
+  let userZoom = $state<number | null>(1);
   let dragging = $state(false);
+  // Per-view-column rename/menu UI state — at most one open/renaming at a time.
+  let menuOpenId = $state<string | null>(null);
+  let renamingId = $state<string | null>(null);
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
@@ -95,8 +102,8 @@
   const colBudget = $derived(Math.max(80, (paneW - 40 - Math.max(0, views.length - 1) * 16) / Math.max(1, views.length)));
   function colScale(cellW: number): number { return Math.max(0.05, Math.min(1, colBudget / cellW)); }
   // The scale the ACTIVE view is actually shown at — what the status-bar % must report (and the base
-  // for the −/+ buttons). Card mode auto-fits each column to its share of the pane (colScale), so a
-  // multi-view pane is NOT the single-card fitScale; sheet mode uses the full-pane fitScale.
+  // for the −/+ buttons). Card mode auto-fits each column to its share of the pane (colScale) when
+  // zoomed out to auto-fit; sheet mode uses the full-pane fitScale; an explicit userZoom overrides both.
   const displayScale = $derived(mode === 'sheet' ? scale : (userZoom ?? colScale(cellPx.w)));
 
   // Sheet mode: every record of the schema mapped through the ACTIVE view (packed-or-derived, same
@@ -124,6 +131,22 @@
   function onAddView() {
     if (schema) addView(schema.id);
   }
+  function toggleMenu(id: string) {
+    menuOpenId = menuOpenId === id ? null : id;
+  }
+  function startRename(id: string) {
+    menuOpenId = null;
+    renamingId = id;
+  }
+  function commitRename(templateId: string, name: string) {
+    renamingId = null;
+    const trimmed = name.trim();
+    if (schema && trimmed) renameView(schema.id, templateId, trimmed);
+  }
+  function onDeleteView(templateId: string) {
+    menuOpenId = null;
+    if (schema && views.length > 1) deleteView(schema.id, templateId);
+  }
 </script>
 
 <div class="preview" bind:clientWidth={paneW}>
@@ -147,16 +170,6 @@
     </button>
   </header>
 
-  {#if schema}
-    <div class="view-bar" role="tablist" aria-label="Views">
-      {#each views as v, i (v.id)}
-        <button type="button" role="tab" aria-selected={v.id === resolvedActiveId} class:on={v.id === resolvedActiveId}
-          onclick={() => selectView(v.id)}>{viewLabel(v, schema, i)}</button>
-      {/each}
-      <button type="button" class="add-view" aria-label="Add view" onclick={onAddView}><Plus size={13} /></button>
-    </div>
-  {/if}
-
   {#if showStyle}<StyleControls />{/if}
 
   {#if record && schema}
@@ -169,7 +182,39 @@
             role="button" tabindex="0" aria-label={`Focus ${vc.label}`}
             onclick={() => selectView(vc.id)}
             onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectView(vc.id); } }}>
-            <span class="view-col-label">{vc.label}</span>
+            <div class="view-col-header">
+              {#if renamingId === vc.id}
+                <input class="view-col-rename" value={vc.label}
+                  aria-label={`Rename ${vc.label}`}
+                  onclick={(e) => e.stopPropagation()}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+                    if (e.key === 'Escape') { e.preventDefault(); renamingId = null; }
+                  }}
+                  onblur={(e) => commitRename(vc.id, (e.target as HTMLInputElement).value)} />
+              {:else}
+                <span class="view-col-label">{vc.label}</span>
+              {/if}
+              <div class="view-col-menu">
+                <button type="button" class="view-menu-btn" aria-label={`${vc.label} options`}
+                  aria-haspopup="menu" aria-expanded={menuOpenId === vc.id}
+                  onclick={(e) => { e.stopPropagation(); toggleMenu(vc.id); }}>
+                  <MoreHorizontal size={13} />
+                </button>
+                {#if menuOpenId === vc.id}
+                  <div class="view-menu" role="menu">
+                    <button type="button" role="menuitem" onclick={(e) => { e.stopPropagation(); startRename(vc.id); }}>
+                      <Pencil size={12} /> Rename
+                    </button>
+                    <button type="button" role="menuitem" aria-label={`Delete ${vc.label}`}
+                      disabled={views.length <= 1}
+                      onclick={(e) => { e.stopPropagation(); onDeleteView(vc.id); }}>
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  </div>
+                {/if}
+              </div>
+            </div>
             <div class="preview-frame" style={`width:${Math.round(vc.cellPx.w * vScale)}px;height:${Math.round(vc.cellPx.h * vScale)}px;`}>
               <div class="preview-scaler" style={`transform:scale(${vScale});width:${vc.cellPx.w}px;height:${vc.cellPx.h}px;`}>
                 {@html vc.html}
@@ -177,6 +222,10 @@
             </div>
           </div>
         {/each}
+        <button type="button" class="add-view-tile" aria-label="Add view" onclick={onAddView}>
+          <Plus size={18} />
+          <span>Add view</span>
+        </button>
       </div>
     {:else}
       <div class="preview-scroll" class:panable={userZoom !== null} class:grabbing={dragging} use:zoomPan
@@ -224,20 +273,6 @@
     outline:2px solid var(--accent); outline-offset:1px; }
   .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
 
-  .view-bar { display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding:6px 12px;
-    background:var(--surface); border-bottom:1px solid var(--border); }
-  .view-bar button[role=tab] { border:1px solid var(--border); background:var(--bg); color:var(--text-muted);
-    border-radius:999px; padding:3px 10px; font:inherit; font-size:11px; cursor:pointer;
-    transition:background .12s ease, color .12s ease, border-color .12s ease; }
-  .view-bar button[role=tab]:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
-  .view-bar button[role=tab].on { background:var(--accent); color:#fff; border-color:var(--accent); }
-  .view-bar button[role=tab]:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .add-view { border:1px dashed var(--border); background:transparent; color:var(--text-muted);
-    border-radius:999px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:border-color .12s ease, color .12s ease; }
-  .add-view:hover { border-color:var(--accent); color:var(--accent); }
-  .add-view:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
   .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 10px; cursor:pointer;
     font:inherit; font-size:12px; transition:background .12s ease, color .12s ease; }
@@ -257,13 +292,43 @@
   /* When zoomed (userZoom set), the canvas is draggable to pan. */
   .preview-scroll.panable { cursor:grab; }
   .preview-scroll.grabbing { cursor:grabbing; }
-  .preview-scroll.views-row { flex-wrap:wrap; gap:16px; justify-content:flex-start; }
-  .view-col { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
-    border-radius:6px; padding:6px; transition:background .12s ease; }
+  .preview-scroll.views-row { flex-wrap:wrap; gap:16px; justify-content:flex-start; align-items:flex-start; }
+  .view-col { display:flex; flex-direction:column; align-items:stretch; gap:6px; cursor:pointer;
+    border-radius:8px; padding:6px; transition:background .12s ease; min-width:0; }
   .view-col:hover:not(.active) { background:var(--accent-weak); }
   .view-col:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .view-col-label { font-size:11px; font-weight:600; color:var(--text-muted); transition:color .12s ease; }
+
+  /* Per-view card header: name (rename-in-place) + a ⋯ menu (Rename / Delete). */
+  .view-col-header { display:flex; align-items:center; gap:4px; min-height:22px; }
+  .view-col-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:11px; font-weight:600; color:var(--text-muted); transition:color .12s ease; }
   .view-col.active .view-col-label { color:var(--accent); }
+  .view-col-rename { flex:1; min-width:0; font:inherit; font-size:11px; font-weight:600; color:var(--text);
+    background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:1px 4px; }
+  .view-col-menu { position:relative; flex:none; }
+  .view-menu-btn { border:none; background:transparent; color:var(--text-muted); cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:5px;
+    transition:background .12s ease, color .12s ease; }
+  .view-menu-btn:hover { background:var(--accent-weak); color:var(--accent); }
+  .view-menu-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .view-menu { position:absolute; top:100%; right:0; z-index:10; margin-top:2px; min-width:110px;
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    box-shadow:0 4px 14px rgba(0,0,0,.14); padding:4px; display:flex; flex-direction:column; gap:1px; }
+  .view-menu button { display:flex; align-items:center; gap:6px; border:none; background:transparent;
+    color:var(--text); font:inherit; font-size:12px; padding:5px 7px; border-radius:4px; cursor:pointer;
+    text-align:left; transition:background .12s ease, color .12s ease; }
+  .view-menu button:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
+  .view-menu button:focus-visible { outline:2px solid var(--accent); outline-offset:-1px; }
+  .view-menu button:disabled { color:var(--text-muted); opacity:.5; cursor:not-allowed; }
+
+  /* "＋ Add view" — a dashed placeholder tile at the end of the row. */
+  .add-view-tile { flex:none; align-self:flex-start; margin-top:28px; width:96px; height:120px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    border:1.5px dashed var(--border); border-radius:8px; background:transparent; color:var(--text-muted);
+    font:inherit; font-size:11px; cursor:pointer; transition:border-color .12s ease, color .12s ease, background .12s ease; }
+  .add-view-tile:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-weak); }
+  .add-view-tile:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
   /* Layout box = scaled size, so flex can center it; the scaler renders the full-size card into it. */
   .preview-frame {
     flex:none;
