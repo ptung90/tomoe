@@ -158,42 +158,70 @@ Cover `1big-2small`, `1left-2right`, `1left-3right`, `1top-3bot`, `1full` (image
 
 ---
 
-## Task 3: N-up tiling core (pure)
+## Task 3: N-up tiling core (pure) — fixed grid **and** auto-fit
 
-**Files:** Modify `model.ts` (`CardTemplate.cardsPerPage`), `lib/card-render.ts` (`sheetGrid`, `buildSheetHTML`), `lib/printCards.ts` (`collectPrintSheets`); Tests `tests/card-render.test.ts`, `tests/printCards.test.ts`.
+**Files:** Modify `model.ts` (`CardTemplate` fields), `lib/card-render.ts` (`sheetGrid`, `sheetLayout`, `buildSheetHTML`), `lib/printCards.ts` (`collectPrintSheets`); Tests `tests/card-render.test.ts`, `tests/printCards.test.ts`.
 
-- [ ] **Step 1: `model.ts`** — add `cardsPerPage?: number;` to `CardTemplate`.
+Two tiling modes (user chose both):
+- **Fixed grid:** `cardsPerPage` ∈ 1/2/3/4/6/8/9 → sheet split into N equal cells; card scales to fill the cell.
+- **Auto-fit:** `autoFit: true` + a `cardSize` (paper enum, e.g. `A7`) → pack real-size cards `floor(sheet/card)` per sheet, order-independent (the print-and-cut use case).
 
-- [ ] **Step 2: Failing tests** — `sheetGrid` presets + `collectPrintSheets` chunking:
+`settings.paperSize` = the **sheet** (what you print on); `cardSize` = the **card's** physical size (auto-fit only).
+
+- [ ] **Step 1: `model.ts`** — add to `CardTemplate`: `cardsPerPage?: number;`, `autoFit?: boolean;`, `cardSize?: 'A4'|'A5'|'A6'|'A7'|'A8'|'Letter';`.
+
+- [ ] **Step 2: Failing tests** — `sheetGrid` presets, `sheetLayout` (fixed + auto), `collectPrintSheets` chunking:
 ```ts
-import { sheetGrid } from '../src/lib/modules/flashcards/lib/card-render';
+import { sheetGrid, sheetLayout } from '../src/lib/modules/flashcards/lib/card-render';
 expect(sheetGrid(6, 'portrait')).toEqual({ cols: 2, rows: 3 });
 expect(sheetGrid(6, 'landscape')).toEqual({ cols: 3, rows: 2 });
-expect(sheetGrid(1, 'portrait')).toEqual({ cols: 1, rows: 1 });
-// collectPrintSheets: schema with 7 records, cardsPerPage 6 → 2 sheets (6 + 1)
+// auto-fit: A7 cards on an A4 sheet (portrait) → floor(A4/A7) grid, real-size cells
+const a = sheetLayout({ autoFit: true, cardSize: 'A7' }, 'A4', 'portrait');
+expect(a.perPage).toBe(a.cols * a.rows);
+expect(a.cols).toBeGreaterThanOrEqual(1);
+// collectPrintSheets: 7 records, cardsPerPage 6 → 2 sheets (6 + 1)
 ```
 
-- [ ] **Step 3: Implement `sheetGrid` + `buildSheetHTML` in `card-render.ts`:**
+- [ ] **Step 3: Implement `sheetGrid` + `sheetLayout` + `buildSheetHTML` in `card-render.ts`:**
 ```ts
 const SHEET_GRID: Record<number, [number, number]> = { 1:[1,1], 2:[1,2], 3:[1,3], 4:[2,2], 6:[2,3], 8:[2,4], 9:[3,3] };
-/** Columns×rows for `n` cards per sheet; landscape swaps. Pure. */
+/** Columns×rows for a fixed N-per-sheet; landscape swaps. Pure. */
 export function sheetGrid(n: number, orientation: string): { cols: number; rows: number } {
   let [cols, rows] = SHEET_GRID[n] ?? [1, Math.max(1, n)];
   if (orientation === 'landscape') [cols, rows] = [rows, cols];
   return { cols, rows };
 }
-/** Tile up to perPage single-cards into a paper-sized grid; each cell = buildCardHTML at cell px. */
-export function buildSheetHTML(cards: Card[], perPage: number, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
+/** Resolve grid + cell px for a template's tiling on a sheet. Pure.
+ *  fixed grid → cells fill the sheet (fillCell=true); auto-fit → real-size cards packed floor(sheet/card). */
+export function sheetLayout(
+  opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number },
+  sheetSize: string, orientation: string,
+): { cols: number; rows: number; cellW: number; cellH: number; perPage: number; fillCell: boolean } {
+  const sheet = getPaperPx(sheetSize, orientation);
+  if (opts.autoFit) {
+    const card = getPaperPx(opts.cardSize || 'A7', orientation);
+    const cols = Math.max(1, Math.floor(sheet.w / card.w));
+    const rows = Math.max(1, Math.floor(sheet.h / card.h));
+    return { cols, rows, cellW: card.w, cellH: card.h, perPage: cols * rows, fillCell: false };
+  }
+  const { cols, rows } = sheetGrid(Math.max(1, opts.cardsPerPage || 1), orientation);
+  return { cols, rows, cellW: Math.floor(sheet.w / cols), cellH: Math.floor(sheet.h / rows), perPage: cols * rows, fillCell: true };
+}
+/** Tile cards into a sheet per a resolved `sheetLayout`. Each cell = buildCardHTML at cell px. */
+export function buildSheetHTML(cards: Card[], lay: { cols: number; rows: number; cellW: number; cellH: number; fillCell: boolean }, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
   const orient = (cards[0]?.orientation as string) || settings.orientation;
   const { w, h } = overridePx || getPaperPx(settings.paperSize, orient);
-  const { cols, rows } = sheetGrid(Math.max(1, perPage), orient);
-  const cellW = Math.floor(w / cols), cellH = Math.floor(h / rows);
+  const { cols, rows, cellW, cellH } = lay;
   const cells = Array.from({ length: cols * rows }, (_, i) => {
     const card = cards[i];
     const inner = card ? buildCardHTML(card, settings, locale, forPrint, { w: cellW, h: cellH }) : '';
     return `<div class="fc-sheet-cell" style="width:${cellW}px;height:${cellH}px;overflow:hidden;">${inner}</div>`;
   }).join('');
-  return `<div class="fc-sheet" style="width:${w}px;height:${h}px;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);background:#fff;overflow:hidden;">${cells}</div>`;
+  // fixed grid fills the sheet (1fr tracks); auto-fit uses real-size px tracks packed from the top-left.
+  const colTrack = lay.fillCell ? 'repeat(' + cols + ',1fr)' : 'repeat(' + cols + ',' + cellW + 'px)';
+  const rowTrack = lay.fillCell ? 'repeat(' + rows + ',1fr)' : 'repeat(' + rows + ',' + cellH + 'px)';
+  const justify = lay.fillCell ? '' : 'justify-content:start;align-content:start;';
+  return `<div class="fc-sheet" style="width:${w}px;height:${h}px;display:grid;grid-template-columns:${colTrack};grid-template-rows:${rowTrack};${justify}background:#fff;overflow:hidden;">${cells}</div>`;
 }
 ```
 
@@ -201,17 +229,19 @@ export function buildSheetHTML(cards: Card[], perPage: number, settings: Setting
 ```ts
 import type { Project, Card } from '../model';
 import { deriveAutoTemplate, recordToCard, chunkRecords } from '../cardMapping';
+import { sheetLayout } from './card-render';
 
-export interface Sheet { cards: Card[]; perPage: number; }
+export interface Sheet { cards: Card[]; lay: ReturnType<typeof sheetLayout>; }
 export function collectPrintSheets(project: Project): Sheet[] {
   const out: Sheet[] = [];
   for (const schema of project.schemas) {
     const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
-    const perPage = Math.max(1, template.cardsPerPage || 1);
+    const orient = template.orientation || project.settings.orientation;
+    const lay = sheetLayout(template, project.settings.paperSize, orient);
     const recs = project.records.filter((r) => r.schemaId === schema.id);
     const cards = recs.map((r) =>
       project.cards.find((c) => c.recordId === r.id) ?? recordToCard(r, schema, template, project.settings, project.activeLocale));
-    for (const chunk of chunkRecords(cards, perPage)) out.push({ cards: chunk, perPage });
+    for (const chunk of chunkRecords(cards, lay.perPage)) out.push({ cards: chunk, lay });
   }
   return out;
 }
@@ -226,15 +256,17 @@ export function collectPrintSheets(project: Project): Sheet[] {
 
 **Files:** Modify `components/PrintView.svelte`, `lib/pdfExport.ts`, `components/CardPreview.svelte`, `components/StyleControls.svelte`; Tests `tests/PrintView.test.ts`, `tests/CardPreview.test.ts`.
 
-- [ ] **Step 1: PrintView** — iterate `collectPrintSheets($project)`; render one `.print-page` per sheet via `{@html buildSheetHTML(sheet.cards, sheet.perPage, $project.settings, $project.activeLocale, true)}` sized to `getPaperPx`. Keep the `@media print` isolation (`:has(.print-view)`).
+- [ ] **Step 1: PrintView** — iterate `collectPrintSheets($project)`; render one `.print-page` per sheet via `{@html buildSheetHTML(sheet.cards, sheet.lay, $project.settings, $project.activeLocale, true)}` sized to `getPaperPx($project.settings.paperSize, orient)`. Keep the `@media print` isolation (`:has(.print-view)`).
 
-- [ ] **Step 2: pdfExport** — `exportCardsPdf` loops `collectPrintSheets`; per sheet, `host.innerHTML = buildSheetHTML(sheet.cards, sheet.perPage, s, locale, true, px)`, capture, one PDF page per sheet (paper mm from the sheet's orientation). Filename/stamp unchanged.
+- [ ] **Step 2: pdfExport** — `exportCardsPdf` loops `collectPrintSheets`; per sheet, `host.innerHTML = buildSheetHTML(sheet.cards, sheet.lay, s, locale, true, px)`, capture, one PDF page per sheet (paper mm = the SHEET's paperSize/orientation). Filename/stamp unchanged.
 
-- [ ] **Step 3: CardPreview** — add a **Card ↔ Sheet** segmented toggle + a **Cards/page** number (bound to `template.cardsPerPage` via `setTemplateLayout`). In `Card` mode show the single `buildCardHTML`; in `Sheet` mode show `buildSheetHTML` for the chunk the selected record belongs to (compute the chunk with `chunkRecords(schemaRecords→cards, perPage)`), scaled by the existing zoom/fit. Registry labels already wired (Task 1).
+- [ ] **Step 3: CardPreview** — add a **Card ↔ Sheet** segmented toggle. In `Card` mode show the single `buildCardHTML`; in `Sheet` mode compute `lay = sheetLayout(template, settings.paperSize, orient)`, find the chunk (`chunkRecords(schemaCards, lay.perPage)`) the selected record belongs to, and show `buildSheetHTML(chunk, lay, …)`, scaled by the existing zoom/fit. Registry labels already wired (Task 1).
 
-- [ ] **Step 4: StyleControls (optional placement)** — if not in the preview toolbar, add the **Cards/page** control to the Card tab (number, presets 1/2/3/4/6/8/9) via `setTemplateLayout({ cardsPerPage })`.
+- [ ] **Step 4: Cards/page control (in the preview toolbar or StyleControls Card tab)** — a mode select **Fixed N ↔ Auto-fit** bound to `template.autoFit` (via `setTemplateLayout`):
+  - **Fixed:** a `cardsPerPage` select (1/2/3/4/6/8/9).
+  - **Auto-fit:** a `cardSize` select (A5/A6/A7/A8) → `setTemplateLayout({ autoFit: true, cardSize })`. Show the resolved perPage (from `sheetLayout`) as a hint (e.g. "≈ 8/trang").
 
-- [ ] **Step 5: Tests** — PrintView renders N `.print-page` = sheet count; a 6-up schema with 7 records → 2 pages. CardPreview: toggling Sheet renders a `.fc-sheet` with the right cell count; Cards/page change calls `setTemplateLayout`.
+- [ ] **Step 5: Tests** — PrintView renders `.print-page` count = sheets (6-up, 7 records → 2). CardPreview: Sheet toggle renders `.fc-sheet` with the right cell count; changing Cards/page or Auto-fit calls `setTemplateLayout`. `sheetLayout` auto-fit already unit-tested in T3.
 
 - [ ] **Step 6: Manual (human)** — preview Card/Sheet toggle; print & PDF a 6-up and 9-up deck.
 

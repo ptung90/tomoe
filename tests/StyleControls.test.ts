@@ -40,13 +40,11 @@ describe('StyleControls (tabbed)', () => {
     expect(get(S.project).settings.textVAlign).toBe('middle');
   });
 
-  it('Image: fit + 3-card fit commit', async () => {
+  it('Image: fit commit', async () => {
     render(StyleControls);
     await tab('Image');
     await fireEvent.change(screen.getByLabelText('Fit'), { target: { value: 'contain' } });
-    await fireEvent.change(screen.getByLabelText('3-card fit (fill height)'), { target: { checked: true } });
     expect(get(S.project).settings.image.backgroundSize).toBe('contain');
-    expect(get(S.project).settings.threeCardFit).toBe(true);
   });
 
   it('Image: image-height control (image layout) sets template.imageHeightPercent', async () => {

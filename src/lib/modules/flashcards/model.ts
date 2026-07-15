@@ -1,27 +1,29 @@
+import { LAYOUT_IDS } from './lib/layouts';
+
 export type Locale = string;
 export type LocalizedText = string | Record<Locale, string>;
 export interface FontSpec { family: string; size: number; weight?: number; color: string; lineHeight: number; textAlign?: string }
 export interface Settings {
   paperSize: 'A4'|'A5'|'A6'|'Letter'; orientation: 'portrait'|'landscape';
   margin: number; padding: number; imgPadding: number;
-  textVAlign: 'top'|'middle'|'bottom'; threeCardFit: boolean;
+  textVAlign: 'top'|'middle'|'bottom';
   border: { width: number; style: string; color: string; radius: number };
   image: { backgroundSize: string; backgroundPosition: string };
   titleFont: FontSpec; contentFont: FontSpec;
   pdfImageFormat: 'jpeg'|'png'; pdfJpegQuality: number; pdfScale: number; customCss: string;
 }
 export interface SchemaField { id: string; key: string; label: string; type: 'text'|'text-long'|'image'; multilingual?: boolean }
-export interface CardTemplate { id: string; templateType: 'single'|'compound'; layout: string; locale?: string; size?: string|null; orientation?: string; imageHeightPercent?: number; hideTitle?: boolean; hideSectionLabels?: boolean; cardClass?: string|null; cardConfig?: Record<string, unknown>; mapping: { titleSlot?: string; labelSlot?: string; textSlot?: string; imageSlot?: string; imageSlots?: string[]; sections?: string[] } }
+export interface CardTemplate { id: string; templateType: 'single'|'compound'; layout: string; locale?: string; size?: string|null; orientation?: string; imageHeightPercent?: number; hideTitle?: boolean; hideSectionLabels?: boolean; cardClass?: string|null; cardConfig?: Record<string, unknown>; cardsPerPage?: number; autoFit?: boolean; cardSize?: 'A4'|'A5'|'A6'|'A7'|'A8'|'Letter'; mapping: { titleSlot?: string; labelSlot?: string; textSlot?: string; imageSlot?: string; imageSlots?: string[]; sections?: string[] } }
 export interface Schema { id: string; name: string; fields: SchemaField[]; cardTemplates: CardTemplate[] }
 export interface RecordItem { id: string; schemaId: string; fieldsHash: string; fields: Record<string, LocalizedText> }
 export interface CardSection { id: string; label: LocalizedText; content: LocalizedText; recordId?: string; customClass?: string; fontSize?: number; textAlign?: string; labelSize?: number }
 export interface CardImage { slot: number; url: string; recordId?: string; size?: string|null; color?: string; attribution?: unknown; search_query?: string }
-export interface Card { id: string; layout: string; imageHeightPercent: number; imageGridSplit?: { row: number; col: number; inner: number; rowBorders?: boolean }; images: CardImage[]; title: LocalizedText; sections: CardSection[]; orientation?: string|null; hideTitle?: boolean; hideSectionLabels?: boolean; titleFont?: FontSpec|null; contentFont?: FontSpec|null; customCss?: string; cssClass?: string; recordId?: string; templateId?: string; packedRecordIds?: string[]; sourceHash?: string; edited?: boolean; [k: string]: unknown }
+export interface Card { id: string; layout: string; imageHeightPercent: number; imageGridSplit?: { row: number; col: number; inner: number; rowBorders?: boolean }; images: CardImage[]; title: LocalizedText; sections: CardSection[]; orientation?: string|null; hideTitle?: boolean; hideSectionLabels?: boolean; titleFont?: FontSpec|null; contentFont?: FontSpec|null; customCss?: string; cssClass?: string; recordId?: string; templateId?: string; /** legacy/read-only: only read by parseProject to drop old compound-card snapshots; never written */ packedRecordIds?: string[]; sourceHash?: string; edited?: boolean; [k: string]: unknown }
 export interface Project { version: number; projectName: string; projectIcon: string; settings: Settings; schemas: Schema[]; records: RecordItem[]; cards: Card[]; locales: Locale[]; activeLocale: Locale }
 
 export const DEFAULT_SETTINGS: Settings = {
   paperSize: 'A5', orientation: 'portrait', margin: 9, padding: 2, imgPadding: 0,
-  textVAlign: 'middle', threeCardFit: false,
+  textVAlign: 'middle',
   border: { width: 4, style: 'double', color: '#6B21A8', radius: 0 },
   image: { backgroundSize: 'cover', backgroundPosition: 'center' },
   titleFont: { family: 'Lexend', size: 14, weight: 700, color: '#1a1a1a', lineHeight: 1.0 },
@@ -34,6 +36,24 @@ export function newProject(): Project {
   return { version: 1, projectName: 'Untitled', projectIcon: '🗂️', settings: structuredClone(DEFAULT_SETTINGS), schemas: [], records: [], cards: [], locales: ['en','vi'], activeLocale: 'en' };
 }
 export function serializeProject(p: Project): string { return JSON.stringify(p, null, 2) + '\n'; }
+
+// ── Migration: removed compound/3card layouts → single-card + cardsPerPage ──
+const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number }> = {
+  '3card':     { layout: '1top-1bot', cardsPerPage: 3 },
+  '2img-2txt': { layout: '1top-1bot', cardsPerPage: 2 },
+  '3img-3txt': { layout: '1top-1bot', cardsPerPage: 3 },
+  'img3-txt3': { layout: '1top-1bot', cardsPerPage: 3 },
+  '6cell':     { layout: '1top-1bot', cardsPerPage: 6 },
+  '8img-8txt': { layout: '1top-1bot', cardsPerPage: 8 },
+  'txtgrid':   { layout: 'fulltext',  cardsPerPage: 12 },
+};
+function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
+  const m = COMPOUND_MIGRATION[t?.layout];
+  if (m) return { ...t, layout: m.layout, cardsPerPage: t.cardsPerPage ?? m.cardsPerPage, templateType: 'single' };
+  if (!LAYOUT_IDS.includes(t?.layout)) return { ...t, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
+  return t;
+}
+
 export function parseProject(text: string): Project {
   const raw = JSON.parse(text) as any; const base = newProject();
   const s = raw.settings || {};
@@ -43,11 +63,13 @@ export function parseProject(text: string): Project {
     titleFont: { ...base.settings.titleFont, ...(s.titleFont||{}) },
     contentFont: { ...base.settings.contentFont, ...(s.contentFont||{}) } };
 
-  const normSchema = (sc: any): Schema => ({
-    ...sc, id: sc.id || uid('sch'), name: sc.name || 'Records',
-    fields: Array.isArray(sc.fields) ? sc.fields : [],
-    cardTemplates: Array.isArray(sc.cardTemplates) ? sc.cardTemplates : [],
-  });
+  const normSchema = (sc: any): Schema => {
+    const fields = Array.isArray(sc.fields) ? sc.fields : [];
+    const schemaHasImage = fields.some((f: SchemaField) => f.type === 'image');
+    const cardTemplates = (Array.isArray(sc.cardTemplates) ? sc.cardTemplates : [])
+      .map((t: any) => migrateTemplate(t, schemaHasImage));
+    return { ...sc, id: sc.id || uid('sch'), name: sc.name || 'Records', fields, cardTemplates };
+  };
   // Legacy flashcard-creator single-schema files use `schema` (object) instead of `schemas`.
   let schemas: Schema[];
   const rawRecords: any[] = Array.isArray(raw.records) ? raw.records : [];
@@ -64,10 +86,16 @@ export function parseProject(text: string): Project {
     fields: r.fields ?? {},
   }));
 
+  // Drop persisted compound card snapshots (packedRecordIds) — one Card = one record now.
+  // Remap any surviving card's layout that referenced a removed compound layout.
+  const cards: Card[] = (Array.isArray(raw.cards) ? raw.cards : [])
+    .filter((c: any) => !(c.packedRecordIds?.length))
+    .map((c: any) => (COMPOUND_MIGRATION[c.layout] ? { ...c, layout: COMPOUND_MIGRATION[c.layout].layout } : c));
+
   return { version: typeof raw.version==='number'?raw.version:1,
     projectName: raw.projectName ?? raw.project_name ?? base.projectName,
     projectIcon: raw.projectIcon ?? raw.project_icon ?? base.projectIcon,
-    settings, schemas, records, cards: Array.isArray(raw.cards) ? raw.cards : [],
+    settings, schemas, records, cards,
     locales: raw.locales ?? base.locales, activeLocale: raw.activeLocale ?? base.activeLocale };
 }
 export function looksLikeFlashcards(text: string): boolean {

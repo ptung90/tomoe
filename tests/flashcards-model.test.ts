@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, serializeProject, parseProject, DEFAULT_SETTINGS } from '../src/lib/modules/flashcards/model';
+import { LAYOUTS, LAYOUT_SLOTS, HIDE_TITLE_LAYOUTS } from '../src/lib/modules/flashcards/lib/layouts';
 
 describe('flashcards model', () => {
   it('newProject: empty arrays + default settings + version 1', () => {
@@ -44,5 +45,37 @@ describe('flashcards model', () => {
     expect(p.settings.paperSize).toBe('A5'); expect(p.cards.length).toBe(1);
     expect(p.settings.border.color).toBe(DEFAULT_SETTINGS.border.color); // deep-merged default
     expect(p.locales).toContain('en');
+  });
+  it('parseProject migrates a legacy compound (3card) template + drops packed card snapshots', () => {
+    const legacy = JSON.stringify({
+      projectName: 'Legacy', schemas: [
+        { id: 'sch1', name: 'Words',
+          fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text' }],
+          cardTemplates: [{ id: 't1', templateType: 'compound', layout: '3card', size: null, mapping: {} }] },
+      ],
+      records: [{ id: 'r1', schemaId: 'sch1', fields: { w: 'go' } }],
+      cards: [
+        { id: 'c1', layout: '3card', imageHeightPercent: 50, images: [], title: '', sections: [], packedRecordIds: ['r1', 'r2', 'r3'] },
+      ],
+    });
+    const p = parseProject(legacy);
+    expect(p.schemas[0].cardTemplates[0].layout).toBe('1top-1bot');
+    expect(p.schemas[0].cardTemplates[0].templateType).toBe('single');
+    expect((p.schemas[0].cardTemplates[0] as any).cardsPerPage).toBe(3);
+    expect(p.cards.every((c) => !(c as any).packedRecordIds?.length)).toBe(true);
+    expect(p.cards).toHaveLength(0); // the only card was a compound snapshot — dropped
+  });
+});
+
+describe('layout registry', () => {
+  it('exposes 11 unique layout ids', () => {
+    expect(LAYOUTS).toHaveLength(11);
+    expect(new Set(LAYOUTS.map((l) => l.id)).size).toBe(11);
+  });
+  it('1big-2small has 3 slots', () => {
+    expect(LAYOUT_SLOTS['1big-2small']).toBe(3);
+  });
+  it('HIDE_TITLE_LAYOUTS is exactly fulltext + fullimage', () => {
+    expect(HIDE_TITLE_LAYOUTS).toEqual(new Set(['fulltext', 'fullimage']));
   });
 });

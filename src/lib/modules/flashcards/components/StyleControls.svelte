@@ -12,15 +12,15 @@
   import ScanLine from 'lucide-svelte/icons/scan-line';
   import ImageIcon from 'lucide-svelte/icons/image';
   import MoveVertical from 'lucide-svelte/icons/move-vertical';
-  import Rows3 from 'lucide-svelte/icons/rows-3';
+  import LayoutGrid from 'lucide-svelte/icons/layout-grid';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
   import { deriveAutoTemplate } from '../cardMapping';
+  import { sheetLayout } from '../lib/card-render';
   import type { FontSpec } from '../model';
 
   const s = $derived($project.settings);
   const num = (e: Event) => Number((e.target as HTMLInputElement).value);
   const str = (e: Event) => (e.target as HTMLInputElement | HTMLSelectElement).value;
-  const bool = (e: Event) => (e.target as HTMLInputElement).checked;
 
   const FONT_FAMILIES = ['Lexend', 'sans-serif', 'serif', 'monospace', 'Georgia', 'Arial', 'Times New Roman', 'Courier New'];
   const WEIGHTS: { v: number; label: string }[] = [
@@ -40,9 +40,24 @@
     setTemplateLayout(schema.id, { imageHeightPercent: Math.min(95, Math.max(5, v)) });
   }
 
+  // Cards/page (N-up tiling): Fixed grid (cardsPerPage) or Auto-fit (real-size cardSize).
+  const orient = $derived(template?.orientation || s.orientation);
+  const resolvedPerPage = $derived(template ? sheetLayout(template, s.paperSize, orient).perPage : 0);
+  const CARDS_PER_PAGE = [1, 2, 3, 4, 6, 8, 9, 12];
+  const CARD_SIZES = ['A5', 'A6', 'A7', 'A8'];
+  function onAutoFitMode(autoFit: boolean) {
+    if (schema) setTemplateLayout(schema.id, { autoFit });
+  }
+  function onCardsPerPage(e: Event) {
+    if (schema) setTemplateLayout(schema.id, { cardsPerPage: Number((e.target as HTMLSelectElement).value), autoFit: false });
+  }
+  function onCardSize(e: Event) {
+    if (schema) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true });
+  }
+
   let tab = $state<'text' | 'card' | 'image'>('text');
   let textSub = $state<'title' | 'content'>('title');
-  let cardSub = $state<'border' | 'spacing'>('border');
+  let cardSub = $state<'border' | 'spacing' | 'page'>('border');
 </script>
 
 <div class="style-controls">
@@ -68,6 +83,7 @@
     <div class="subtabs" role="tablist" aria-label="Card target">
       <button type="button" role="tab" aria-selected={cardSub === 'border'} class:on={cardSub === 'border'} onclick={() => (cardSub = 'border')}>Border</button>
       <button type="button" role="tab" aria-selected={cardSub === 'spacing'} class:on={cardSub === 'spacing'} onclick={() => (cardSub = 'spacing')}>Spacing</button>
+      <button type="button" role="tab" aria-selected={cardSub === 'page'} class:on={cardSub === 'page'} onclick={() => (cardSub = 'page')}>Page</button>
     </div>
     <div class="panel" role="tabpanel">
       {#if cardSub === 'border'}
@@ -84,7 +100,7 @@
           <span class="tool" title="Corner radius"><Spline size={14} /><input aria-label="Radius" type="number" min="0" value={s.border.radius}
             onchange={(e) => setSettings({ border: { ...s.border, radius: num(e) } })} /></span>
         </div>
-      {:else}
+      {:else if cardSub === 'spacing'}
         <div class="toolbar">
           <span class="tool" title="Card margin (mm)"><ScanLine size={14} /><input aria-label="Card margin (mm)" type="number" min="0" value={s.margin}
             onchange={(e) => setSettings({ margin: num(e) })} /></span>
@@ -97,6 +113,29 @@
               {#each ['top','middle','bottom'] as v (v)}<option value={v}>{v}</option>{/each}
             </select>
           </span>
+        </div>
+      {:else}
+        <div class="toolbar">
+          <div class="seg" title="Tiling mode" role="tablist" aria-label="Tiling mode">
+            <button type="button" role="tab" aria-selected={!template?.autoFit} class:on={!template?.autoFit}
+              disabled={!schema} onclick={() => onAutoFitMode(false)}>Fixed</button>
+            <button type="button" role="tab" aria-selected={!!template?.autoFit} class:on={!!template?.autoFit}
+              disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
+          </div>
+          {#if !template?.autoFit}
+            <span class="tool" title="Cards per page"><LayoutGrid size={14} />
+              <select aria-label="Cards per page" value={template?.cardsPerPage ?? 1} disabled={!schema} onchange={onCardsPerPage}>
+                {#each CARDS_PER_PAGE as n (n)}<option value={n}>{n}</option>{/each}
+              </select>
+            </span>
+          {:else}
+            <span class="tool" title="Card size"><LayoutGrid size={14} />
+              <select aria-label="Card size" value={template?.cardSize ?? 'A7'} disabled={!schema} onchange={onCardSize}>
+                {#each CARD_SIZES as sz (sz)}<option value={sz}>{sz}</option>{/each}
+              </select>
+            </span>
+            <span class="hint">≈ {resolvedPerPage}/page</span>
+          {/if}
         </div>
       {/if}
     </div>
@@ -117,8 +156,6 @@
             {#each ['center','top','bottom','left','right'] as v (v)}<option value={v}>{v}</option>{/each}
           </select>
         </span>
-        <label class="tool toggle" title="3-card fit (fill height)"><Rows3 size={14} /><input aria-label="3-card fit (fill height)" type="checkbox" checked={s.threeCardFit}
-          onchange={(e) => setSettings({ threeCardFit: bool(e) })} /></label>
       </div>
     </div>
   {/if}
@@ -169,6 +206,7 @@
   .tabs button:focus-visible, .subtabs button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 
   .panel { flex:1; min-height:0; overflow:auto; padding:10px; }
+  .hint { font-size:11px; color:var(--text-muted); align-self:center; }
   /* Compact horizontal icon toolbar — each control is an icon + a small input/select. */
   .toolbar { display:flex; flex-wrap:wrap; gap:6px 8px; align-content:flex-start; }
   .tool { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); border-radius:7px;
@@ -181,8 +219,6 @@
   .tool input[type=number] { width:42px; }
   .tool select { max-width:112px; cursor:pointer; }
   .tool input[type=color] { width:24px; height:20px; padding:0; border:none; background:none; cursor:pointer; }
-  .tool.toggle { cursor:pointer; }
-  .tool.toggle input[type=checkbox] { width:15px; height:15px; cursor:pointer; }
 
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
   .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 8px; cursor:pointer;
