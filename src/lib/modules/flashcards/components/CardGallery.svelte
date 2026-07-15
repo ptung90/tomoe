@@ -27,7 +27,7 @@
     const packed = $project.cards.filter((c) => c.recordId && recs.some((r) => r.id === c.recordId));
     const packedIds = new Set(packed.map((c) => c.recordId));
     const autoRecs = recs.filter((r) => !packedIds.has(r.id));
-    const paper = getPaperPx(template.size || $project.settings.paperSize, template.orientation || $project.settings.orientation);
+    const paper = getPaperPx(template.size || $project.settings.paperSize, template.style?.orientation ?? template.orientation ?? $project.settings.orientation);
     const scale = Math.min(1, THUMB_W / paper.w);
     return { schema, template, recs, packed, autoRecs, paper, scale };
   }));
