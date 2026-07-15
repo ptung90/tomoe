@@ -128,5 +128,5 @@
   .entry-actions button { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
     background:transparent; color:var(--text); border-radius:6px; padding:5px 9px; font:inherit; font-size:12px; }
   .entry-actions button:hover { background:var(--accent-weak); color:var(--accent); }
-  .entry-actions button.danger:hover { color:#b91c1c; border-color:#f3c2c2; background:transparent; }
+  .entry-actions button.danger:hover { color:var(--danger); border-color:var(--danger-border); background:transparent; }
 </style>

@@ -77,7 +77,7 @@
   .field.row input { width:80px; }
   .field textarea { resize:vertical; }
   .field input:focus-visible, .field textarea:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .err { color:#b91c1c; font-size:12px; margin:0; }
+  .err { color:var(--danger); font-size:12px; margin:0; }
   .actions { display:flex; justify-content:flex-end; gap:8px; }
   .ghost, .primary { display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:6px 12px;
     font:inherit; font-size:13px; cursor:pointer; }

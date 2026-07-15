@@ -40,6 +40,9 @@ Import (any project): `import './design-theme/theme.css'` (or `<link rel="styles
 |-------|-------|------|-----|
 | `--accent` | `#c0562f` | `#e0703f` | **Brand.** primary/selected/links/focus |
 | `--accent-weak` | `#faece6` | `#3a2a22` | **Brand tint.** hover / active bg / chips |
+| `--danger` | `#b91c1c` | `#f87171` | destructive text/icon (delete, remove) |
+| `--danger-weak` | `color-mix(10% danger)` | `color-mix(22% danger)` | soft danger hover background |
+| `--danger-border` | `color-mix(25% danger)` | `color-mix(40% danger)` | soft danger border |
 | `--bg` | `#fbfaf8` | `#1c1a17` | app background |
 | `--surface` | `#ffffff` | `#26231f` | cards, inputs, panels |
 | `--sidebar` | `#f4f1ec` | `#211e1a` | secondary surface |

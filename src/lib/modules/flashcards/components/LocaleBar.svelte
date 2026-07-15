@@ -34,7 +34,7 @@
   .pick { border:none; background:transparent; color:var(--text); font:inherit; font-size:12px; padding:3px 7px; }
   .chip.active .pick { background:var(--accent); color:#fff; font-weight:600; }
   .rm { border:none; background:transparent; color:var(--text-muted); display:inline-flex; padding:2px 4px; }
-  .rm:hover { color:#b91c1c; }
+  .rm:hover { color:var(--danger); }
   .localebar input { border:1px solid var(--border); border-radius:6px; padding:3px 7px;
     background:var(--bg); color:var(--text); font:inherit; font-size:12px; }
 </style>

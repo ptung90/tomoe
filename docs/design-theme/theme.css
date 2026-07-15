@@ -12,6 +12,11 @@
   --accent:       #0d9488;   /* primary: selected rows, primary buttons, links, focus */
   --accent-weak:  color-mix(in srgb, var(--accent) 10%, var(--surface));   /* soft tint: hovers, active backgrounds, chips */
 
+  /* ---- Danger (destructive actions: delete/remove text, icon, hover bg) ---- */
+  --danger:        #b91c1c;   /* destructive text/icon (delete, remove) */
+  --danger-weak:   color-mix(in srgb, var(--danger) 10%, var(--surface));   /* soft danger hover background */
+  --danger-border: color-mix(in srgb, var(--danger) 25%, var(--surface));  /* soft danger border */
+
   /* ---- Neutrals (warm "paper") ---- */
   --bg:           #fbfaf8;   /* app background */
   --surface:      #ffffff;   /* cards, inputs, panels */
@@ -41,6 +46,9 @@
   :root:not([data-theme="light"]) {
     --accent:      #2dd4bf;
     --accent-weak: color-mix(in srgb, var(--accent) 22%, var(--surface));
+    --danger:        #f87171;
+    --danger-weak:   color-mix(in srgb, var(--danger) 22%, var(--surface));
+    --danger-border: color-mix(in srgb, var(--danger) 40%, var(--surface));
     --bg:          #1c1a17;
     --surface:     #26231f;
     --sidebar:     #211e1a;
@@ -53,6 +61,9 @@
 :root[data-theme="dark"] {
   --accent:      #2dd4bf;
   --accent-weak: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  --danger:        #f87171;
+  --danger-weak:   color-mix(in srgb, var(--danger) 22%, var(--surface));
+  --danger-border: color-mix(in srgb, var(--danger) 40%, var(--surface));
   --bg:          #1c1a17;
   --surface:     #26231f;
   --sidebar:     #211e1a;

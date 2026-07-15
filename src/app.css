@@ -2,6 +2,7 @@
   --bg:#fbfaf8; --surface:#ffffff; --sidebar:#f4f1ec;
   --text:#2e2a23; --text-muted:#a89a86; --border:#e7e2d9;
   --accent:#c0562f; --accent-weak:#faece6;
+  --danger:#b91c1c; --danger-weak:color-mix(in srgb, var(--danger) 10%, var(--surface)); --danger-border:color-mix(in srgb, var(--danger) 25%, var(--surface));
   --radius:8px;
   font-family: 'Lexend', system-ui, -apple-system, sans-serif; font-size:14px;
   color:var(--text); background:var(--bg);
@@ -11,12 +12,14 @@
     --bg:#1c1a17; --surface:#26231f; --sidebar:#211e1a;
     --text:#ece7de; --text-muted:#8a8073; --border:#3a352d;
     --accent:#e0703f; --accent-weak:#3a2a22;
+    --danger:#f87171; --danger-weak:color-mix(in srgb, var(--danger) 22%, var(--surface)); --danger-border:color-mix(in srgb, var(--danger) 40%, var(--surface));
   }
 }
 :root[data-theme="dark"] {
   --bg:#1c1a17; --surface:#26231f; --sidebar:#211e1a;
   --text:#ece7de; --text-muted:#8a8073; --border:#3a352d;
   --accent:#e0703f; --accent-weak:#3a2a22;
+  --danger:#f87171; --danger-weak:color-mix(in srgb, var(--danger) 22%, var(--surface)); --danger-border:color-mix(in srgb, var(--danger) 40%, var(--surface));
 }
 /* Flashcards module uses the teal Tomoe accent; json-table + shell keep the terracotta default. */
 .mod-flashcards { --accent:#0d9488; --accent-weak:color-mix(in srgb, #0d9488 10%, var(--surface)); }

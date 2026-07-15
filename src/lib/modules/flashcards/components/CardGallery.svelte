@@ -278,7 +278,7 @@
   .icon-act { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
     color:var(--text-muted); border-radius:6px; padding:3px; cursor:pointer; transition:background .12s ease, color .12s ease; }
   .icon-act:hover { background:var(--accent-weak); color:var(--accent); }
-  .icon-act.danger:hover { background:#fee; color:#b91c1c; }
+  .icon-act.danger:hover { background:var(--danger-weak); color:var(--danger); }
   .icon-act:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 
   .cta { border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:600;

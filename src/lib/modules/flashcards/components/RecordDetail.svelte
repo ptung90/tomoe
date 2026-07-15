@@ -108,7 +108,7 @@
     background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit;
     transition:background .12s ease, color .12s ease; }
   .actions button:hover { background:var(--accent-weak); color:var(--accent); }
-  .actions .danger:hover { background:#fee; color:#b91c1c; }
+  .actions .danger:hover { background:var(--danger-weak); color:var(--danger); }
   .actions button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .detail-body { flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:14px; }
   .hint { color:var(--text-muted); font-size:13px; }

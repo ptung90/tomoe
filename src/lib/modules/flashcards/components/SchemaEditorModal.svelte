@@ -146,5 +146,5 @@
   .modal-foot button { border:1px solid var(--border); background:transparent; color:var(--text);
     border-radius:6px; padding:6px 14px; font:inherit; }
   .modal-foot .primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
-  .modal-foot .danger { color:#b91c1c; border-color:#f3c2c2; display:inline-flex; align-items:center; gap:5px; }
+  .modal-foot .danger { color:var(--danger); border-color:var(--danger-border); display:inline-flex; align-items:center; gap:5px; }
 </style>
