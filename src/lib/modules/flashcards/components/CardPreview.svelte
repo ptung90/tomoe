@@ -36,9 +36,6 @@
   ));
   const fitScale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
   const scale = $derived(userZoom ?? fitScale);
-  // Image-size (image-area height %) only applies to layouts that share space
-  // between an image area and text (not text-only or image-only).
-  const showImageSize = $derived(!!template && template.layout !== 'fulltext' && template.layout !== 'fullimage');
 
   // Ctrl/⌘ + wheel zooms the canvas (non-passive so we can preventDefault the
   // webview's page-zoom); drag pans the scroll when zoomed in; double-click refits.
@@ -85,11 +82,6 @@
   function onLayout(e: Event) {
     if (schema) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value });
   }
-  function onImageHeight(e: Event) {
-    if (!schema) return;
-    const v = Math.round(Number((e.target as HTMLInputElement).value)) || 50;
-    setTemplateLayout(schema.id, { imageHeightPercent: Math.min(95, Math.max(5, v)) });
-  }
 </script>
 
 <div class="preview" bind:clientWidth={paneW}>
@@ -99,11 +91,6 @@
         {#each LAYOUTS as l (l)}<option value={l}>{LAYOUT_LABELS[l] ?? l}</option>{/each}
       </select>
     </label>
-    {#if showImageSize}
-      <label title="Height of the image area, as a % of the card">Image %
-        <input type="number" min="5" max="95" value={template?.imageHeightPercent ?? 50} onchange={onImageHeight} disabled={!schema} />
-      </label>
-    {/if}
     <label>Paper
       <select value={$project.settings.paperSize} onchange={(e) => setSettings({ paperSize: (e.target as HTMLSelectElement).value as any })}>
         {#each ['A4','A5','A6','Letter'] as p (p)}<option value={p}>{p}</option>{/each}
@@ -140,12 +127,9 @@
   .preview-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 12px;
     background:var(--surface); border-bottom:1px solid var(--border); }
   .preview-toolbar label { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-muted); }
-  .preview-toolbar select, .preview-toolbar button, .preview-toolbar input { border:1px solid var(--border); border-radius:6px;
+  .preview-toolbar select, .preview-toolbar button { border:1px solid var(--border); border-radius:6px;
     padding:3px 8px; background:var(--bg); color:var(--text); font:inherit; font-size:12px;
     transition:background .12s ease, color .12s ease, border-color .12s ease; }
-  .preview-toolbar input[type=number] { width:56px; }
-  .preview-toolbar input:hover { border-color:var(--accent); }
-  .preview-toolbar input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .preview-toolbar button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
   .preview-toolbar select:not(:disabled):hover { border-color:var(--accent); }
   .preview-toolbar button.on { background:var(--accent); color:#fff; border-color:var(--accent); }

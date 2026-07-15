@@ -49,6 +49,28 @@ describe('StyleControls (tabbed)', () => {
     expect(get(S.project).settings.threeCardFit).toBe(true);
   });
 
+  it('Image: image-height control (image layout) sets template.imageHeightPercent', async () => {
+    const sid = S.addSchema('Cards');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+    ] });
+    S.addRecord(sid); // selects it; auto layout 1top-1bot has an image area
+    render(StyleControls);
+    await tab('Image');
+    await fireEvent.change(screen.getByLabelText('Image height %'), { target: { value: '35' } });
+    expect(get(S.project).schemas[0].cardTemplates[0].imageHeightPercent).toBe(35);
+  });
+
+  it('Image: no image-height control for a text-only layout', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true }] });
+    S.addRecord(sid); // fulltext (no image field)
+    render(StyleControls);
+    await tab('Image');
+    expect(screen.queryByLabelText('Image height %')).not.toBeInTheDocument();
+  });
+
   it('Text → Title: family + line-height + align commit to titleFont', async () => {
     render(StyleControls); // Title is the default sub-tab
     await fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'serif' } });
