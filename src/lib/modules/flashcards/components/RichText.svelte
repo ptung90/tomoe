@@ -1,5 +1,8 @@
 <script lang="ts">
   import type { Editor } from '@tiptap/core';
+  import AlignLeft from 'lucide-svelte/icons/align-left';
+  import AlignCenter from 'lucide-svelte/icons/align-center';
+  import AlignRight from 'lucide-svelte/icons/align-right';
   import { createEditor, htmlToMd } from '../lib/richtext';
 
   let { value = '', onChange }: { value?: string; onChange: (md: string) => void } = $props();
@@ -40,12 +43,12 @@
     <button type="button" class:on={active('orderedList')} aria-label="ordered list"
       onclick={() => editor?.chain().focus().toggleOrderedList().run()}>1.</button>
     <span class="rt-div"></span>
-    <button type="button" class:on={active({ textAlign: 'left' })} aria-label="align left"
-      onclick={() => editor?.chain().focus().setTextAlign('left').run()}>⬅</button>
-    <button type="button" class:on={active({ textAlign: 'center' })} aria-label="align center"
-      onclick={() => editor?.chain().focus().setTextAlign('center').run()}>⬌</button>
-    <button type="button" class:on={active({ textAlign: 'right' })} aria-label="align right"
-      onclick={() => editor?.chain().focus().setTextAlign('right').run()}>➡</button>
+    <button type="button" class="rt-icon" class:on={active({ textAlign: 'left' })} aria-label="align left"
+      onclick={() => editor?.chain().focus().setTextAlign('left').run()}><AlignLeft size={15} /></button>
+    <button type="button" class="rt-icon" class:on={active({ textAlign: 'center' })} aria-label="align center"
+      onclick={() => editor?.chain().focus().setTextAlign('center').run()}><AlignCenter size={15} /></button>
+    <button type="button" class="rt-icon" class:on={active({ textAlign: 'right' })} aria-label="align right"
+      onclick={() => editor?.chain().focus().setTextAlign('right').run()}><AlignRight size={15} /></button>
   </div>
   <div class="rt-editor" use:mount></div>
 </div>
@@ -58,6 +61,7 @@
     border-radius:6px; padding:3px 7px; font:inherit; min-width:26px; }
   .rt-toolbar button:hover { background:var(--accent-weak); color:var(--accent); }
   .rt-toolbar button.on { background:var(--accent); color:#fff; }
+  .rt-toolbar button.rt-icon { display:inline-flex; align-items:center; justify-content:center; }
   .rt-div { width:1px; height:18px; background:var(--border); margin:0 4px; }
   .rt-editor { padding:8px 10px; min-height:60px; }
   .rt-editor :global(.ProseMirror) { outline:none; min-height:44px; }
