@@ -284,19 +284,20 @@ describe('applyCardToRecords — honors the view\'s field selection (Fix: previo
     return p;
   }
 
-  it('a "def"-only text view packs def AS the title (no sections); editing + applying writes the edit back ' +
-    'to "def", and leaves "title" UNCHANGED', () => {
+  it('a "def"-only view (title field NOT selected) packs def as a SECTION; editing + applying writes back ' +
+    'to "def" and leaves "title" UNCHANGED', () => {
     let p = projDefOnlyView();
     p = ops.packAllForSchema(p, 's1');
     const card = p.cards[0];
-    expect(card.title).toBe('OrigDef'); // the view's one field becomes the title
-    expect(card.sections).toHaveLength(0);
-    // Escape-hatch edit of the card's title (the sole field this view captured).
-    p = { ...p, cards: p.cards.map((c) => (c.id === card.id ? { ...c, title: 'EDITED', edited: true } : c)) };
+    expect(card.title).toBe('');            // 'title' (the schema's title field) isn't in this view → no title
+    expect(card.sections).toHaveLength(1);  // def renders as a section, never dropped
+    expect(card.sections[0].content).toBe('OrigDef');
+    // Escape-hatch edit of the card's section (the sole field this view captured).
+    p = ops.setCardCell(p, card.id, 0, { content: 'EDITED' });
     p = ops.applyCardToRecords(p, card.id);
     const r0 = p.records.find((r) => r.id === 'r0')!;
     expect((r0.fields.def as Record<string, string>).en).toBe('EDITED');      // written to the view's ACTUAL field
-    expect((r0.fields.title as Record<string, string>).en).toBe('OrigTitle'); // NOT touched (pre-fix this got clobbered with 'EDITED')
+    expect((r0.fields.title as Record<string, string>).en).toBe('OrigTitle'); // NOT touched
   });
 
   it('an image-only view (fields:["pic"]) does not wipe the record\'s text fields on apply', () => {

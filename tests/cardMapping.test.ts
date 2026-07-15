@@ -232,20 +232,24 @@ describe('recordToCard — field selection (views)', () => {
     expect(c.title).toBe('');
     expect(c.sections).toHaveLength(0);
   });
-  it('template.fields=["def"] with fulltext includes only that field, as the title (the one remaining text field)', () => {
+  it('template.fields=["def"] (title field NOT selected) renders def as a SECTION, not the title (never dropped)', () => {
+    // 'title' is the schema's designated title field; a view that omits it has no title, and its
+    // selected fields all render as sections — so a content-only view is never an empty card.
     const t = { ...deriveAutoTemplate(schema()), layout: 'fulltext', fields: ['def'] };
     const c = recordToCard(rec, schema(), t, DEFAULT_SETTINGS, 'en');
-    expect(c.title).toBe('a bird');
-    expect(c.sections).toHaveLength(0);
+    expect(c.title).toBe('');
+    expect(c.sections).toHaveLength(1);
+    expect(c.sections[0].label).toBe('Definition');
+    expect(c.sections[0].content).toBe('a bird');
     expect(c.images).toHaveLength(0);
   });
-  it('template.fields in a custom order puts the FIRST listed text field as the title', () => {
+  it('the title is the schema\'s title field (regardless of the view\'s field order); the rest are sections', () => {
     const t = { ...deriveAutoTemplate(schema()), layout: 'fulltext', fields: ['def', 'title'] };
     const c = recordToCard(rec, schema(), t, DEFAULT_SETTINGS, 'en');
-    expect(c.title).toBe('a bird');
+    expect(c.title).toBe('Owl');            // 'title' is the schema's designated title field
     expect(c.sections).toHaveLength(1);
-    expect(c.sections[0].label).toBe('Title');
-    expect(c.sections[0].content).toBe('Owl');
+    expect(c.sections[0].label).toBe('Definition');
+    expect(c.sections[0].content).toBe('a bird');
   });
   it('an empty fields array behaves like undefined — all fields, unchanged', () => {
     const t = { ...deriveAutoTemplate(schema()), fields: [] };

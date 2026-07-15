@@ -42,16 +42,31 @@ export function activeFieldsFor(schema: Schema, template: CardTemplate): SchemaF
     : schema.fields;
 }
 
+/** The schema's designated title field key — its first text (non-image) field, or null. */
+export function schemaTitleKey(schema: Schema): string | null {
+  return schema.fields.find((f) => f.type !== 'image')?.key ?? null;
+}
+
+/** Split a view's active text fields into an (optional) title + the rest as sections.
+ *  The title is the schema's designated title field (its first text field) — and ONLY when the
+ *  view actually includes it. A view that omits the title field renders ALL its selected text
+ *  fields as sections; a selected field is never silently dropped into a hidden title slot. */
+export function splitTitleSections(schema: Schema, activeFields: SchemaField[]): { titleField: SchemaField | null; sectionFields: SchemaField[] } {
+  const textFields = activeFields.filter((f) => f.type !== 'image');
+  const tkey = schemaTitleKey(schema);
+  const titleField = tkey ? (textFields.find((f) => f.key === tkey) ?? null) : null;
+  const sectionFields = textFields.filter((f) => f !== titleField);
+  return { titleField, sectionFields };
+}
+
 /** Build one Card from a single record — one Card = one record. */
 export function recordToCard(
   record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
 ): Card {
   const orientation = template.style?.orientation ?? template.orientation ?? settings.orientation;
   const activeFields = activeFieldsFor(schema, template);
-  const textFields = activeFields.filter((f) => f.type !== 'image');
   const imageFields = activeFields.filter((f) => f.type === 'image');
-  const titleField = textFields[0] ?? null;
-  const sectionFields = titleField ? textFields.slice(1) : textFields;
+  const { titleField, sectionFields } = splitTitleSections(schema, activeFields);
   const slotCount = LAYOUT_SLOTS[template.layout] ?? 0;
   const images: CardImage[] = [];
   for (let i = 0; i < Math.min(slotCount, imageFields.length); i++) {
