@@ -19,14 +19,14 @@ describe('StyleControls (tabbed)', () => {
 
   it('Card → Border: width commits', async () => {
     render(StyleControls);
-    await tab('Card');
+    await tab('Border');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '6' } });
     expect(get(S.project).settings.border.width).toBe(6);
   });
 
   it('Card → Border: color applies live via input', async () => {
     const { container } = render(StyleControls);
-    await tab('Card');
+    await tab('Border');
     const colorInput = container.querySelector('input[type=color]') as HTMLInputElement;
     await fireEvent.input(colorInput, { target: { value: '#123456' } });
     expect(get(S.project).settings.border.color).toBe('#123456');
@@ -34,7 +34,7 @@ describe('StyleControls (tabbed)', () => {
 
   it('Card → Spacing: margin + vertical align commit', async () => {
     render(StyleControls);
-    await tab('Card'); await tab('Spacing');
+    await tab('Spacing');
     await fireEvent.change(screen.getByLabelText('Card margin (mm)'), { target: { value: '12' } });
     await fireEvent.change(screen.getByLabelText('Vertical text align'), { target: { value: 'middle' } });
     expect(get(S.project).settings.margin).toBe(12);
@@ -92,7 +92,7 @@ describe('StyleControls (tabbed)', () => {
     S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
     S.addRecord(sid); // selects it → the schema's template exists
     render(StyleControls);
-    await tab('Card'); await tab('Fields');
+    await tab('Fields');
     await fireEvent.change(screen.getByLabelText('Show field labels'), { target: { checked: false } });
     await fireEvent.change(screen.getByLabelText('Show title'), { target: { checked: false } });
     const tpl = get(S.project).schemas[0].cardTemplates[0];
@@ -117,7 +117,7 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
 
   it('defaults to Global — Border width writes to settings', async () => {
     render(StyleControls);
-    await tab('Card');
+    await tab('Border');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '6' } });
     expect(get(S.project).settings.border.width).toBe(6);
   });
@@ -126,7 +126,7 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     const sid = seedSelected();
     render(StyleControls);
     await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
-    await tab('Card');
+    await tab('Border');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9' } });
     expect(get(S.project).schemas[0].cardTemplates[0].style?.border?.width).toBe(9);
     expect(get(S.project).settings.border.width).not.toBe(9);
@@ -138,7 +138,7 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     S.packAllForSchema(sid);
     render(StyleControls);
     await fireEvent.click(screen.getByRole('tab', { name: 'This card' }));
-    await tab('Card');
+    await tab('Border');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '11' } });
     const recId = get(S.selectedRecordId);
     const card = get(S.project).cards.find((c) => c.recordId === recId);
@@ -150,7 +150,7 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     const sid = seedSelected();
     S.setTemplateStyle(sid, { border: { width: 22 } });
     render(StyleControls);
-    await tab('Card');
+    await tab('Border');
     expect((screen.getByLabelText('Width') as HTMLInputElement).value).toBe('22');
   });
 
@@ -159,7 +159,7 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     S.setTemplateStyle(sid, { border: { width: 22 } });
     render(StyleControls);
     await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
-    await tab('Card');
+    await tab('Border');
     expect(screen.getByLabelText('Width')).toHaveValue(22);
     await fireEvent.click(screen.getByLabelText('Reset border'));
     expect(get(S.project).schemas[0].cardTemplates[0].style?.border).toBeUndefined();
@@ -170,7 +170,7 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     const sid = seedSelected();
     S.setTemplateStyle(sid, { border: { width: 22 } });
     render(StyleControls);
-    await tab('Card');
+    await tab('Border');
     expect(screen.queryByLabelText('Reset border')).not.toBeInTheDocument();
   });
 

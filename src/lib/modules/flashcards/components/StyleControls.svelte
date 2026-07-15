@@ -106,9 +106,9 @@
     if (schema) setTemplateLayout(schema.id, { hideSectionLabels: !(e.target as HTMLInputElement).checked });
   }
 
-  let tab = $state<'text' | 'card' | 'image'>('text');
-  let textSub = $state<'title' | 'content'>('title');
-  let cardSub = $state<'border' | 'spacing' | 'page' | 'fields'>('border');
+  // One flat row of tabs (no Text/Card/Image grouping, no sub-pills).
+  type StyleTab = 'title' | 'content' | 'border' | 'spacing' | 'image' | 'page' | 'fields';
+  let tab = $state<StyleTab>('title');
 </script>
 
 <div class="style-controls">
@@ -135,100 +135,50 @@
     {/if}
   </div>
   <div class="tabs" role="tablist" aria-label="Style sections">
-    <button type="button" role="tab" aria-selected={tab === 'text'} class:on={tab === 'text'} onclick={() => (tab = 'text')}>Text</button>
-    <button type="button" role="tab" aria-selected={tab === 'card'} class:on={tab === 'card'} onclick={() => (tab = 'card')}>Card</button>
-    <button type="button" role="tab" aria-selected={tab === 'image'} class:on={tab === 'image'} onclick={() => (tab = 'image')}>Image</button>
+    {#each [['title','Title'],['content','Content'],['border','Border'],['spacing','Spacing'],['image','Image'],['page','Page'],['fields','Fields']] as [id, label] (id)}
+      <button type="button" role="tab" aria-selected={tab === id} class:on={tab === id} onclick={() => (tab = id as StyleTab)}>{label}</button>
+    {/each}
   </div>
 
-  {#if tab === 'text'}
-    <div class="subtabs" role="tablist" aria-label="Text target">
-      <button type="button" role="tab" aria-selected={textSub === 'title'} class:on={textSub === 'title'} onclick={() => (textSub = 'title')}>Title</button>
-      <button type="button" role="tab" aria-selected={textSub === 'content'} class:on={textSub === 'content'} onclick={() => (textSub = 'content')}>Content</button>
-    </div>
-    <div class="panel" role="tabpanel">
-      {#if textSub === 'title'}
-        {@render fontTools(eff.titleFont, 'titleFont', (p) => write({ titleFont: p }))}
-      {:else}
-        {@render fontTools(eff.contentFont, 'contentFont', (p) => write({ contentFont: p }))}
-      {/if}
-    </div>
-  {:else if tab === 'card'}
-    <div class="subtabs" role="tablist" aria-label="Card target">
-      <button type="button" role="tab" aria-selected={cardSub === 'border'} class:on={cardSub === 'border'} onclick={() => (cardSub = 'border')}>Border</button>
-      <button type="button" role="tab" aria-selected={cardSub === 'spacing'} class:on={cardSub === 'spacing'} onclick={() => (cardSub = 'spacing')}>Spacing</button>
-      <button type="button" role="tab" aria-selected={cardSub === 'page'} class:on={cardSub === 'page'} onclick={() => (cardSub = 'page')}>Page</button>
-      <button type="button" role="tab" aria-selected={cardSub === 'fields'} class:on={cardSub === 'fields'} onclick={() => (cardSub = 'fields')}>Fields</button>
-    </div>
-    <div class="panel" role="tabpanel">
-      {#if cardSub === 'border'}
-        <div class="toolbar">
-          <span class="tool" title="Border width"><Square size={14} /><input aria-label="Width" type="number" min="0" value={eff.border.width}
-            onchange={(e) => write({ border: { width: num(e) } })} /></span>
-          <span class="tool" title="Border style"><SquareDashed size={14} />
-            <select aria-label="Style" value={eff.border.style} onchange={(e) => write({ border: { style: str(e) } })}>
-              {#each ['solid','dashed','dotted','double','none'] as st (st)}<option value={st}>{st}</option>{/each}
-            </select>
-          </span>
-          <span class="tool" title="Border color"><input aria-label="Border color" type="color" value={eff.border.color}
-            oninput={(e) => write({ border: { color: str(e) } })} /></span>
-          <span class="tool" title="Corner radius"><Spline size={14} /><input aria-label="Radius" type="number" min="0" value={eff.border.radius}
-            onchange={(e) => write({ border: { radius: num(e) } })} /></span>
-          {@render resetBtn('border')}
-        </div>
-      {:else if cardSub === 'spacing'}
-        <div class="toolbar">
-          <span class="tool" title="Card margin (mm)"><ScanLine size={14} /><input aria-label="Card margin (mm)" type="number" min="0" value={eff.margin}
-            onchange={(e) => write({ margin: num(e) })} /></span>
-          {@render resetBtn('margin')}
-          <span class="tool" title="Padding (mm)"><SquareDashed size={14} /><input aria-label="Padding (mm)" type="number" min="0" value={eff.padding}
-            onchange={(e) => write({ padding: num(e) })} /></span>
-          {@render resetBtn('padding')}
-          <span class="tool" title="Image padding (mm)"><ImageIcon size={14} /><input aria-label="Image padding (mm)" type="number" min="0" value={eff.imgPadding}
-            onchange={(e) => write({ imgPadding: num(e) })} /></span>
-          {@render resetBtn('imgPadding')}
-          <span class="tool" title="Vertical text align"><MoveVertical size={14} />
-            <select aria-label="Vertical text align" value={eff.textVAlign} onchange={(e) => write({ textVAlign: str(e) as 'top'|'middle'|'bottom' })}>
-              {#each ['top','middle','bottom'] as v (v)}<option value={v}>{v}</option>{/each}
-            </select>
-          </span>
-          {@render resetBtn('textVAlign')}
-        </div>
-      {:else if cardSub === 'page'}
-        <div class="toolbar">
-          <div class="seg" title="Tiling mode" role="tablist" aria-label="Tiling mode">
-            <button type="button" role="tab" aria-selected={!template?.autoFit} class:on={!template?.autoFit}
-              disabled={!schema} onclick={() => onAutoFitMode(false)}>Fixed</button>
-            <button type="button" role="tab" aria-selected={!!template?.autoFit} class:on={!!template?.autoFit}
-              disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
-          </div>
-          {#if !template?.autoFit}
-            <span class="tool" title="Cards per page"><LayoutGrid size={14} />
-              <select aria-label="Cards per page" value={template?.cardsPerPage ?? 1} disabled={!schema} onchange={onCardsPerPage}>
-                {#each CARDS_PER_PAGE as n (n)}<option value={n}>{n}</option>{/each}
-              </select>
-            </span>
-          {:else}
-            <span class="tool" title="Card size"><LayoutGrid size={14} />
-              <select aria-label="Card size" value={template?.cardSize ?? 'A7'} disabled={!schema} onchange={onCardSize}>
-                {#each CARD_SIZES as sz (sz)}<option value={sz}>{sz}</option>{/each}
-              </select>
-            </span>
-            <span class="hint">≈ {resolvedPerPage}/page</span>
-          {/if}
-        </div>
-      {:else}
-        <div class="toolbar">
-          <label class="tool" title="Show the card title (the record's first text field)">
-            <input type="checkbox" aria-label="Show title" checked={!template?.hideTitle} disabled={!schema} onchange={onShowTitle} /> Title
-          </label>
-          <label class="tool" title="Show the “• label:” prefix before each field's value">
-            <input type="checkbox" aria-label="Show field labels" checked={!template?.hideSectionLabels} disabled={!schema} onchange={onShowLabels} /> Labels
-          </label>
-        </div>
-      {/if}
-    </div>
-  {:else}
-    <div class="panel" role="tabpanel">
+  <div class="panel" role="tabpanel">
+    {#if tab === 'title'}
+      {@render fontTools(eff.titleFont, 'titleFont', (p) => write({ titleFont: p }))}
+    {:else if tab === 'content'}
+      {@render fontTools(eff.contentFont, 'contentFont', (p) => write({ contentFont: p }))}
+    {:else if tab === 'border'}
+      <div class="toolbar">
+        <span class="tool" title="Border width"><Square size={14} /><input aria-label="Width" type="number" min="0" value={eff.border.width}
+          onchange={(e) => write({ border: { width: num(e) } })} /></span>
+        <span class="tool" title="Border style"><SquareDashed size={14} />
+          <select aria-label="Style" value={eff.border.style} onchange={(e) => write({ border: { style: str(e) } })}>
+            {#each ['solid','dashed','dotted','double','none'] as st (st)}<option value={st}>{st}</option>{/each}
+          </select>
+        </span>
+        <span class="tool" title="Border color"><input aria-label="Border color" type="color" value={eff.border.color}
+          oninput={(e) => write({ border: { color: str(e) } })} /></span>
+        <span class="tool" title="Corner radius"><Spline size={14} /><input aria-label="Radius" type="number" min="0" value={eff.border.radius}
+          onchange={(e) => write({ border: { radius: num(e) } })} /></span>
+        {@render resetBtn('border')}
+      </div>
+    {:else if tab === 'spacing'}
+      <div class="toolbar">
+        <span class="tool" title="Card margin (mm)"><ScanLine size={14} /><input aria-label="Card margin (mm)" type="number" min="0" value={eff.margin}
+          onchange={(e) => write({ margin: num(e) })} /></span>
+        {@render resetBtn('margin')}
+        <span class="tool" title="Padding (mm)"><SquareDashed size={14} /><input aria-label="Padding (mm)" type="number" min="0" value={eff.padding}
+          onchange={(e) => write({ padding: num(e) })} /></span>
+        {@render resetBtn('padding')}
+        <span class="tool" title="Image padding (mm)"><ImageIcon size={14} /><input aria-label="Image padding (mm)" type="number" min="0" value={eff.imgPadding}
+          onchange={(e) => write({ imgPadding: num(e) })} /></span>
+        {@render resetBtn('imgPadding')}
+        <span class="tool" title="Vertical text align"><MoveVertical size={14} />
+          <select aria-label="Vertical text align" value={eff.textVAlign} onchange={(e) => write({ textVAlign: str(e) as 'top'|'middle'|'bottom' })}>
+            {#each ['top','middle','bottom'] as v (v)}<option value={v}>{v}</option>{/each}
+          </select>
+        </span>
+        {@render resetBtn('textVAlign')}
+      </div>
+    {:else if tab === 'image'}
       <div class="toolbar">
         {#if imgHeightApplies}
           <span class="tool" title="Image height %"><StretchVertical size={14} /><input aria-label="Image height %" type="number" min="5" max="95"
@@ -246,8 +196,40 @@
         </span>
         {@render resetBtn('image')}
       </div>
-    </div>
-  {/if}
+    {:else if tab === 'page'}
+      <div class="toolbar">
+        <div class="seg" title="Tiling mode" role="tablist" aria-label="Tiling mode">
+          <button type="button" role="tab" aria-selected={!template?.autoFit} class:on={!template?.autoFit}
+            disabled={!schema} onclick={() => onAutoFitMode(false)}>Fixed</button>
+          <button type="button" role="tab" aria-selected={!!template?.autoFit} class:on={!!template?.autoFit}
+            disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
+        </div>
+        {#if !template?.autoFit}
+          <span class="tool" title="Cards per page"><LayoutGrid size={14} />
+            <select aria-label="Cards per page" value={template?.cardsPerPage ?? 1} disabled={!schema} onchange={onCardsPerPage}>
+              {#each CARDS_PER_PAGE as n (n)}<option value={n}>{n}</option>{/each}
+            </select>
+          </span>
+        {:else}
+          <span class="tool" title="Card size"><LayoutGrid size={14} />
+            <select aria-label="Card size" value={template?.cardSize ?? 'A7'} disabled={!schema} onchange={onCardSize}>
+              {#each CARD_SIZES as sz (sz)}<option value={sz}>{sz}</option>{/each}
+            </select>
+          </span>
+          <span class="hint">≈ {resolvedPerPage}/page</span>
+        {/if}
+      </div>
+    {:else}
+      <div class="toolbar">
+        <label class="tool" title="Show the card title (the record's first text field)">
+          <input type="checkbox" aria-label="Show title" checked={!template?.hideTitle} disabled={!schema} onchange={onShowTitle} /> Title
+        </label>
+        <label class="tool" title="Show the “• label:” prefix before each field's value">
+          <input type="checkbox" aria-label="Show field labels" checked={!template?.hideSectionLabels} disabled={!schema} onchange={onShowLabels} /> Labels
+        </label>
+      </div>
+    {/if}
+  </div>
 </div>
 
 {#snippet resetBtn(key: keyof StyleOverrides)}
@@ -290,18 +272,15 @@
 <style>
   .style-controls { display:flex; flex-direction:column; height:186px;
     background:var(--surface); border-bottom:1px solid var(--border); }
-  .tabs { display:flex; gap:2px; padding:6px 10px 0; border-bottom:1px solid var(--border); flex:none; }
-  .tabs button { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px; font-weight:600;
-    padding:6px 12px; border-radius:6px 6px 0 0; border-bottom:2px solid transparent; cursor:pointer; margin-bottom:-1px;
+  .tabs { display:flex; gap:2px; padding:6px 8px 0; border-bottom:1px solid var(--border); flex:none;
+    flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tabs button { flex:none; white-space:nowrap; border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px; font-weight:600;
+    padding:6px 9px; border-radius:6px 6px 0 0; border-bottom:2px solid transparent; cursor:pointer; margin-bottom:-1px;
     transition:color .12s ease, border-color .12s ease; }
   .tabs button:hover:not(.on) { color:var(--accent); }
   .tabs button.on { color:var(--accent); border-bottom-color:var(--accent); }
-  .subtabs { display:flex; gap:4px; padding:8px 10px 0; flex:none; }
-  .subtabs button { border:1px solid var(--border); background:var(--bg); color:var(--text-muted); font:inherit; font-size:11px;
-    padding:3px 10px; border-radius:999px; cursor:pointer; transition:background .12s ease, color .12s ease, border-color .12s ease; }
-  .subtabs button:hover:not(.on) { border-color:var(--accent); color:var(--accent); }
-  .subtabs button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .tabs button:focus-visible, .subtabs button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .tabs button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 
   .panel { flex:1; min-height:0; overflow:auto; padding:10px; }
   .hint { font-size:11px; color:var(--text-muted); align-self:center; }

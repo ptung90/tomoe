@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import CardPreview from '../src/lib/modules/flashcards/components/CardPreview.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 import { get } from 'svelte/store';
@@ -57,7 +57,6 @@ describe('CardPreview', () => {
     const sid = get(S.project).schemas[0].id;
     render(CardPreview);
     await fireEvent.click(screen.getByRole('button', { name: 'style' }));
-    await fireEvent.click(within(screen.getByRole('tablist', { name: 'Style sections' })).getByRole('tab', { name: 'Card' }));
     await fireEvent.click(screen.getByRole('tab', { name: 'Page' }));
     await fireEvent.change(screen.getByLabelText('Cards per page'), { target: { value: '6' } });
     const tpl = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates[0];
@@ -69,7 +68,6 @@ describe('CardPreview', () => {
     const sid = get(S.project).schemas[0].id;
     render(CardPreview);
     await fireEvent.click(screen.getByRole('button', { name: 'style' }));
-    await fireEvent.click(within(screen.getByRole('tablist', { name: 'Style sections' })).getByRole('tab', { name: 'Card' }));
     await fireEvent.click(screen.getByRole('tab', { name: 'Page' }));
     await fireEvent.click(screen.getByRole('tab', { name: 'Auto-fit' }));
     await fireEvent.change(screen.getByLabelText('Card size'), { target: { value: 'A7' } });
