@@ -155,6 +155,24 @@ describe('CardPreview — views', () => {
     expect(screen.getByText('Front')).toBeInTheDocument();
   });
 
+  it('Escape cancels a rename — even if a subsequent blur fires (real-browser focus-fixup), the name is unchanged', async () => {
+    const sid = get(S.project).schemas[0].id;
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'View 1 options' }));
+    await fireEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+    const input = screen.getByRole('textbox', { name: /rename view 1/i });
+    await fireEvent.input(input, { target: { value: 'Should Not Commit' } });
+    await fireEvent.keyDown(input, { key: 'Escape' });
+    // jsdom doesn't auto-fire blur on removal/focus changes like a real browser would;
+    // simulate that focus-fixup explicitly and confirm the guard still discards.
+    await fireEvent.blur(input);
+    // A cancelled rename must not even materialize the virgin schema's synthetic auto-view
+    // (renameView would otherwise turn cardTemplates from [] into a persisted [tpl]).
+    expect(get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates).toHaveLength(0);
+    expect(screen.queryByRole('textbox', { name: /rename view 1/i })).not.toBeInTheDocument();
+    expect(screen.getByText('View 1')).toBeInTheDocument();
+  });
+
   it('Delete (via the ⋯ menu) removes a view; the last remaining view has no delete affordance', async () => {
     const sid = get(S.project).schemas[0].id;
     render(CardPreview);
@@ -167,5 +185,13 @@ describe('CardPreview — views', () => {
 
     await fireEvent.click(screen.getByRole('button', { name: 'View 1 options' }));
     expect(screen.getByRole('menuitem', { name: 'Delete View 1' })).toBeDisabled();
+  });
+
+  it('the ⋯ menu closes on an outside click', async () => {
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'View 1 options' }));
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toBeInTheDocument();
+    await fireEvent.click(document.body);
+    expect(screen.queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
   });
 });

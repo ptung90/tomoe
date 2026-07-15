@@ -26,6 +26,10 @@
   // Per-view-column rename/menu UI state — at most one open/renaming at a time.
   let menuOpenId = $state<string | null>(null);
   let renamingId = $state<string | null>(null);
+  // Escape sets this before blurring the input, so the blur handler (which normally
+  // commits) knows to discard instead — blur fires even when the input is removed from
+  // the DOM by a real browser's focus-fixup, so cancel must be explicit, not "don't null it".
+  let renameCancel = false;
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
@@ -136,9 +140,15 @@
   }
   function startRename(id: string) {
     menuOpenId = null;
+    renameCancel = false;
     renamingId = id;
   }
   function commitRename(templateId: string, name: string) {
+    if (renameCancel) {
+      renameCancel = false;
+      renamingId = null;
+      return;
+    }
     renamingId = null;
     const trimmed = name.trim();
     if (schema && trimmed) renameView(schema.id, templateId, trimmed);
@@ -147,6 +157,20 @@
     menuOpenId = null;
     if (schema && views.length > 1) deleteView(schema.id, templateId);
   }
+
+  // Close the open ⋯ menu on an outside click. `.view-col-menu` wraps both the toggle
+  // button and the dropdown, so a click on the toggle itself is "inside" and won't
+  // immediately reclose the menu it just opened.
+  $effect(() => {
+    if (menuOpenId === null) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.view-col-menu')) return;
+      menuOpenId = null;
+    };
+    window.addEventListener('click', onDocClick);
+    return () => window.removeEventListener('click', onDocClick);
+  });
 </script>
 
 <div class="preview" bind:clientWidth={paneW}>
@@ -189,7 +213,7 @@
                   onclick={(e) => e.stopPropagation()}
                   onkeydown={(e) => {
                     if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
-                    if (e.key === 'Escape') { e.preventDefault(); renamingId = null; }
+                    if (e.key === 'Escape') { e.preventDefault(); renameCancel = true; (e.target as HTMLInputElement).blur(); }
                   }}
                   onblur={(e) => commitRename(vc.id, (e.target as HTMLInputElement).value)} />
               {:else}
