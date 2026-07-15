@@ -38,6 +38,22 @@ describe('CardGallery', () => {
     const { getByText } = render(CardGallery, { onOpen: vi.fn() });
     expect(getByText(/no cards yet/i)).toBeInTheDocument();
   });
+
+  it('Gallery view (default) shows per-card thumbnails, not sheets', () => {
+    seed('1top-1bot', 3);
+    const { container } = render(CardGallery, { onOpen: vi.fn() });
+    expect(container.querySelectorAll('.thumb').length).toBe(3);
+    expect(container.querySelector('.fc-sheet')).not.toBeInTheDocument();
+  });
+
+  it('Sheets view tiles the cards onto paper (one .fc-sheet per page, same as Print/PDF)', async () => {
+    const sid = seed('1top-1bot', 3);
+    S.setTemplateLayout(sid, { cardsPerPage: 2, autoFit: false }); // 3 cards → 2 sheets
+    const { container, getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    await fireEvent.click(getByRole('tab', { name: 'Sheets' }));
+    expect(container.querySelectorAll('.fc-sheet').length).toBe(2);
+    expect(container.querySelector('.thumb')).not.toBeInTheDocument(); // no per-card thumbs in sheets view
+  });
 });
 
 describe('CardGallery — packed cards', () => {

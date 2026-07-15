@@ -11,7 +11,8 @@
   import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
   import { deriveAutoTemplate, recordToCard } from '../cardMapping';
   import { isCardStale, schemaForCard } from '../cardOps';
-  import { buildCardHTML, getPaperPx } from '../lib/card-render';
+  import { buildCardHTML, buildSheetHTML, getPaperPx } from '../lib/card-render';
+  import { collectPrintSheets } from '../lib/printCards';
   import { resolveStyle } from '../lib/style';
   import type { RecordItem, Schema, CardTemplate, Card } from '../model';
   import EmptyState from './EmptyState.svelte';
@@ -19,6 +20,25 @@
   let { onOpen }: { onOpen: (recordId: string) => void } = $props();
 
   const THUMB_W = 190;
+  const SHEET_THUMB_W = 260;
+
+  // Cards view has two modes: the per-card manager (gallery) and the assembled
+  // print sheets (same N-up tiling as Print/PDF).
+  let gview = $state<'gallery' | 'sheets'>('gallery');
+
+  // Assembled print sheets, each tagged with its schema name + per-schema page number for captions.
+  const sheetItems = $derived.by(() => {
+    const pageBySchema = new Map<string, number>();
+    return collectPrintSheets($project).map((sheet) => {
+      const rid = sheet.cards.find((c) => c.recordId)?.recordId ?? null;
+      const rec = rid ? $project.records.find((r) => r.id === rid) : null;
+      const schema = rec ? $project.schemas.find((s) => s.id === rec.schemaId) : null;
+      const sid = schema?.id ?? '?';
+      const page = (pageBySchema.get(sid) ?? 0) + 1;
+      pageBySchema.set(sid, page);
+      return { sheet, name: schema?.name ?? 'Cards', page, scale: Math.min(1, SHEET_THUMB_W / sheet.lay.sheetW) };
+    });
+  });
 
   // One thumbnail per record: the persisted (packed) card if one exists, else auto-derived.
   const groups = $derived($project.schemas.map((schema) => {
@@ -78,6 +98,32 @@
     hint="Add records in the Records view — they'll appear here as cards." />
 {:else}
   <div class="gallery">
+    <div class="gallery-bar">
+      <div class="seg" role="tablist" aria-label="Cards view mode">
+        <button type="button" role="tab" aria-selected={gview === 'gallery'} class:on={gview === 'gallery'}
+          onclick={() => (gview = 'gallery')}>Gallery</button>
+        <button type="button" role="tab" aria-selected={gview === 'sheets'} class:on={gview === 'sheets'}
+          onclick={() => (gview = 'sheets')}>Sheets</button>
+      </div>
+      {#if gview === 'sheets'}
+        <span class="bar-info">{sheetItems.length} sheet{sheetItems.length === 1 ? '' : 's'} · same layout as Print / PDF</span>
+      {/if}
+    </div>
+
+    {#if gview === 'sheets'}
+      <div class="sheets">
+        {#each sheetItems as it, i (i)}
+          <div class="sheet-thumb">
+            <div class="thumb-frame" style={`width:${Math.round(it.sheet.lay.sheetW * it.scale)}px;height:${Math.round(it.sheet.lay.sheetH * it.scale)}px;`}>
+              <div class="thumb-scaler" style={`transform:scale(${it.scale});width:${it.sheet.lay.sheetW}px;height:${it.sheet.lay.sheetH}px;`}>
+                {@html buildSheetHTML(it.sheet.cards, it.sheet.lay, it.sheet.settings, $project.activeLocale)}
+              </div>
+            </div>
+            <span class="thumb-cap">{it.name} · page {it.page}</span>
+          </div>
+        {/each}
+      </div>
+    {:else}
     {#each groups as g (g.schema.id)}
       <section class="group">
         <header class="group-head">
@@ -139,12 +185,25 @@
         {/if}
       </section>
     {/each}
+    {/if}
   </div>
 {/if}
 
 <style>
   .gallery { height:100%; min-height:0; overflow:auto; padding:16px; background:var(--sidebar);
     display:flex; flex-direction:column; gap:20px; }
+  .gallery-bar { display:flex; align-items:center; gap:10px; }
+  .bar-info { font-size:11px; color:var(--text-muted); }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; background:var(--bg); }
+  .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 12px; cursor:pointer;
+    font:inherit; font-size:12px; transition:background .12s ease, color .12s ease; }
+  .seg button:not(:last-child) { border-right:1px solid var(--border); }
+  .seg button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
+  .seg button.on { background:var(--accent); color:#fff; }
+  .seg button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+  /* Assembled print sheets — bigger thumbnails than single cards (a whole page). */
+  .sheets { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:18px; align-items:start; }
+  .sheet-thumb { display:flex; flex-direction:column; align-items:center; gap:6px; }
   .group { display:flex; flex-direction:column; gap:10px; }
   .group-head { display:flex; align-items:center; gap:8px; }
   .group-name { font-weight:600; font-size:13px; color:var(--text); }
