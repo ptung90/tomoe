@@ -42,4 +42,17 @@ describe('flashcards store wrappers', () => {
     expect(get(S.selectedRecordId)).toBeNull();
     expect(get(S.project).records).toHaveLength(0);
   });
+
+  it('selectAdjacentRecord moves within siblings and clamps at both ends', () => {
+    const sid = S.addSchema('W');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 't', label: 'T', type: 'text', multilingual: true }] });
+    S.addRecord(sid); S.addRecord(sid); S.addRecord(sid);
+    const ids = get(S.project).records.map((r) => r.id);
+    S.selectRecord(ids[0]);
+    S.selectAdjacentRecord(1); expect(get(S.selectedRecordId)).toBe(ids[1]);
+    S.selectAdjacentRecord(1); expect(get(S.selectedRecordId)).toBe(ids[2]);
+    S.selectAdjacentRecord(1); expect(get(S.selectedRecordId)).toBe(ids[2]); // clamped at end
+    S.selectAdjacentRecord(-1); expect(get(S.selectedRecordId)).toBe(ids[1]);
+    S.selectRecord(ids[0]); S.selectAdjacentRecord(-1); expect(get(S.selectedRecordId)).toBe(ids[0]); // clamped at start
+  });
 });

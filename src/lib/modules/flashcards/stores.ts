@@ -70,6 +70,18 @@ export const cardEditorOpen = writable<string | null>(null);
 
 export function selectRecord(id: string | null): void { selectedRecordId.set(id); }
 
+/** Move selection to a sibling record (same schema, in list order). delta -1 = prev, +1 = next. No-op at the ends. */
+export function selectAdjacentRecord(delta: number): void {
+  const p = get(project);
+  const curId = get(selectedRecordId);
+  const cur = p.records.find((r) => r.id === curId);
+  if (!cur) return;
+  const sibs = p.records.filter((r) => r.schemaId === cur.schemaId);
+  const j = sibs.findIndex((r) => r.id === curId) + delta;
+  if (j < 0 || j >= sibs.length) return;
+  selectedRecordId.set(sibs[j].id);
+}
+
 // ── Record actions ─────────────────────────────────────────────────────
 export function addRecord(schemaId: string): void {
   const { project: np, id } = ops.addRecord(get(project), schemaId);
