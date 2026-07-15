@@ -6,59 +6,63 @@ import * as S from '../src/lib/modules/flashcards/stores';
 
 beforeEach(() => { S.initProject(); });
 
-describe('StyleControls', () => {
-  it('editing border width commits to settings', async () => {
+const tab = (name: string | RegExp) => fireEvent.click(screen.getByRole('tab', { name }));
+
+describe('StyleControls (tabbed)', () => {
+  it('defaults to the Text→Title panel; other sections are hidden until their tab is active', () => {
     render(StyleControls);
+    expect(screen.getByLabelText('Family')).toBeInTheDocument();   // Title font shown
+    expect(screen.queryByLabelText('Width')).not.toBeInTheDocument();      // Border hidden
+    expect(screen.queryByLabelText('Fit')).not.toBeInTheDocument();        // Image hidden
+  });
+
+  it('Card → Border: width commits', async () => {
+    render(StyleControls);
+    await tab('Card');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '6' } });
     expect(get(S.project).settings.border.width).toBe(6);
   });
 
-  it('color picker applies live via input (border color, first)', async () => {
+  it('Card → Border: color applies live via input', async () => {
     const { container } = render(StyleControls);
+    await tab('Card');
     const colorInput = container.querySelector('input[type=color]') as HTMLInputElement;
     await fireEvent.input(colorInput, { target: { value: '#123456' } });
     expect(get(S.project).settings.border.color).toBe('#123456');
   });
 
-  it('editing card margin commits to settings', async () => {
+  it('Card → Spacing: margin + vertical align commit', async () => {
     render(StyleControls);
+    await tab('Card'); await tab('Spacing');
     await fireEvent.change(screen.getByLabelText('Card margin (mm)'), { target: { value: '12' } });
-    expect(get(S.project).settings.margin).toBe(12);
-  });
-
-  it('vertical text align select commits', async () => {
-    render(StyleControls);
     await fireEvent.change(screen.getByLabelText('Vertical text align'), { target: { value: 'middle' } });
+    expect(get(S.project).settings.margin).toBe(12);
     expect(get(S.project).settings.textVAlign).toBe('middle');
   });
 
-  it('image fit select commits to image.backgroundSize', async () => {
+  it('Image: fit + 3-card fit commit', async () => {
     render(StyleControls);
+    await tab('Image');
     await fireEvent.change(screen.getByLabelText('Fit'), { target: { value: 'contain' } });
-    expect(get(S.project).settings.image.backgroundSize).toBe('contain');
-  });
-
-  it('3-card fit checkbox commits', async () => {
-    render(StyleControls);
     await fireEvent.change(screen.getByLabelText('3-card fit (fill height)'), { target: { checked: true } });
+    expect(get(S.project).settings.image.backgroundSize).toBe('contain');
     expect(get(S.project).settings.threeCardFit).toBe(true);
   });
 
-  it('title font family (first Family control) commits to titleFont', async () => {
-    render(StyleControls);
-    await fireEvent.change(screen.getAllByLabelText('Family')[0], { target: { value: 'serif' } });
+  it('Text → Title: family + line-height + align commit to titleFont', async () => {
+    render(StyleControls); // Title is the default sub-tab
+    await fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'serif' } });
+    await fireEvent.change(screen.getByLabelText('Line height'), { target: { value: '1.4' } });
+    await fireEvent.click(screen.getByLabelText('align center'));
     expect(get(S.project).settings.titleFont.family).toBe('serif');
-  });
-
-  it('title line-height (first Line height control) commits to titleFont', async () => {
-    render(StyleControls);
-    await fireEvent.change(screen.getAllByLabelText('Line height')[0], { target: { value: '1.4' } });
     expect(get(S.project).settings.titleFont.lineHeight).toBe(1.4);
+    expect(get(S.project).settings.titleFont.textAlign).toBe('center');
   });
 
-  it('title align-center button sets titleFont.textAlign', async () => {
+  it('Text → Content: family commits to contentFont', async () => {
     render(StyleControls);
-    await fireEvent.click(screen.getAllByLabelText('align center')[0]);
-    expect(get(S.project).settings.titleFont.textAlign).toBe('center');
+    await tab('Content');
+    await fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'monospace' } });
+    expect(get(S.project).settings.contentFont.family).toBe('monospace');
   });
 });
