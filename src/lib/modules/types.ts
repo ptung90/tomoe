@@ -11,6 +11,7 @@ export interface TomoeModule {
   newDoc(): void;             // reset this module's store to an empty document
   open(text: string, path: string | null): void;  // parse text into this module's store
   save(): Promise<void>;      // this module serializes + writes (native) + toast
+  saveAs?(): Promise<void>;   // always prompt for a new path (Save As…), then write there
   dirty: Readable<boolean>;
   canUndo: Readable<boolean>;
   canRedo: Readable<boolean>;

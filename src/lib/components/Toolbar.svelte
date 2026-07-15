@@ -2,6 +2,7 @@
   import FilePlus from 'lucide-svelte/icons/file-plus';
   import FolderOpen from 'lucide-svelte/icons/folder-open';
   import Save from 'lucide-svelte/icons/save';
+  import SaveAll from 'lucide-svelte/icons/save-all';
   import Undo2 from 'lucide-svelte/icons/undo-2';
   import Redo2 from 'lucide-svelte/icons/redo-2';
   import Sun from 'lucide-svelte/icons/sun';
@@ -34,6 +35,7 @@
     </button>
     <button onclick={pickOpen} title="Open (Ctrl+O)"><FolderOpen size={18} /> Open</button>
     <button onclick={() => mod?.save()} disabled={!mod} title="Save (Ctrl+S)"><Save size={18} /> Save</button>
+    <button onclick={() => mod?.saveAs?.()} disabled={!mod} title="Save As…"><SaveAll size={18} /> Save As</button>
   </div>
   <span class="sep"></span>
   <div class="grp">
