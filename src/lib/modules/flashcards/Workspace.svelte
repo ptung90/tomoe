@@ -9,7 +9,12 @@
   import CardGallery from './components/CardGallery.svelte';
   import PrintView from './components/PrintView.svelte';
   import { collectPrintCards } from './lib/printCards';
+  import { exportCardsPdf, pdfFileName, pdfStamp } from './lib/pdfExport';
+  import { save as saveDialog } from '@tauri-apps/plugin-dialog';
+  import { writeFile } from '@tauri-apps/plugin-fs';
+  import { showToast } from '../../shell';
   import Printer from 'lucide-svelte/icons/printer';
+  import FileDown from 'lucide-svelte/icons/file-down';
   import PanelLeft from 'lucide-svelte/icons/panel-left';
   import PanelRight from 'lucide-svelte/icons/panel-right';
 
@@ -19,6 +24,25 @@
   let rightHidden = $state(false);
   let view = $state<'records' | 'cards'>('records');
   const printCount = $derived(collectPrintCards($project).length);
+  let exporting = $state(false);
+
+  async function exportPdf() {
+    if (printCount === 0 || exporting) return;
+    exporting = true;
+    try {
+      const bytes = await exportCardsPdf($project);
+      if (!bytes) { showToast('No cards to export', 'error'); return; }
+      const name = pdfFileName($project.projectName, pdfStamp(new Date()));
+      const path = await saveDialog({ defaultPath: name, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+      if (!path) return;
+      await writeFile(path, bytes);
+      showToast('Exported PDF');
+    } catch (e) {
+      showToast(`Export failed: ${(e as Error).message}`, 'error');
+    } finally {
+      exporting = false;
+    }
+  }
   const cols = $derived(
     `${leftHidden ? 0 : leftWidth}px ${leftHidden ? 0 : 6}px 1fr ${rightHidden ? 0 : 6}px ${rightHidden ? 0 : rightWidth}px`,
   );
@@ -55,8 +79,12 @@
       </div>
     {/if}
     <button type="button" class="print-btn" disabled={printCount === 0}
-      onclick={() => window.print()} title="Print / Export PDF">
+      onclick={() => window.print()} title="Print (system dialog)">
       <Printer size={14} /> Print
+    </button>
+    <button type="button" class="print-btn" disabled={printCount === 0 || exporting}
+      onclick={exportPdf} title="Export PDF (image, matches preview)">
+      <FileDown size={14} /> {exporting ? 'Exporting…' : 'PDF'}
     </button>
   </header>
   {#if view === 'records'}

@@ -38,7 +38,9 @@
     "@tiptap/extension-underline": "^3.27.4",
     "@tiptap/starter-kit": "^3.27.4",
     "cropperjs": "^1.6.2",
+    "html-to-image": "^1.11.13",
     "json5": "^2.2.3",
+    "jspdf": "^4.2.1",
     "lucide-svelte": "^0.460.1",
     "marked": "^18.0.6",
     "turndown": "^7.2.4"

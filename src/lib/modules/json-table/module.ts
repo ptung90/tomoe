@@ -1,7 +1,7 @@
 import type { TomoeModule } from '../types';
 import Workspace from './Workspace.svelte';
 import * as S from './stores';
-import { saveCurrent, openText } from './io';
+import { saveCurrent, pickSave, openText } from './io';
 
 export const jsonTable: TomoeModule = {
   id: 'json-table',
@@ -11,6 +11,7 @@ export const jsonTable: TomoeModule = {
   newDoc: () => S.loadDocument(null, null),
   open: (text, path) => openText(text, path),
   save: () => saveCurrent(),
+  saveAs: () => pickSave(),
   dirty: S.dirty,
   canUndo: S.canUndo,
   canRedo: S.canRedo,
