@@ -42,13 +42,43 @@ export function parseProject(text: string): Project {
     image: { ...base.settings.image, ...(s.image||{}) },
     titleFont: { ...base.settings.titleFont, ...(s.titleFont||{}) },
     contentFont: { ...base.settings.contentFont, ...(s.contentFont||{}) } };
+
+  const normSchema = (sc: any): Schema => ({
+    ...sc, id: sc.id || uid('sch'), name: sc.name || 'Records',
+    fields: Array.isArray(sc.fields) ? sc.fields : [],
+    cardTemplates: Array.isArray(sc.cardTemplates) ? sc.cardTemplates : [],
+  });
+  // Legacy flashcard-creator single-schema files use `schema` (object) instead of `schemas`.
+  let schemas: Schema[];
+  const rawRecords: any[] = Array.isArray(raw.records) ? raw.records : [];
+  if (raw.schema && typeof raw.schema === 'object' && !Array.isArray(raw.schemas)) {
+    schemas = [normSchema(raw.schema)];
+  } else {
+    schemas = (Array.isArray(raw.schemas) ? raw.schemas : []).map(normSchema);
+  }
+  const fallbackSchemaId = schemas[0]?.id ?? '';
+  const records: RecordItem[] = rawRecords.map((r) => ({
+    id: r.id || uid('rec'),
+    schemaId: r.schemaId ?? fallbackSchemaId,
+    fieldsHash: r.fieldsHash ?? '',
+    fields: r.fields ?? {},
+  }));
+
   return { version: typeof raw.version==='number'?raw.version:1,
     projectName: raw.projectName ?? raw.project_name ?? base.projectName,
     projectIcon: raw.projectIcon ?? raw.project_icon ?? base.projectIcon,
-    settings, schemas: raw.schemas ?? [], records: raw.records ?? [], cards: raw.cards ?? [],
+    settings, schemas, records, cards: Array.isArray(raw.cards) ? raw.cards : [],
     locales: raw.locales ?? base.locales, activeLocale: raw.activeLocale ?? base.activeLocale };
 }
 export function looksLikeFlashcards(text: string): boolean {
-  try { const o = JSON.parse(text); return !!o && typeof o==='object' && Array.isArray(o.schemas) && Array.isArray(o.cards); }
-  catch { return false; }
+  try {
+    const o = JSON.parse(text);
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+    // project_name/project_icon are on every flashcard-creator save; projectName/projectIcon on Tomoe's.
+    if ('project_name' in o || 'project_icon' in o || 'projectName' in o || 'projectIcon' in o) return true;
+    if (Array.isArray(o.schemas) && Array.isArray(o.records)) return true;              // schema+records project
+    if (Array.isArray(o.cards) && (Array.isArray(o.schemas) || o.settings)) return true; // packed project
+    if (o.schema && typeof o.schema === 'object' && Array.isArray(o.records)) return true; // legacy single-schema
+    return false;
+  } catch { return false; }
 }

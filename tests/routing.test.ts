@@ -14,4 +14,15 @@ describe('open routing', () => {
   it('invalid JSON → json-table (fallback)', () => {
     expect(pickModuleForOpen('/a.json', 'not json').id).toBe('json-table');
   });
+
+  // Legacy flashcard-creator exports carry .json and route by content sniff.
+  it('legacy .json with project_name/project_icon → flashcards', () => {
+    expect(pickModuleForOpen('/old.json', JSON.stringify({ version: '1.0', project_name: 'Verbs', project_icon: '🐟', settings: {}, cards: [] })).id).toBe('flashcards');
+  });
+  it('legacy .json single-schema (schema object + records) → flashcards', () => {
+    expect(pickModuleForOpen('/old.json', JSON.stringify({ schema: { id: 's', fields: [] }, records: [{ fields: {} }] })).id).toBe('flashcards');
+  });
+  it('.json with schemas + records arrays → flashcards', () => {
+    expect(pickModuleForOpen('/old.json', JSON.stringify({ schemas: [], records: [] })).id).toBe('flashcards');
+  });
 });
