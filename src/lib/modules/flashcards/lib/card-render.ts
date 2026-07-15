@@ -43,6 +43,10 @@ const GRID_STRATEGIES: Record<string, (r: number, c: number, n: number) => strin
   '1top-1bot': (r) => `grid-template-rows:${r}% ${100 - r}%;`,
   '2top-1bot': (r, _c, n) => `grid-template-rows:${r}% ${100 - r}%;grid-template-columns:${n}% ${100 - n}%;`,
   '1top-2bot': (r, _c, n) => `grid-template-rows:${r}% ${100 - r}%;grid-template-columns:${n}% ${100 - n}%;`,
+  '1big-2small': (r, c, n) => `grid-template-columns:${c}% ${100 - c}%;grid-template-rows:${n}% ${100 - n}%;`,
+  '1left-2right': (r, c, n) => `grid-template-columns:${c}% ${100 - c}%;grid-template-rows:${n}% ${100 - n}%;`,
+  '1left-3right': (_r, c) => `grid-template-columns:${c}% ${100 - c}%;grid-template-rows:1fr 1fr 1fr;`,
+  '1top-3bot': (r) => `grid-template-rows:${r}% ${100 - r}%;grid-template-columns:1fr 1fr 1fr;`,
 };
 
 export function getGridTemplateStyle(layout: string, sp: GridSplit): string {

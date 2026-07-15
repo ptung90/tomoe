@@ -75,3 +75,59 @@ describe('buildCardHTML grid/fulltext/fullimage', () => {
     expect(html).not.toContain('📷');
   });
 });
+
+describe('buildCardHTML new 5 layouts', () => {
+  it('1big-2small renders a 2-col grid with columns 67% 33% and 3 image slots', () => {
+    const html = buildCardHTML(card({
+      layout: '1big-2small',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('grid-template-columns:67% 33%');
+    expect(html).toContain('fc-image-slot-0');
+    expect(html).toContain('fc-image-slot-1');
+    expect(html).toContain('fc-image-slot-2');
+  });
+  it('1left-2right renders a 2-col grid with columns 33% 67% and 3 image slots', () => {
+    const html = buildCardHTML(card({
+      layout: '1left-2right',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('grid-template-columns:33% 67%');
+    expect(html).toContain('fc-image-slot-0');
+    expect(html).toContain('fc-image-slot-1');
+    expect(html).toContain('fc-image-slot-2');
+  });
+  it('1left-3right renders a 2-col / 3-row grid with columns 33% 67% and 4 image slots', () => {
+    const html = buildCardHTML(card({
+      layout: '1left-3right',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('grid-template-columns:33% 67%');
+    expect(html).toContain('grid-template-rows:1fr 1fr 1fr');
+    expect(html).toContain('fc-image-slot-0');
+    expect(html).toContain('fc-image-slot-1');
+    expect(html).toContain('fc-image-slot-2');
+    expect(html).toContain('fc-image-slot-3');
+  });
+  it('1top-3bot renders a 3-col / 2-row grid with rows 67% 33% and 4 image slots', () => {
+    const html = buildCardHTML(card({
+      layout: '1top-3bot',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('grid-template-rows:67% 33%');
+    expect(html).toContain('grid-template-columns:1fr 1fr 1fr');
+    expect(html).toContain('fc-image-slot-0');
+    expect(html).toContain('fc-image-slot-1');
+    expect(html).toContain('fc-image-slot-2');
+    expect(html).toContain('fc-image-slot-3');
+  });
+  it('1full renders with image-area present and 1 image slot', () => {
+    const html = buildCardHTML(card({
+      layout: '1full',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('fc-image-area');
+    expect(html).toContain('fc-image-slot-0');
+    expect(html).not.toContain('fc-image-slot-1');
+  });
+});
