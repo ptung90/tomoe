@@ -93,18 +93,73 @@ export function applySettings(p: Project, patch: Partial<Settings> | StyleOverri
   } };
 }
 
-export function applyTemplatePatch(p: Project, schemaId: string, patch: Partial<CardTemplate>): Project {
+/** Index of the addressed template within a schema's cardTemplates: the exact templateId if
+ *  found; the first view (index 0) if templateId is null/stale/unknown but the schema already
+ *  has views; -1 only when the schema has NO views yet (the caller then creates the first one). */
+function templateIndex(s: Schema, templateId: string | null): number {
+  if (!s.cardTemplates.length) return -1;
+  if (!templateId) return 0;
+  const idx = s.cardTemplates.findIndex((t) => t.id === templateId);
+  return idx === -1 ? 0 : idx;
+}
+
+export function applyTemplatePatch(p: Project, schemaId: string, templateId: string | null, patch: Partial<CardTemplate>): Project {
   return { ...p, schemas: p.schemas.map((s) => {
     if (s.id !== schemaId) return s;
-    const existing = s.cardTemplates[0] ?? deriveAutoTemplate(s);
-    return { ...s, cardTemplates: [{ ...existing, ...patch }, ...s.cardTemplates.slice(1)] };
+    const idx = templateIndex(s, templateId);
+    if (idx === -1) return { ...s, cardTemplates: [{ ...deriveAutoTemplate(s), ...patch }, ...s.cardTemplates] };
+    const cardTemplates = s.cardTemplates.slice();
+    cardTemplates[idx] = { ...cardTemplates[idx], ...patch };
+    return { ...s, cardTemplates };
   }) };
 }
 
-export function applyTemplateStyle(p: Project, schemaId: string, patch: StyleOverrides): Project {
+export function applyTemplateStyle(p: Project, schemaId: string, templateId: string | null, patch: StyleOverrides): Project {
   return { ...p, schemas: p.schemas.map((s) => {
     if (s.id !== schemaId) return s;
-    const existing = s.cardTemplates[0] ?? deriveAutoTemplate(s);
-    return { ...s, cardTemplates: [{ ...existing, style: mergeStyle(existing.style, patch) }, ...s.cardTemplates.slice(1)] };
+    const idx = templateIndex(s, templateId);
+    if (idx === -1) {
+      const created = deriveAutoTemplate(s);
+      return { ...s, cardTemplates: [{ ...created, style: mergeStyle(created.style, patch) }, ...s.cardTemplates] };
+    }
+    const cardTemplates = s.cardTemplates.slice();
+    cardTemplates[idx] = { ...cardTemplates[idx], style: mergeStyle(cardTemplates[idx].style, patch) };
+    return { ...s, cardTemplates };
   }) };
+}
+
+// ── Views (multi-view per schema): a "view" is one entry in Schema.cardTemplates ──
+/** Adds one more view than the schema currently shows. A virgin schema (cardTemplates: []) only
+ *  ever DISPLAYS one synthetic auto-derived view (see deriveAutoTemplate) — it is never persisted
+ *  until something writes to it. So "add a view" here first MATERIALIZES that baseline view as a
+ *  real, persisted cardTemplates[0], then appends the new one after it — the user goes from
+ *  "View 1" (implicit) to "View 1" + "View 2" (both real), not from nothing to a single view. */
+export function addView(p: Project, schemaId: string): { project: Project; id: string | null } {
+  const schema = p.schemas.find((s) => s.id === schemaId);
+  if (!schema) return { project: p, id: null };
+  const baseline = schema.cardTemplates.length ? schema.cardTemplates : [deriveAutoTemplate(schema)];
+  const created: CardTemplate = { ...deriveAutoTemplate(schema), id: uid('tpl') };
+  const project = { ...p, schemas: p.schemas.map((s) => (s.id === schemaId ? { ...s, cardTemplates: [...baseline, created] } : s)) };
+  return { project, id: created.id };
+}
+
+export function renameView(p: Project, schemaId: string, templateId: string, name: string): Project {
+  return { ...p, schemas: p.schemas.map((s) => (s.id !== schemaId ? s : {
+    ...s, cardTemplates: s.cardTemplates.map((t) => (t.id === templateId ? { ...t, name } : t)),
+  })) };
+}
+
+/** Refuses to delete a schema's last remaining view — a schema must always keep >=1 once it has any. */
+export function deleteView(p: Project, schemaId: string, templateId: string): Project {
+  const schema = p.schemas.find((s) => s.id === schemaId);
+  if (!schema || schema.cardTemplates.length <= 1) return p;
+  return { ...p, schemas: p.schemas.map((s) => (s.id !== schemaId ? s : {
+    ...s, cardTemplates: s.cardTemplates.filter((t) => t.id !== templateId),
+  })) };
+}
+
+export function setViewFields(p: Project, schemaId: string, templateId: string, keys: string[]): Project {
+  return { ...p, schemas: p.schemas.map((s) => (s.id !== schemaId ? s : {
+    ...s, cardTemplates: s.cardTemplates.map((t) => (t.id === templateId ? { ...t, fields: keys } : t)),
+  })) };
 }

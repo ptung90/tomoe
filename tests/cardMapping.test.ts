@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
-import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, chunkRecords, viewLabel } from '../src/lib/modules/flashcards/cardMapping';
+import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, applyTemplateStyle, chunkRecords, viewLabel, addView, renameView, deleteView, setViewFields } from '../src/lib/modules/flashcards/cardMapping';
 
 function schema(): Schema {
   return { id: 's1', name: 'Words', cardTemplates: [], fields: [
@@ -65,13 +65,115 @@ describe('applySettings / applyTemplatePatch', () => {
     expect(p2.settings.paperSize).toBe('A4');
     expect(p.settings.border.width).not.toBe(8); // unmutated
   });
-  it('applyTemplatePatch creates the schema template then patches it', () => {
+  it('applyTemplatePatch(templateId=null) creates the schema\'s first template then patches it', () => {
     const p = newProject(); p.schemas.push(schema());
-    const p2 = applyTemplatePatch(p, 's1', { layout: '2x2' });
+    const p2 = applyTemplatePatch(p, 's1', null, { layout: '2x2' });
     expect(p2.schemas[0].cardTemplates[0].layout).toBe('2x2');
-    const p3 = applyTemplatePatch(p2, 's1', { orientation: 'landscape' });
+    const p3 = applyTemplatePatch(p2, 's1', null, { orientation: 'landscape' });
     expect(p3.schemas[0].cardTemplates[0].layout).toBe('2x2'); // preserved
     expect(p3.schemas[0].cardTemplates[0].orientation).toBe('landscape');
+  });
+  it('applyTemplatePatch targets a specific templateId, leaving other views untouched', () => {
+    const p = newProject();
+    const s = schema();
+    s.cardTemplates = [
+      { id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} },
+      { id: 't2', templateType: 'single', layout: 'fullimage', mapping: {} },
+    ];
+    p.schemas.push(s);
+    const p2 = applyTemplatePatch(p, 's1', 't2', { hideTitle: true });
+    expect(p2.schemas[0].cardTemplates[0]).toMatchObject({ layout: 'fulltext' }); // t1 untouched
+    expect(p2.schemas[0].cardTemplates[1]).toMatchObject({ layout: 'fullimage', hideTitle: true });
+  });
+  it('applyTemplatePatch with a stale/unknown templateId falls back to the first view (no duplicate created)', () => {
+    const p = newProject(); const s = schema();
+    s.cardTemplates = [{ id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} }];
+    p.schemas.push(s);
+    const p2 = applyTemplatePatch(p, 's1', 'not-a-real-id', { hideTitle: true });
+    expect(p2.schemas[0].cardTemplates).toHaveLength(1);
+    expect(p2.schemas[0].cardTemplates[0]).toMatchObject({ layout: 'fulltext', hideTitle: true });
+  });
+
+  describe('applyTemplateStyle (templateId)', () => {
+    it('targets a specific templateId', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [
+        { id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} },
+        { id: 't2', templateType: 'single', layout: 'fullimage', mapping: {} },
+      ];
+      p.schemas.push(s);
+      const p2 = applyTemplateStyle(p, 's1', 't2', { border: { width: 9 } });
+      expect(p2.schemas[0].cardTemplates[0].style).toBeUndefined();
+      expect(p2.schemas[0].cardTemplates[1].style?.border?.width).toBe(9);
+    });
+  });
+
+  describe('views (addView/renameView/deleteView/setViewFields)', () => {
+    it('addView on a virgin schema (no persisted templates) materializes the implicit view 1, then appends view 2', () => {
+      const p = newProject(); p.schemas.push(schema()); // schema().cardTemplates === []
+      const { project: p2, id } = addView(p, 's1');
+      expect(id).toBeTruthy();
+      expect(p2.schemas[0].cardTemplates).toHaveLength(2); // baseline (materialized) + the new one
+      expect(p2.schemas[0].cardTemplates[1].id).toBe(id);  // the new view is the 2nd
+    });
+    it('addView on a schema that already has views just appends one more', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [{ id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} }];
+      p.schemas.push(s);
+      const { project: p2, id } = addView(p, 's1');
+      expect(p2.schemas[0].cardTemplates).toHaveLength(2);
+      expect(p2.schemas[0].cardTemplates[0].id).toBe('t1'); // untouched
+      expect(p2.schemas[0].cardTemplates[1].id).toBe(id);
+    });
+    it('addView on a missing schema is a no-op', () => {
+      const p = newProject();
+      const { project: p2, id } = addView(p, 'missing');
+      expect(id).toBeNull();
+      expect(p2).toBe(p);
+    });
+    it('renameView sets an explicit name on the addressed template only', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [
+        { id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} },
+        { id: 't2', templateType: 'single', layout: 'fullimage', mapping: {} },
+      ];
+      p.schemas.push(s);
+      const p2 = renameView(p, 's1', 't2', 'Cover');
+      expect(p2.schemas[0].cardTemplates[0].name).toBeUndefined();
+      expect(p2.schemas[0].cardTemplates[1].name).toBe('Cover');
+    });
+    it('deleteView removes the addressed template when more than one view exists', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [
+        { id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} },
+        { id: 't2', templateType: 'single', layout: 'fullimage', mapping: {} },
+      ];
+      p.schemas.push(s);
+      const p2 = deleteView(p, 's1', 't1');
+      expect(p2.schemas[0].cardTemplates).toHaveLength(1);
+      expect(p2.schemas[0].cardTemplates[0].id).toBe('t2');
+    });
+    it('deleteView refuses to delete the last remaining view', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [{ id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} }];
+      p.schemas.push(s);
+      const p2 = deleteView(p, 's1', 't1');
+      expect(p2.schemas[0].cardTemplates).toHaveLength(1);
+      expect(p2).toBe(p); // unchanged reference — refused
+    });
+    it('setViewFields sets the selected field keys on the addressed template', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [{ id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} }];
+      p.schemas.push(s);
+      const p2 = setViewFields(p, 's1', 't1', ['def']);
+      expect(p2.schemas[0].cardTemplates[0].fields).toEqual(['def']);
+    });
   });
 });
 

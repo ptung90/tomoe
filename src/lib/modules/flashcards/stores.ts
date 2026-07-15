@@ -1,6 +1,6 @@
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
 import * as H from '../../history';
-import { newProject, type Project, type SchemaField, type RecordItem, type Settings, type CardTemplate, type StyleOverrides } from './model';
+import { newProject, type Project, type Schema, type SchemaField, type RecordItem, type Settings, type CardTemplate, type StyleOverrides } from './model';
 import * as ops from './recordOps';
 import * as cardMapping from './cardMapping';
 import * as cardOps from './cardOps';
@@ -48,6 +48,7 @@ export function initProject(): void {
   history.set(H.createHistory(newProject()));
   filePath.set(null); dirty.set(false);
   selectedRecordId.set(null); activeSchemaId.set(null); schemaEditorOpen.set(null); cardEditorOpen.set(null);
+  activeViewId.set(null);
 }
 export function loadProject(p: Project, path: string | null): void {
   history.set(H.createHistory(p));
@@ -56,6 +57,7 @@ export function loadProject(p: Project, path: string | null): void {
   activeSchemaId.set(p.schemas[0]?.id ?? null);
   schemaEditorOpen.set(null);
   cardEditorOpen.set(null);
+  activeViewId.set(null);
 }
 export function commit(next: Project): void { history.update((h) => H.push(h, next)); dirty.set(true); }
 export function undo(): void { history.update((h) => H.undo(h)); dirty.set(true); }
@@ -68,6 +70,9 @@ export const selectedRecordId = writable<string | null>(null);
 export const activeSchemaId = writable<string | null>(null);
 export const schemaEditorOpen = writable<string | '__new__' | null>(null);
 export const cardEditorOpen = writable<string | null>(null);
+export const activeViewId: Writable<string | null> = writable(null);
+
+export function selectView(id: string | null): void { activeViewId.set(id); }
 
 export function selectRecord(id: string | null): void { selectedRecordId.set(id); }
 
@@ -136,39 +141,55 @@ export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'o
 export function setSettings(patch: Partial<Settings> | StyleOverrides): void {
   commit(cardMapping.applySettings(get(project), patch));
 }
-export function setTemplateLayout(schemaId: string, patch: Partial<CardTemplate>): void {
-  commit(cardMapping.applyTemplatePatch(get(project), schemaId, patch));
+function resolveTemplateId(schemaId: string, templateId?: string): string | null {
+  if (templateId) return templateId;
+  const active = get(activeViewId);
+  if (active) return active;
+  return get(project).schemas.find((s) => s.id === schemaId)?.cardTemplates[0]?.id ?? null;
 }
-export function setTemplateStyle(schemaId: string, patch: StyleOverrides): void {
-  commit(cardMapping.applyTemplateStyle(get(project), schemaId, patch));
+
+export function setTemplateLayout(schemaId: string, patch: Partial<CardTemplate>, templateId?: string): void {
+  commit(cardMapping.applyTemplatePatch(get(project), schemaId, resolveTemplateId(schemaId, templateId), patch));
+}
+export function setTemplateStyle(schemaId: string, patch: StyleOverrides, templateId?: string): void {
+  commit(cardMapping.applyTemplateStyle(get(project), schemaId, resolveTemplateId(schemaId, templateId), patch));
 }
 export function setCardStyle(cardId: string, patch: StyleOverrides): void {
   const p = get(project);
   commit({ ...p, cards: p.cards.map((c) => (c.id === cardId ? { ...c, style: mergeStyle(c.style, patch) } : c)) });
 }
 /** Drop ALL style overrides at the given scope in a single undo step (schema template.style / card.style → undefined). */
-export function resetScopeStyle(scope: 'schema' | 'card', id: string): void {
+export function resetScopeStyle(scope: 'schema' | 'card', id: string, templateId?: string): void {
   const p = get(project);
   if (scope === 'schema') {
+    const tid = resolveTemplateId(id, templateId);
     commit({ ...p, schemas: p.schemas.map((s) => {
-      if (s.id !== id || !s.cardTemplates[0]?.style) return s;
-      return { ...s, cardTemplates: [{ ...s.cardTemplates[0], style: undefined }, ...s.cardTemplates.slice(1)] };
+      if (s.id !== id) return s;
+      const idx = s.cardTemplates.findIndex((t) => t.id === tid);
+      if (idx === -1 || !s.cardTemplates[idx].style) return s;
+      const cardTemplates = s.cardTemplates.slice();
+      cardTemplates[idx] = { ...cardTemplates[idx], style: undefined };
+      return { ...s, cardTemplates };
     }) });
   } else {
     commit({ ...p, cards: p.cards.map((c) => (c.id === id && c.style ? { ...c, style: undefined } : c)) });
   }
 }
 /** Remove one override key at the given scope's style object; if the resulting style is empty, set it to undefined. */
-export function clearStyleOverride(scope: 'schema' | 'card', id: string, key: keyof StyleOverrides): void {
+export function clearStyleOverride(scope: 'schema' | 'card', id: string, key: keyof StyleOverrides, templateId?: string): void {
   const p = get(project);
   if (scope === 'schema') {
+    const tid = resolveTemplateId(id, templateId);
     commit({ ...p, schemas: p.schemas.map((s) => {
       if (s.id !== id) return s;
-      const existing = s.cardTemplates[0];
-      if (!existing?.style) return s;
-      const { [key]: _drop, ...rest } = existing.style;
+      const idx = s.cardTemplates.findIndex((t) => t.id === tid);
+      if (idx === -1 || !s.cardTemplates[idx].style) return s;
+      const existing = s.cardTemplates[idx];
+      const { [key]: _drop, ...rest } = existing.style!;
       const style = Object.keys(rest).length ? rest : undefined;
-      return { ...s, cardTemplates: [{ ...existing, style }, ...s.cardTemplates.slice(1)] };
+      const cardTemplates = s.cardTemplates.slice();
+      cardTemplates[idx] = { ...existing, style };
+      return { ...s, cardTemplates };
     }) });
   } else {
     commit({ ...p, cards: p.cards.map((c) => {
@@ -178,6 +199,26 @@ export function clearStyleOverride(scope: 'schema' | 'card', id: string, key: ke
       return { ...c, style };
     }) });
   }
+}
+
+// ── View (multi-view per schema) actions ────────────────────────────────
+export function addView(schemaId: string): void {
+  const { project: np, id } = cardMapping.addView(get(project), schemaId);
+  if (!id) return;
+  commit(np);
+  activeViewId.set(id);
+}
+export function renameView(schemaId: string, templateId: string, name: string): void {
+  commit(cardMapping.renameView(get(project), schemaId, templateId, name));
+}
+export function deleteView(schemaId: string, templateId: string): void {
+  const before = get(project).schemas.find((s) => s.id === schemaId)?.cardTemplates.length ?? 0;
+  commit(cardMapping.deleteView(get(project), schemaId, templateId));
+  const after = get(project).schemas.find((s) => s.id === schemaId)?.cardTemplates ?? [];
+  if (after.length < before && get(activeViewId) === templateId) activeViewId.set(after[0]?.id ?? null);
+}
+export function setViewFields(schemaId: string, templateId: string, keys: string[]): void {
+  commit(cardMapping.setViewFields(get(project), schemaId, templateId, keys));
 }
 
 // ── Card pack/regenerate/delete actions ─────────────────────────────────
