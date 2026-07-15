@@ -5,6 +5,7 @@
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
   import { deriveAutoTemplate, recordsToCard, cardsPerPage, chunkRecords } from '../cardMapping';
   import { buildCardHTML, LAYOUTS, getPaperPx } from '../lib/card-render';
+  import { zoomStep } from '../lib/zoom';
   import StyleControls from './StyleControls.svelte';
   import EmptyState from './EmptyState.svelte';
 
@@ -19,8 +20,10 @@
     '3card': '3 mini-cards',
   };
 
-  let paneW = $state(360);
+  let paneW = $state(440);
   let showStyle = $state(false);
+  // null = auto-fit; a number = explicit user zoom (Ctrl/⌘ + wheel). Double-click resets.
+  let userZoom = $state<number | null>(null);
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
@@ -30,7 +33,22 @@
     template?.size || $project.settings.paperSize,
     template?.orientation || $project.settings.orientation,
   ));
-  const scale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
+  const fitScale = $derived(Math.max(0.05, Math.min(1, (paneW - 40) / paper.w)));
+  const scale = $derived(userZoom ?? fitScale);
+
+  // Ctrl/⌘ + wheel zooms the canvas; a non-passive listener lets us preventDefault
+  // (so the webview doesn't page-zoom). Double-click resets to auto-fit.
+  function wheelZoom(node: HTMLElement) {
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      userZoom = zoomStep(scale, e.deltaY);
+    };
+    const onDblClick = () => { userZoom = null; }; // reset to auto-fit
+    node.addEventListener('wheel', onWheel, { passive: false });
+    node.addEventListener('dblclick', onDblClick);
+    return { destroy() { node.removeEventListener('wheel', onWheel); node.removeEventListener('dblclick', onDblClick); } };
+  }
   const cardHtml = $derived.by(() => {
     if (!record || !schema || !template) return '';
     const schemaRecords = $project.records.filter((r) => r.schemaId === schema.id);
@@ -69,7 +87,8 @@
   {#if showStyle}<StyleControls />{/if}
 
   {#if record && schema}
-    <div class="preview-scroll">
+    <div class="preview-scroll" use:wheelZoom
+      title="Ctrl/⌘ + scroll to zoom · double-click to fit">
       <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
         <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
           {@html cardHtml}
@@ -101,7 +120,7 @@
   .preview-scroll {
     flex:1; min-height:0; overflow:auto;
     padding:20px;
-    display:flex; justify-content:center; align-items:flex-start;
+    display:flex; justify-content:safe center; align-items:flex-start;
     background:var(--sidebar);
     box-shadow:inset 0 1px 0 var(--border);
   }
