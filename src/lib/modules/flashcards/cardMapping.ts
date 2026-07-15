@@ -58,7 +58,7 @@ export function recordsToCard(
     return {
       id: 'preview_' + (record?.id ?? 'empty'),
       layout: template.layout,
-      imageHeightPercent: DEFAULT_IMAGE_HEIGHT,
+      imageHeightPercent: template.imageHeightPercent ?? DEFAULT_IMAGE_HEIGHT,
       images,
       title: record && titleField ? resolveLocale(record.fields[titleField.key], locale) : '',
       sections,
@@ -96,7 +96,7 @@ export function recordsToCard(
   return {
     id: 'preview_' + (cells[0]?.id ?? 'empty'),
     layout: template.layout,
-    imageHeightPercent: DEFAULT_IMAGE_HEIGHT,
+    imageHeightPercent: template.imageHeightPercent ?? DEFAULT_IMAGE_HEIGHT,
     images,
     title: '',
     sections,
