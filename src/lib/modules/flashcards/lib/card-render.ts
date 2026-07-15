@@ -125,6 +125,10 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const marginPx = mmToPx(s.margin);
   const paddingPx = mmToPx(s.padding);
   const imgPaddingPx = mmToPx(s.imgPadding ?? 0);
+  // Inset the image block from its allotted area. `fullimage` handles its own
+  // wrapper below; every other layout applies it to `.fc-image-area` (which has
+  // a fixed px height/min-height, so border-box keeps the padding inside).
+  const imgAreaPad = imgPaddingPx ? 'box-sizing:border-box;padding:' + imgPaddingPx + 'px;' : '';
   const vAlign = s.textVAlign || 'top';
   const vAlignJustify = TEXT_VALIGN_MAP[vAlign] || 'flex-start';
   const textVAlignStyle = 'justify-content:' + vAlignJustify + ';';
@@ -194,7 +198,12 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     ? `${_cs} .fc-section__content{font-size:${card.contentSize}px}`
     : '';
   const _imgLabelFontRule = contentStyle ? `${_cs} .fc-img-label{${contentStyle}}` : '';
-  const cardStyleTag = '<style>' + _h1Rule + _labelSizeRule + _contentSizeRule + _imgLabelFontRule + (card.customCss ? _scopeCardCss(card.customCss, card.id) : '') + '</style>';
+  // Gap between content paragraphs; the last one is flush so it doesn't push text off the card.
+  const paraGapPx = Math.max(0, s.paraGap ?? 0);
+  const _paraGapRule =
+    `${_cs} .fc-section__content > p{margin-bottom:${paraGapPx}px}` +
+    `${_cs} .fc-section__content > p:last-child{margin-bottom:0}`;
+  const cardStyleTag = '<style>' + _h1Rule + _labelSizeRule + _contentSizeRule + _imgLabelFontRule + _paraGapRule + (card.customCss ? _scopeCardCss(card.customCss, card.id) : '') + '</style>';
   const showTitle = !!resolvedTitle && !card.hideTitle;
 
   // fullimage: image-only card with inner padding wrapper
@@ -224,7 +233,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       '" style="' + sizeStyle + borderStyle + '">' +
       (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '') +
       // Image auto-fills the empty middle between title and text; imageHeightPercent is the floor (min-height).
-      '<div class="fc-image-area" style="min-height:' + imgH + 'px;position:relative;flex:1 1 auto;">' + slots + handles + '</div>' +
+      '<div class="fc-image-area" style="min-height:' + imgH + 'px;position:relative;flex:1 1 auto;' + imgAreaPad + '">' + slots + handles + '</div>' +
       '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
       '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' + sectionsHtml + '</div>' +
       '</div></div>'
@@ -259,6 +268,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     '<div class="fc-image-area" style="height:' +
     imgH +
     'px;position:relative;' +
+    imgAreaPad +
     gridStyle +
     '">' +
     slots +

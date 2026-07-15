@@ -6,6 +6,8 @@ export interface FontSpec { family: string; size: number; weight?: number; color
 export interface Settings {
   paperSize: 'A4'|'A5'|'A6'|'Letter'; orientation: 'portrait'|'landscape';
   margin: number; padding: number; imgPadding: number;
+  /** Vertical gap (px) between content paragraphs; the last paragraph gets none. */
+  paraGap: number;
   textVAlign: 'top'|'middle'|'bottom';
   border: { width: number; style: string; color: string; radius: number };
   image: { backgroundSize: string; backgroundPosition: string };
@@ -20,7 +22,7 @@ export interface StyleOverrides {
   image?: Partial<Settings['image']>;
   titleFont?: Partial<FontSpec>;
   contentFont?: Partial<FontSpec>;
-  margin?: number; padding?: number; imgPadding?: number;
+  margin?: number; padding?: number; imgPadding?: number; paraGap?: number;
   textVAlign?: 'top' | 'middle' | 'bottom';
   paperSize?: Settings['paperSize'];
   orientation?: Settings['orientation'];
@@ -35,6 +37,7 @@ export interface Project { version: number; projectName: string; projectIcon: st
 
 export const DEFAULT_SETTINGS: Settings = {
   paperSize: 'A5', orientation: 'portrait', margin: 9, padding: 2, imgPadding: 0,
+  paraGap: 2,
   textVAlign: 'middle',
   border: { width: 4, style: 'double', color: '#6B21A8', radius: 0 },
   image: { backgroundSize: 'cover', backgroundPosition: 'center' },

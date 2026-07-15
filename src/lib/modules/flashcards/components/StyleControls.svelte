@@ -3,6 +3,8 @@
   import ALargeSmall from 'lucide-svelte/icons/a-large-small';
   import Bold from 'lucide-svelte/icons/bold';
   import StretchVertical from 'lucide-svelte/icons/stretch-vertical';
+  import StretchHorizontal from 'lucide-svelte/icons/stretch-horizontal';
+  import Baseline from 'lucide-svelte/icons/baseline';
   import AlignLeft from 'lucide-svelte/icons/align-left';
   import AlignCenter from 'lucide-svelte/icons/align-center';
   import AlignRight from 'lucide-svelte/icons/align-right';
@@ -254,7 +256,7 @@
         {#each WEIGHTS as w (w.v)}<option value={w.v}>{w.label}</option>{/each}
       </select>
     </span>
-    <span class="tool" title="Line height"><StretchVertical size={14} /><input aria-label="Line height" type="number" min="0.5" step="0.1" value={f.lineHeight}
+    <span class="tool" title="Line height"><Baseline size={14} /><input aria-label="Line height" type="number" min="0.5" step="0.1" value={f.lineHeight}
       onchange={(e) => patch({ lineHeight: num(e) })} /></span>
     <span class="tool" title="Text color"><input aria-label="Color" type="color" value={f.color}
       oninput={(e) => patch({ color: str(e) })} /></span>
@@ -266,6 +268,11 @@
       {/each}
     </div>
     {@render resetBtn(key)}
+    {#if key === 'contentFont'}
+      <span class="tool" title="Paragraph gap (px)"><StretchHorizontal size={14} /><input aria-label="Paragraph gap (px)" type="number" min="0" value={eff.paraGap}
+        onchange={(e) => write({ paraGap: num(e) })} /></span>
+      {@render resetBtn('paraGap')}
+    {/if}
   </div>
 {/snippet}
 

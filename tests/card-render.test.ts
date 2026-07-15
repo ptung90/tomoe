@@ -159,6 +159,44 @@ describe('buildCardHTML new 5 layouts', () => {
     expect(html).toContain('fc-image-slot-0');
     expect(html).not.toContain('fc-image-slot-1');
   });
+  it('imgPadding insets the image-area in the default (grid/1full) layout', () => {
+    const pad = mmToPx(5);
+    const html = buildCardHTML(card({
+      layout: '1full',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), { ...DEFAULT_SETTINGS, imgPadding: 5 }, 'en');
+    const area = html.match(/fc-image-area" style="([^"]*)"/);
+    expect(area).toBeTruthy();
+    expect(area![1]).toContain('box-sizing:border-box');
+    expect(area![1]).toContain(`padding:${pad}px`);
+  });
+  it('imgPadding insets the image-area in title-img-text', () => {
+    const pad = mmToPx(5);
+    const html = buildCardHTML(card({
+      layout: 'title-img-text', title: 'Owl',
+      images: [{ slot: 0, url: 'http://x/o.png' }],
+      sections: [{ id: 's1', label: '', content: 'a bird' }],
+    }), { ...DEFAULT_SETTINGS, imgPadding: 5 }, 'en');
+    const area = html.match(/fc-image-area" style="([^"]*)"/);
+    expect(area).toBeTruthy();
+    expect(area![1]).toContain(`padding:${pad}px`);
+  });
+  it('imgPadding of 0 adds no padding to the image-area', () => {
+    const html = buildCardHTML(card({
+      layout: '1full',
+      sections: [{ id: 's1', label: '', content: 'hi' }],
+    }), { ...DEFAULT_SETTINGS, imgPadding: 0 }, 'en');
+    const area = html.match(/fc-image-area" style="([^"]*)"/);
+    expect(area![1]).not.toContain('padding:');
+  });
+  it('paraGap sets the paragraph margin-bottom and zeroes the last paragraph', () => {
+    const html = buildCardHTML(card({
+      layout: 'fulltext',
+      sections: [{ id: 's1', label: '', content: 'one\n\ntwo' }],
+    }), { ...DEFAULT_SETTINGS, paraGap: 7 }, 'en');
+    expect(html).toContain('.fc-section__content > p{margin-bottom:7px}');
+    expect(html).toContain('.fc-section__content > p:last-child{margin-bottom:0}');
+  });
 });
 
 describe('sheetGrid', () => {
