@@ -60,12 +60,6 @@
       {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
     </span>
-    <div class="view-toggle" aria-label="view">
-      <button type="button" aria-pressed={view === 'records'} class:on={view === 'records'}
-        onclick={() => (view = 'records')}>Records</button>
-      <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
-        onclick={() => (view = 'cards')}>Cards</button>
-    </div>
     {#if view === 'records'}
       <div class="panel-toggles" aria-label="panels">
         <button type="button" class="panel-btn" class:off={leftHidden} aria-pressed={!leftHidden}
@@ -78,6 +72,12 @@
         </button>
       </div>
     {/if}
+    <div class="view-toggle" aria-label="view">
+      <button type="button" aria-pressed={view === 'records'} class:on={view === 'records'}
+        onclick={() => (view = 'records')}>Records</button>
+      <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
+        onclick={() => (view = 'cards')}>Cards</button>
+    </div>
     <button type="button" class="print-btn" disabled={printCount === 0}
       onclick={() => window.print()} title="Print (system dialog)">
       <Printer size={14} /> Print
@@ -132,7 +132,7 @@
   .view-toggle button:hover:not(.on) { color:var(--accent); }
   .view-toggle button.on { background:var(--accent); color:#fff; font-weight:600; }
   .view-toggle button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .panel-toggles { display:inline-flex; gap:2px; }
+  .panel-toggles { margin-left:auto; display:inline-flex; gap:2px; }
   .panel-btn { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
     color:var(--text); border-radius:6px; padding:4px 7px; cursor:pointer; transition:background .12s ease, color .12s ease; }
   .panel-btn:hover { background:var(--accent-weak); color:var(--accent); }
