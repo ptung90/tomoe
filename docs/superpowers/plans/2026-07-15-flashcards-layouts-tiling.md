@@ -15,7 +15,9 @@
 - Reference values (grid tracks, slots, splits) transcribed verbatim from flashcard-creator `src/js/render.js` (`GRID_STRATEGIES`) and `src/js/core/state.js` (`LAYOUT_SLOTS`/`LAYOUT_SPLIT_DEFAULTS`).
 - `buildCardHTML` signature is unchanged and reused per tile via its `overridePx` param.
 - Card interior = FIXED print colors (`#fff`/`#1a1a1a`/`#e5e7eb`/`#9ca3af`); chrome = Calm Paper tokens; lucide subpath imports.
-- Pure logic (registry, `sheetGrid`, `collectPrintSheets`, `recordToCard`) immutable + TDD.
+- Pure logic (registry, `sheetGrid`, `collectPrintSheets`, `recordToCard`, migration) immutable + TDD.
+- **The `LAYOUTS` registry lives in a new `lib/layouts.ts`** (no render/`marked` deps) so `card-render.ts`, `cardMapping.ts`, and `model.ts` can all import it without pulling `marked` into `model` (avoids a heavy/circular import). `card-render.ts` may re-export it for existing importers.
+- **Backward compatibility:** `parseProject` migrates old files (persisted `.tomoe.json` and legacy flashcard-creator `.json`) that reference removed compound layouts — see Task 1 Step 6.
 - Gates per task: `npm run check` 0 errors · `npm test` green, 0 unhandled (re-run once on EBUSY) · `npm run build` OK. Merge only on green.
 
 ## The 11 single-card layouts (registry source of truth)
@@ -51,11 +53,11 @@
 
 ## Task 1: Layout registry + remove compound
 
-**Files:** Modify `lib/card-render.ts`, `cardMapping.ts`, `cardOps.ts`, `lib/printCards.ts`, `components/CardPreview.svelte`; trim `tests/cardMapping.test.ts`, `tests/printCards.test.ts`, `tests/card-render.test.ts`, `tests/cardOps.test.ts`, `tests/CardPreview.test.ts` (remove 3card/compound assertions).
+**Files:** Create `lib/layouts.ts` (registry); Modify `lib/card-render.ts`, `cardMapping.ts`, `cardOps.ts`, `lib/printCards.ts`, `model.ts` (migration), `components/CardPreview.svelte`; add/trim `tests/flashcards-model.test.ts` (migration), `tests/cardMapping.test.ts`, `tests/printCards.test.ts`, `tests/card-render.test.ts`, `tests/cardOps.test.ts`, `tests/CardPreview.test.ts` (remove 3card/compound assertions).
 
 **Interfaces produced:** `LayoutDef`, `LAYOUTS: LayoutDef[]`, `LAYOUT_IDS: string[]`, derived `LAYOUT_SLOTS`, `LAYOUT_SPLIT_DEFAULTS`, `HIDE_TITLE_LAYOUTS`; `recordToCard(record, schema, template, settings, locale): Card` (single-only).
 
-- [ ] **Step 1: Registry in `card-render.ts`.** Replace the standalone `LAYOUTS`, `LAYOUT_SLOTS`, `LAYOUT_SPLIT_DEFAULTS` consts with:
+- [ ] **Step 1: Registry in a new `lib/layouts.ts`** (no `marked`/render deps). Create it and move the layout constants here (out of `card-render.ts`); `card-render.ts`, `cardMapping.ts`, and `model.ts` import from it. Contents:
 ```ts
 export interface LayoutDef {
   id: string; label: string; slots: number;
@@ -97,11 +99,31 @@ and the now-unused compound locals (`compoundWrapperStyle`, `borderCss` if only 
 
 - [ ] **Step 5: `printCards.ts` interim.** Keep `collectPrintCards` but simplify to one card per record (packed card if `project.cards.find(c => c.recordId === r.id)`, else `recordToCard`). (Task 3 adds `collectPrintSheets`; keeping `collectPrintCards` green here avoids breaking PrintView until Task 4.)
 
-- [ ] **Step 6: `CardPreview.svelte`.** Import `LAYOUTS` (defs) instead of the string array; drop the local `LAYOUT_LABELS`; render options as `{#each LAYOUTS as l (l.id)}<option value={l.id}>{l.label}</option>{/each}`. `cardHtml` uses `recordToCard(record, schema, template, …)` (single). Remove the `chunkRecords(...cardsPerPage...)` 3card logic — preview is the single card.
+- [ ] **Step 6: Migration in `parseProject` (`model.ts`).** Import `LAYOUT_IDS` from `lib/layouts.ts`. Add and apply migration so old files open on the new model:
+```ts
+const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number }> = {
+  '3card':     { layout: '1top-1bot', cardsPerPage: 3 },
+  '2img-2txt': { layout: '1top-1bot', cardsPerPage: 2 },
+  '3img-3txt': { layout: '1top-1bot', cardsPerPage: 3 },
+  'img3-txt3': { layout: '1top-1bot', cardsPerPage: 3 },
+  '6cell':     { layout: '1top-1bot', cardsPerPage: 6 },
+  '8img-8txt': { layout: '1top-1bot', cardsPerPage: 8 },
+  'txtgrid':   { layout: 'fulltext',  cardsPerPage: 12 },
+};
+function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
+  const m = COMPOUND_MIGRATION[t?.layout];
+  if (m) return { ...t, layout: m.layout, cardsPerPage: t.cardsPerPage ?? m.cardsPerPage };
+  if (!LAYOUT_IDS.includes(t?.layout)) return { ...t, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
+  return t;
+}
+```
+In `parseProject`, after normalizing schemas, map each schema's `cardTemplates` through `migrateTemplate` (`schemaHasImage = schema.fields.some(f => f.type === 'image')`), and **drop compound card snapshots**: `cards: (Array.isArray(raw.cards) ? raw.cards : []).filter((c) => !(c.packedRecordIds?.length)).map((c) => COMPOUND_MIGRATION[c.layout] ? { ...c, layout: COMPOUND_MIGRATION[c.layout].layout } : c)`. Records/schemas/settings unchanged.
 
-- [ ] **Step 7: Trim compound tests.** In `cardMapping.test.ts` remove the `3card`/compound `recordsToCard` cases and `cardsPerPage` compound assertions (keep single-card mapping + `chunkRecords`). In `printCards.test.ts` update expectations to one-card-per-record. In `card-render.test.ts`/`cardOps.test.ts`/`CardPreview.test.ts` remove 3card/`packedRecordIds` assertions. Add: `LAYOUTS` has 11 unique ids; `LAYOUT_SLOTS['1big-2small']===3`; `HIDE_TITLE_LAYOUTS` has `fulltext`+`fullimage` only.
+- [ ] **Step 7: `CardPreview.svelte`.** Import `LAYOUTS` (defs) from `lib/layouts.ts` instead of the string array; drop the local `LAYOUT_LABELS`; render options as `{#each LAYOUTS as l (l.id)}<option value={l.id}>{l.label}</option>{/each}`. `cardHtml` uses `recordToCard(record, schema, template, …)` (single). Remove the `chunkRecords(...cardsPerPage...)` 3card logic — preview is the single card.
 
-- [ ] **Step 8: RED→GREEN + gates.** `npm test` green (compound tests removed), `npm run check` 0, `npm run build` OK. Commit: `refactor(flashcards): layout registry + remove compound/3card (one card per record)`.
+- [ ] **Step 8: Trim compound tests + add migration test.** Add to `tests/flashcards-model.test.ts`: a legacy `3card` project (template `layout:'3card'`, a card with `packedRecordIds:['r1','r2','r3']`) → after `parseProject`: `schemas[0].cardTemplates[0].layout === '1top-1bot'`, `.cardsPerPage === 3`, and `cards.every(c => !c.packedRecordIds?.length)` (compound snapshot dropped). Then trim compound tests (below). In `cardMapping.test.ts` remove the `3card`/compound `recordsToCard` cases and `cardsPerPage` compound assertions (keep single-card mapping + `chunkRecords`). In `printCards.test.ts` update expectations to one-card-per-record. In `card-render.test.ts`/`cardOps.test.ts`/`CardPreview.test.ts` remove 3card/`packedRecordIds` assertions. Add: `LAYOUTS` has 11 unique ids; `LAYOUT_SLOTS['1big-2small']===3`; `HIDE_TITLE_LAYOUTS` has `fulltext`+`fullimage` only.
+
+- [ ] **Step 9: RED→GREEN + gates.** `npm test` green (compound tests removed), `npm run check` 0, `npm run build` OK. Commit: `refactor(flashcards): layout registry + remove compound/3card (one card per record)`.
 
 ---
 
