@@ -37,6 +37,88 @@ describe('packRecords / packAllForSchema', () => {
   });
 });
 
+function projMultiView(): Project {
+  const p = newProject();
+  const schema: Schema = { id: 's1', name: 'Words', cardTemplates: [
+    { id: 'tText', templateType: 'single', layout: 'fulltext', size: null, hideTitle: false, hideSectionLabels: false, mapping: {} },
+    { id: 'tImg', templateType: 'single', layout: 'fullimage', size: null, hideTitle: false, hideSectionLabels: false, mapping: {}, fields: ['pic'] },
+  ], fields: [
+    { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+    { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+  ] };
+  p.schemas.push(schema);
+  for (let i = 0; i < 3; i++) p.records.push({ id: 'r' + i, schemaId: 's1', fieldsHash: '', fields: { title: { en: 'W' + i, vi: '' }, pic: 'http://x/' + i + '.png' } });
+  return p;
+}
+
+describe('packAllForSchema — multi-view', () => {
+  it('packs one card per (record x view)', () => {
+    const p = ops.packAllForSchema(projMultiView(), 's1');
+    expect(p.cards).toHaveLength(6); // 3 records x 2 views
+    expect(p.cards.filter((c) => c.templateId === 'tText')).toHaveLength(3);
+    expect(p.cards.filter((c) => c.templateId === 'tImg')).toHaveLength(3);
+  });
+  it('the "tImg" view\'s cards only include the image (field-selection honored)', () => {
+    const p = ops.packAllForSchema(projMultiView(), 's1');
+    const imgCard = p.cards.find((c) => c.templateId === 'tImg' && c.recordId === 'r0')!;
+    expect(imgCard.layout).toBe('fullimage');
+    expect(imgCard.title).toBe('');
+    expect(imgCard.images[0]?.url).toBe('http://x/0.png');
+  });
+  it('re-packing replaces each (record, view) pair without duplicating or touching other views', () => {
+    const once = ops.packAllForSchema(projMultiView(), 's1');
+    const twice = ops.packAllForSchema(once, 's1');
+    expect(twice.cards).toHaveLength(6);
+  });
+});
+
+describe('regenerateCard — resolves the card\'s OWN view via templateId', () => {
+  it('regenerating a "tImg" card rebuilds it through the image view, not the schema\'s first view', () => {
+    let p = ops.packAllForSchema(projMultiView(), 's1');
+    const imgCard = p.cards.find((c) => c.templateId === 'tImg' && c.recordId === 'r0')!;
+    p = { ...p, records: p.records.map((r) => r.id === 'r0' ? { ...r, fields: { ...r.fields, pic: 'http://x/CHANGED.png' } } : r) };
+    p = ops.regenerateCard(p, imgCard.id);
+    const rebuilt = p.cards.find((c) => c.id === imgCard.id)!;
+    expect(rebuilt.layout).toBe('fullimage'); // still the image view's layout
+    expect(rebuilt.title).toBe('');           // still field-filtered (no title)
+    expect(rebuilt.images[0]?.url).toBe('http://x/CHANGED.png');
+  });
+});
+
+describe('isCardStale — independent per (record, view) card', () => {
+  it('editing a record marks BOTH its views\' cards stale independently; regenerating one leaves the other stale', () => {
+    let p = ops.packAllForSchema(projMultiView(), 's1');
+    const textCard = p.cards.find((c) => c.templateId === 'tText' && c.recordId === 'r0')!;
+    const imgCard = p.cards.find((c) => c.templateId === 'tImg' && c.recordId === 'r0')!;
+    p = { ...p, records: p.records.map((r) => r.id === 'r0' ? { ...r, fields: { ...r.fields, title: { en: 'CHANGED', vi: '' } } } : r) };
+    expect(ops.isCardStale(p.cards.find((c) => c.id === textCard.id)!, p)).toBe(true);
+    expect(ops.isCardStale(p.cards.find((c) => c.id === imgCard.id)!, p)).toBe(true);
+    p = ops.regenerateCard(p, textCard.id);
+    expect(ops.isCardStale(p.cards.find((c) => c.id === textCard.id)!, p)).toBe(false); // regenerated
+    expect(ops.isCardStale(p.cards.find((c) => c.id === imgCard.id)!, p)).toBe(true);   // still stale — untouched
+  });
+});
+
+describe('templateForCard', () => {
+  it('resolves via the card\'s own templateId', () => {
+    const p = ops.packAllForSchema(projMultiView(), 's1');
+    const imgCard = p.cards.find((c) => c.templateId === 'tImg')!;
+    expect(ops.templateForCard(p, imgCard)?.id).toBe('tImg');
+  });
+  it('falls back to the schema\'s first view when the card\'s templateId no longer exists', () => {
+    let p = ops.packAllForSchema(projMultiView(), 's1');
+    const card = p.cards.find((c) => c.templateId === 'tImg')!;
+    p = { ...p, cards: p.cards.map((c) => (c.id === card.id ? { ...c, templateId: 'gone' } : c)) };
+    expect(ops.templateForCard(p, p.cards.find((c) => c.id === card.id)!)?.id).toBe('tText');
+  });
+  it('returns null when the card\'s source record was deleted', () => {
+    let p = ops.packAllForSchema(projMultiView(), 's1');
+    const card = p.cards.find((c) => c.recordId === 'r0')!;
+    p = { ...p, records: p.records.filter((r) => r.id !== 'r0') };
+    expect(ops.templateForCard(p, card)).toBeNull();
+  });
+});
+
 describe('isCardStale / regenerateCard', () => {
   it('a freshly packed card is not stale', () => {
     const p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
