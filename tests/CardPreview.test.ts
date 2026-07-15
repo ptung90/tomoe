@@ -122,4 +122,20 @@ describe('CardPreview — views', () => {
     await fireEvent.click(screen.getByRole('tab', { name: 'Sheet' }));
     expect(document.querySelectorAll('.fc-sheet')).toHaveLength(1);
   });
+
+  it('the active view\'s column is visually focused (.active); clicking the other column makes IT active', async () => {
+    const { container } = render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add view' })); // View 2 becomes active
+    const cols = container.querySelectorAll('.view-col');
+    expect(cols).toHaveLength(2);
+    expect(cols[0].classList.contains('active')).toBe(false);
+    expect(cols[1].classList.contains('active')).toBe(true);
+
+    await fireEvent.click(cols[0]); // click the inactive (View 1) column
+    expect(screen.getByRole('tab', { name: 'View 1' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'View 2' })).toHaveAttribute('aria-selected', 'false');
+    const colsAfter = container.querySelectorAll('.view-col');
+    expect(colsAfter[0].classList.contains('active')).toBe(true);
+    expect(colsAfter[1].classList.contains('active')).toBe(false);
+  });
 });

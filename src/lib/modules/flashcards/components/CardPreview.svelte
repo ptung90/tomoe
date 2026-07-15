@@ -161,7 +161,10 @@
         title="Ctrl/⌘ + scroll to zoom · drag to pan · double-click to fit">
         {#each viewCards as vc (vc.id)}
           {@const vScale = userZoom ?? colScale(vc.cellPx.w)}
-          <div class="view-col">
+          <div class="view-col" class:active={vc.id === resolvedActiveId}
+            role="button" tabindex="0" aria-label={`Focus ${vc.label}`}
+            onclick={() => selectView(vc.id)}
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectView(vc.id); } }}>
             <span class="view-col-label">{vc.label}</span>
             <div class="preview-frame" style={`width:${Math.round(vc.cellPx.w * vScale)}px;height:${Math.round(vc.cellPx.h * vScale)}px;`}>
               <div class="preview-scaler" style={`transform:scale(${vScale});width:${vc.cellPx.w}px;height:${vc.cellPx.h}px;`}>
@@ -251,13 +254,22 @@
   .preview-scroll.panable { cursor:grab; }
   .preview-scroll.grabbing { cursor:grabbing; }
   .preview-scroll.views-row { flex-wrap:wrap; gap:16px; justify-content:flex-start; }
-  .view-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
-  .view-col-label { font-size:11px; font-weight:600; color:var(--text-muted); }
+  .view-col { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    border-radius:6px; padding:6px; transition:background .12s ease; }
+  .view-col:hover:not(.active) { background:var(--accent-weak); }
+  .view-col:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .view-col-label { font-size:11px; font-weight:600; color:var(--text-muted); transition:color .12s ease; }
+  .view-col.active .view-col-label { color:var(--accent); }
   /* Layout box = scaled size, so flex can center it; the scaler renders the full-size card into it. */
   .preview-frame {
     flex:none;
     border-radius:2px;
     box-shadow:0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.14);
+  }
+  .view-col.active .preview-frame {
+    outline:2px solid var(--accent);
+    outline-offset:3px;
+    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 10px 28px rgba(0,0,0,.16);
   }
   .preview-scaler { transform-origin:top left; }
 
