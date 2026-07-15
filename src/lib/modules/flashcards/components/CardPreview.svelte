@@ -51,7 +51,7 @@
     const onWheel = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      userZoom = zoomStep(scale, e.deltaY);
+      userZoom = zoomStep(displayScale, e.deltaY);
     };
     const onDblClick = () => { userZoom = null; };
     const onDown = (e: MouseEvent) => {
@@ -94,6 +94,10 @@
   // Each column fits within an equal share of the pane's width; explicit userZoom overrides all columns.
   const colBudget = $derived(Math.max(80, (paneW - 40 - Math.max(0, views.length - 1) * 16) / Math.max(1, views.length)));
   function colScale(cellW: number): number { return Math.max(0.05, Math.min(1, colBudget / cellW)); }
+  // The scale the ACTIVE view is actually shown at — what the status-bar % must report (and the base
+  // for the −/+ buttons). Card mode auto-fits each column to its share of the pane (colScale), so a
+  // multi-view pane is NOT the single-card fitScale; sheet mode uses the full-pane fitScale.
+  const displayScale = $derived(mode === 'sheet' ? scale : (userZoom ?? colScale(cellPx.w)));
 
   // Sheet mode: every record of the schema mapped through the ACTIVE view (packed-or-derived, same
   // as collectPrintSheets does per view), chunked by that view's resolved per-page count.
@@ -193,10 +197,10 @@
         {eff.paperSize} · {orient === 'landscape' ? 'landscape' : 'portrait'} · {paper.w}×{paper.h}px
       </span>
       <div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(scale, 1))}>−</button>
+        <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(displayScale, 1))}>−</button>
         <button type="button" class="zoom-pct" class:auto={userZoom === null}
-          title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(scale * 100)}%</button>
-        <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(scale, -1))}>+</button>
+          title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(displayScale * 100)}%</button>
+        <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(displayScale, -1))}>+</button>
       </div>
     </footer>
   {:else}
