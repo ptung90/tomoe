@@ -8,6 +8,10 @@ describe('flashcards model', () => {
     expect(p.locales).toContain('en'); expect(p.version).toBe(1);
     expect(p.settings.paperSize).toBe(DEFAULT_SETTINGS.paperSize);
   });
+  it('default font is Lexend for title and content', () => {
+    expect(DEFAULT_SETTINGS.titleFont.family).toBe('Lexend');
+    expect(DEFAULT_SETTINGS.contentFont.family).toBe('Lexend');
+  });
   it('serialize -> parse round-trips', () => {
     const p = newProject(); p.projectName = 'Birds';
     p.records.push({ id: 'rec_1', schemaId: 's1', fieldsHash: '', fields: { name: { en: 'Owl', vi: 'Cú' } } });

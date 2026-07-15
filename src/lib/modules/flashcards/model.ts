@@ -24,8 +24,8 @@ export const DEFAULT_SETTINGS: Settings = {
   textVAlign: 'middle', threeCardFit: false,
   border: { width: 4, style: 'double', color: '#6B21A8', radius: 0 },
   image: { backgroundSize: 'cover', backgroundPosition: 'center' },
-  titleFont: { family: 'sans-serif', size: 14, weight: 700, color: '#1a1a1a', lineHeight: 1.0 },
-  contentFont: { family: 'sans-serif', size: 12, weight: 400, color: '#1a1a1a', lineHeight: 1.1 },
+  titleFont: { family: 'Lexend', size: 14, weight: 700, color: '#1a1a1a', lineHeight: 1.0 },
+  contentFont: { family: 'Lexend', size: 12, weight: 400, color: '#1a1a1a', lineHeight: 1.1 },
   pdfImageFormat: 'jpeg', pdfJpegQuality: 0.85, pdfScale: 2, customCss: '',
 };
 let _n = 0;
