@@ -229,6 +229,65 @@ describe('setCardCell / applyCardToRecords', () => {
   });
 });
 
+describe('applyCardToRecords — honors the view\'s field selection (Fix: previously derived the reverse ' +
+  'mapping from the FULL schema.fields instead of the card\'s own view, causing data loss on Apply)', () => {
+  function projDefOnlyView(): Project {
+    const p = newProject();
+    const schema: Schema = { id: 's1', name: 'Words', cardTemplates: [
+      { id: 'tDef', templateType: 'single', layout: 'fulltext', size: null, hideTitle: false, hideSectionLabels: false, mapping: {}, fields: ['def'] },
+    ], fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+      { id: 'f3', key: 'pic', label: 'Pic', type: 'image' },
+    ] };
+    p.schemas.push(schema);
+    p.records.push({ id: 'r0', schemaId: 's1', fieldsHash: '', fields: {
+      title: { en: 'OrigTitle', vi: '' }, def: { en: 'OrigDef', vi: '' }, pic: 'http://x/orig.png',
+    } });
+    return p;
+  }
+
+  it('a "def"-only text view packs def AS the title (no sections); editing + applying writes the edit back ' +
+    'to "def", and leaves "title" UNCHANGED', () => {
+    let p = projDefOnlyView();
+    p = ops.packAllForSchema(p, 's1');
+    const card = p.cards[0];
+    expect(card.title).toBe('OrigDef'); // the view's one field becomes the title
+    expect(card.sections).toHaveLength(0);
+    // Escape-hatch edit of the card's title (the sole field this view captured).
+    p = { ...p, cards: p.cards.map((c) => (c.id === card.id ? { ...c, title: 'EDITED', edited: true } : c)) };
+    p = ops.applyCardToRecords(p, card.id);
+    const r0 = p.records.find((r) => r.id === 'r0')!;
+    expect((r0.fields.def as Record<string, string>).en).toBe('EDITED');      // written to the view's ACTUAL field
+    expect((r0.fields.title as Record<string, string>).en).toBe('OrigTitle'); // NOT touched (pre-fix this got clobbered with 'EDITED')
+  });
+
+  it('an image-only view (fields:["pic"]) does not wipe the record\'s text fields on apply', () => {
+    const p0 = newProject();
+    const schema: Schema = { id: 's1', name: 'Words', cardTemplates: [
+      { id: 'tImg', templateType: 'single', layout: 'fullimage', size: null, hideTitle: false, hideSectionLabels: false, mapping: {}, fields: ['pic'] },
+    ], fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+      { id: 'f3', key: 'pic', label: 'Pic', type: 'image' },
+    ] };
+    p0.schemas.push(schema);
+    p0.records.push({ id: 'r0', schemaId: 's1', fieldsHash: '', fields: {
+      title: { en: 'OrigTitle', vi: '' }, def: { en: 'OrigDef', vi: '' }, pic: 'http://x/orig.png',
+    } });
+    let p = ops.packAllForSchema(p0, 's1');
+    const card = p.cards[0];
+    expect(card.title).toBe('');
+    expect(card.sections).toHaveLength(0);
+    p = ops.setCardCell(p, card.id, 0, { image: 'http://x/new.png' });
+    p = ops.applyCardToRecords(p, card.id);
+    const r0 = p.records.find((r) => r.id === 'r0')!;
+    expect(r0.fields.pic).toBe('http://x/new.png');
+    expect((r0.fields.title as Record<string, string>).en).toBe('OrigTitle'); // NOT wiped (pre-fix: cleared to '')
+    expect((r0.fields.def as Record<string, string>).en).toBe('OrigDef');     // NOT wiped (pre-fix: cleared to '')
+  });
+});
+
 describe('serializeProject / parseProject round-trip', () => {
   it('preserves a packed card\'s edited flag + edited section content', () => {
     let p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');

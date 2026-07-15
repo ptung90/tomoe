@@ -32,15 +32,22 @@ export function chunkRecords<T>(items: T[], size: number): T[][] {
   return out;
 }
 
+/** A view (template.fields) selects + orders a subset of the schema's fields; empty/undefined = all.
+ *  Shared by `recordToCard` (forward: record -> card) and `applyCardToRecords` (reverse: card -> record) —
+ *  both MUST agree on which fields are "active" for a given (schema, template), or the reverse mapping
+ *  writes edits to the wrong record fields (see cardOps.applyCardToRecords). Pure. */
+export function activeFieldsFor(schema: Schema, template: CardTemplate): SchemaField[] {
+  return template.fields?.length
+    ? template.fields.map((k) => schema.fields.find((f) => f.key === k)).filter((f): f is SchemaField => !!f)
+    : schema.fields;
+}
+
 /** Build one Card from a single record — one Card = one record. */
 export function recordToCard(
   record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
 ): Card {
   const orientation = template.style?.orientation ?? template.orientation ?? settings.orientation;
-  // A view (template.fields) selects + orders a subset of the schema's fields; empty/undefined = all.
-  const activeFields: SchemaField[] = template.fields?.length
-    ? template.fields.map((k) => schema.fields.find((f) => f.key === k)).filter((f): f is SchemaField => !!f)
-    : schema.fields;
+  const activeFields = activeFieldsFor(schema, template);
   const textFields = activeFields.filter((f) => f.type !== 'image');
   const imageFields = activeFields.filter((f) => f.type === 'image');
   const titleField = textFields[0] ?? null;
@@ -154,13 +161,15 @@ export function renameView(p: Project, schemaId: string, templateId: string, nam
   })) };
 }
 
-/** Refuses to delete a schema's last remaining view — a schema must always keep >=1 once it has any. */
+/** Refuses to delete a schema's last remaining view — a schema must always keep >=1 once it has any.
+ *  Also drops any cards packed against the deleted view — otherwise they'd linger in `project.cards`
+ *  forever, invisible (no view left to show them under) but still taking up space in the saved file. */
 export function deleteView(p: Project, schemaId: string, templateId: string): Project {
   const schema = p.schemas.find((s) => s.id === schemaId);
   if (!schema || schema.cardTemplates.length <= 1) return p;
   return { ...p, schemas: p.schemas.map((s) => (s.id !== schemaId ? s : {
     ...s, cardTemplates: s.cardTemplates.filter((t) => t.id !== templateId),
-  })) };
+  })), cards: p.cards.filter((c) => c.templateId !== templateId) };
 }
 
 export function setViewFields(p: Project, schemaId: string, templateId: string, keys: string[]): Project {

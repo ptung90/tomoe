@@ -1,5 +1,5 @@
 import { uid, type Project, type Card, type Schema, type CardTemplate, type CardSection, type CardImage } from './model';
-import { deriveAutoTemplate, recordToCard } from './cardMapping';
+import { deriveAutoTemplate, recordToCard, activeFieldsFor } from './cardMapping';
 import { hashFields } from './lib/hash';
 import { LAYOUT_SLOTS } from './lib/layouts';
 
@@ -108,15 +108,19 @@ export function applyCardToRecords(project: Project, cardId: string): Project {
   if (!card || !card.recordId) return project;
   const schema = schemaForCard(project, card);
   if (!schema) return project;
-  const textFields = schema.fields.filter((f) => f.type !== 'image');
-  const imageFields = schema.fields.filter((f) => f.type === 'image');
-  const titleField = textFields[0] ?? null;
-  const sectionFields = titleField ? textFields.slice(1) : textFields;
   const locale = project.activeLocale;
   const recordId = card.recordId;
+  // The card was built from the card's OWN view (see recordToCard) — the reverse mapping must
+  // resolve the SAME view's active fields, or a field-selected view (e.g. fields:['def']) writes
+  // its edits into the wrong record fields (title/other fields it never showed). See activeFieldsFor.
+  const template = templateForCard(project, card) ?? deriveAutoTemplate(schema);
+  const activeFields = activeFieldsFor(schema, template);
+  const textFields = activeFields.filter((f) => f.type !== 'image');
+  const imageFields = activeFields.filter((f) => f.type === 'image');
+  const titleField = textFields[0] ?? null;
+  const sectionFields = titleField ? textFields.slice(1) : textFields;
   // The card only captures images up to its template's layout slot count (see recordToCard).
   // Image fields beyond that were never shown/edited on the card — don't wipe them on apply.
-  const template = templateForCard(project, card) ?? deriveAutoTemplate(schema);
   const capturedImageSlots = LAYOUT_SLOTS[card.layout] ?? LAYOUT_SLOTS[template.layout] ?? imageFields.length;
 
   const write = (fields: Record<string, unknown>, key: string | undefined, value: string) => {

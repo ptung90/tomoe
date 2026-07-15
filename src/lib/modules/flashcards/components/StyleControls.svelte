@@ -49,9 +49,10 @@
   const activeViewName = $derived(schema && template ? viewLabel(template, schema, Math.max(0, views.findIndex((v) => v.id === template!.id))) : '');
   // The selected record's packed card FOR THE ACTIVE VIEW — style overrides can only be written
   // onto a real card, so "This card" scope is only available once one exists for this view.
-  // Schemas with a single (still-synthetic, unmaterialized) view have no ambiguity between views,
-  // so fall back to matching by recordId alone — deriveAutoTemplate mints a fresh id per call,
-  // which would otherwise never equal the id a card was packed against.
+  // deriveAutoTemplate now mints a DETERMINISTIC id per schema (see cardMapping.ts), so this
+  // recordId-only fallback is no longer needed to survive a mismatched auto-template id — it's kept
+  // as belt-and-suspenders for the single implicit-view case only (guarded to views.length <= 1):
+  // a schema with just one (still-synthetic, unmaterialized) view has no ambiguity between views anyway.
   const card = $derived(record && template ? (
     $project.cards.find((c) => c.recordId === record.id && c.templateId === template.id)
       ?? (views.length <= 1 ? $project.cards.find((c) => c.recordId === record.id) ?? null : null)

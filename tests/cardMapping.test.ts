@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
 import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, applyTemplateStyle, chunkRecords, viewLabel, addView, renameView, deleteView, setViewFields } from '../src/lib/modules/flashcards/cardMapping';
+import * as ops from '../src/lib/modules/flashcards/cardOps';
 
 function schema(): Schema {
   return { id: 's1', name: 'Words', cardTemplates: [], fields: [
@@ -169,6 +170,27 @@ describe('applySettings / applyTemplatePatch', () => {
       const p2 = deleteView(p, 's1', 't1');
       expect(p2.schemas[0].cardTemplates).toHaveLength(1);
       expect(p2.schemas[0].cardTemplates[0].id).toBe('t2');
+    });
+    it('deleteView drops cards packed against the deleted view, leaving the survivor\'s cards intact ' +
+      '(otherwise they linger in project.cards forever, invisible bloat)', () => {
+      const p0 = newProject();
+      const s: Schema = { id: 's1', name: 'Words', cardTemplates: [
+        { id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} },
+        { id: 't2', templateType: 'single', layout: 'fullimage', mapping: {}, fields: ['pic'] },
+      ], fields: [
+        { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+        { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+      ] };
+      p0.schemas.push(s);
+      for (let i = 0; i < 3; i++) {
+        p0.records.push({ id: 'r' + i, schemaId: 's1', fieldsHash: '', fields: { title: { en: 'W' + i, vi: '' }, pic: 'http://x/' + i + '.png' } });
+      }
+      let p = ops.packAllForSchema(p0, 's1');
+      expect(p.cards).toHaveLength(6); // 3 records x 2 views
+      p = deleteView(p, 's1', 't2');
+      expect(p.schemas[0].cardTemplates).toHaveLength(1);
+      expect(p.cards).toHaveLength(3);
+      expect(p.cards.every((c) => c.templateId !== 't2')).toBe(true);
     });
     it('deleteView refuses to delete the last remaining view', () => {
       const p = newProject();

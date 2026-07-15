@@ -207,6 +207,32 @@ describe('StyleControls (scope switcher: Global / This view / This card)', () =>
   });
 });
 
+describe('StyleControls — "This card" cross-view isolation (2 views, only one packed)', () => {
+  it('while a view WITHOUT a packed card is active, "This card" stays disabled and a style edit lands ' +
+    'on Global, never on the OTHER (packed) view\'s card', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
+    S.addRecord(sid); // selects it; schema still has no persisted views (implicit view 1)
+    S.packAllForSchema(sid); // packs a card for the (still-implicit) view 1
+    S.addView(sid); // materializes view 1 (now real), appends view 2, activeViewId -> view 2 (unpacked)
+
+    const view1Id = get(S.project).schemas[0].cardTemplates[0].id;
+    const packedCard = get(S.project).cards.find((c) => c.templateId === view1Id);
+    expect(packedCard).toBeTruthy(); // view 1's card survived materialization (deterministic auto id)
+
+    render(StyleControls);
+    expect(screen.getByRole('tab', { name: 'This card' })).toBeDisabled(); // view 2 has no card of its own
+    // A disabled tab can't be clicked into by a real user — scope stays at its default (Global).
+
+    await tab('Border');
+    await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '31' } });
+
+    expect(get(S.project).settings.border.width).toBe(31); // the edit landed at Global (the only reachable scope)
+    const cardAfter = get(S.project).cards.find((c) => c.id === packedCard!.id)!;
+    expect(cardAfter.style?.border?.width).not.toBe(31); // did NOT leak onto view 1's packed card
+  });
+});
+
 describe('StyleControls — Fields checklist (per view)', () => {
   it('a per-schema field checklist toggles the active view\'s template.fields', async () => {
     const sid = S.addSchema('Words');
