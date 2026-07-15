@@ -46,6 +46,31 @@ describe('flashcards model', () => {
     expect(p.settings.border.color).toBe(DEFAULT_SETTINGS.border.color); // deep-merged default
     expect(p.locales).toContain('en');
   });
+  it('parseProject folds legacy card.titleFont/contentFont into card.style and drops the top-level fields', () => {
+    const legacy = JSON.stringify({
+      projectName: 'Fonts', schemas: [], records: [],
+      cards: [
+        { id: 'c1', layout: 'fulltext', imageHeightPercent: 50, images: [], title: '', sections: [],
+          titleFont: { family: 'serif', size: 20, color: '#000', lineHeight: 1.2 },
+          contentFont: { family: 'monospace', size: 11, color: '#111', lineHeight: 1.1 } },
+      ],
+    });
+    const p = parseProject(legacy);
+    expect(p.cards).toHaveLength(1);
+    const c = p.cards[0] as any;
+    expect(c.style.titleFont).toEqual({ family: 'serif', size: 20, color: '#000', lineHeight: 1.2 });
+    expect(c.style.contentFont).toEqual({ family: 'monospace', size: 11, color: '#111', lineHeight: 1.1 });
+    expect(c.titleFont).toBeUndefined();
+    expect(c.contentFont).toBeUndefined();
+  });
+  it('parseProject leaves a card with no legacy fonts and no style untouched (no style key added)', () => {
+    const legacy = JSON.stringify({
+      projectName: 'Plain', schemas: [], records: [],
+      cards: [{ id: 'c1', layout: 'fulltext', imageHeightPercent: 50, images: [], title: '', sections: [] }],
+    });
+    const p = parseProject(legacy);
+    expect((p.cards[0] as any).style).toBeUndefined();
+  });
   it('parseProject migrates a legacy compound (3card) template + drops packed card snapshots', () => {
     const legacy = JSON.stringify({
       projectName: 'Legacy', schemas: [

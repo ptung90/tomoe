@@ -5,6 +5,7 @@
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
   import { deriveAutoTemplate, recordToCard, chunkRecords } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
+  import { resolveStyle } from '../lib/style';
   import { LAYOUTS } from '../lib/layouts';
   import { zoomStep } from '../lib/zoom';
   import StyleControls from './StyleControls.svelte';
@@ -21,12 +22,18 @@
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
   const template = $derived(schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null);
-  const orient = $derived(template?.orientation || $project.settings.orientation);
-  const lay = $derived(template ? sheetLayout(template, $project.settings.paperSize, orient) : null);
+  // Resolved cascade: global settings → per-schema template.style → the selected record's packed-card style.
+  // `schemaEff` (no card layer) drives sheet-mode rendering, where buildSheetHTML resolves each cell's
+  // OWN card.style — layering the selected card's style into the shared base would leak it to every cell.
+  const selectedCard = $derived(record ? ($project.cards.find((c) => c.recordId === record.id) ?? null) : null);
+  const schemaEff = $derived(template ? resolveStyle($project.settings, template.style) : $project.settings);
+  const eff = $derived(template ? resolveStyle(schemaEff, selectedCard?.style) : $project.settings);
+  const orient = $derived(eff.orientation);
+  const lay = $derived(template ? sheetLayout(template, eff.paperSize, orient) : null);
 
   // A single card is one CELL of the sheet — its real cut size (e.g. A4/3 for a 3-up sheet),
   // NOT the full sheet. cellW/cellH come from `lay`; for cardsPerPage=1 the cell IS the full sheet.
-  const cellPx = $derived(lay ? { w: lay.cellW, h: lay.cellH } : getPaperPx(template?.size || $project.settings.paperSize, orient));
+  const cellPx = $derived(lay ? { w: lay.cellW, h: lay.cellH } : getPaperPx(template?.size || eff.paperSize, orient));
   // Sheet-mode frame sizes from `lay` (single source of truth, consistent with the grid);
   // card mode from the cell size, so what you see is the actual card you'll cut out.
   const paper = $derived(mode === 'sheet' && lay ? { w: lay.sheetW, h: lay.sheetH } : cellPx);
@@ -69,7 +76,7 @@
   const cardHtml = $derived.by(() => {
     if (!record || !schema || !template) return '';
     return buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
-                         $project.settings, $project.activeLocale, false, cellPx);
+                         eff, $project.activeLocale, false, cellPx);
   });
 
   // Sheet mode: every record of the schema mapped to a card (packed-or-derived, same as
@@ -89,7 +96,7 @@
   });
   const sheetHtml = $derived.by(() => {
     if (!lay) return '';
-    return buildSheetHTML(sheetChunk, lay, $project.settings, $project.activeLocale);
+    return buildSheetHTML(sheetChunk, lay, schemaEff, $project.activeLocale);
   });
   const displayHtml = $derived(mode === 'sheet' ? sheetHtml : cardHtml);
 

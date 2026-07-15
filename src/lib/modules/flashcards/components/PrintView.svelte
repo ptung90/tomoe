@@ -10,7 +10,7 @@
 <div class="print-view" aria-hidden="true">
   {#each sheets as sheet, i (i)}
     <div class="print-page" style={`width:${sheet.lay.sheetW}px;height:${sheet.lay.sheetH}px;`}>
-      {@html buildSheetHTML(sheet.cards, sheet.lay, $project.settings, $project.activeLocale, true)}
+      {@html buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, $project.activeLocale, true)}
     </div>
   {/each}
 </div>
