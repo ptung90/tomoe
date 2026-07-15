@@ -54,10 +54,17 @@
   function onCardSize(e: Event) {
     if (schema) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true });
   }
+  // Fields: show/hide the card title (first text field) and the "• label:" prefix on each field.
+  function onShowTitle(e: Event) {
+    if (schema) setTemplateLayout(schema.id, { hideTitle: !(e.target as HTMLInputElement).checked });
+  }
+  function onShowLabels(e: Event) {
+    if (schema) setTemplateLayout(schema.id, { hideSectionLabels: !(e.target as HTMLInputElement).checked });
+  }
 
   let tab = $state<'text' | 'card' | 'image'>('text');
   let textSub = $state<'title' | 'content'>('title');
-  let cardSub = $state<'border' | 'spacing' | 'page'>('border');
+  let cardSub = $state<'border' | 'spacing' | 'page' | 'fields'>('border');
 </script>
 
 <div class="style-controls">
@@ -84,6 +91,7 @@
       <button type="button" role="tab" aria-selected={cardSub === 'border'} class:on={cardSub === 'border'} onclick={() => (cardSub = 'border')}>Border</button>
       <button type="button" role="tab" aria-selected={cardSub === 'spacing'} class:on={cardSub === 'spacing'} onclick={() => (cardSub = 'spacing')}>Spacing</button>
       <button type="button" role="tab" aria-selected={cardSub === 'page'} class:on={cardSub === 'page'} onclick={() => (cardSub = 'page')}>Page</button>
+      <button type="button" role="tab" aria-selected={cardSub === 'fields'} class:on={cardSub === 'fields'} onclick={() => (cardSub = 'fields')}>Fields</button>
     </div>
     <div class="panel" role="tabpanel">
       {#if cardSub === 'border'}
@@ -114,7 +122,7 @@
             </select>
           </span>
         </div>
-      {:else}
+      {:else if cardSub === 'page'}
         <div class="toolbar">
           <div class="seg" title="Tiling mode" role="tablist" aria-label="Tiling mode">
             <button type="button" role="tab" aria-selected={!template?.autoFit} class:on={!template?.autoFit}
@@ -136,6 +144,15 @@
             </span>
             <span class="hint">≈ {resolvedPerPage}/page</span>
           {/if}
+        </div>
+      {:else}
+        <div class="toolbar">
+          <label class="tool" title="Show the card title (the record's first text field)">
+            <input type="checkbox" aria-label="Show title" checked={!template?.hideTitle} disabled={!schema} onchange={onShowTitle} /> Title
+          </label>
+          <label class="tool" title="Show the “• label:” prefix before each field's value">
+            <input type="checkbox" aria-label="Show field labels" checked={!template?.hideSectionLabels} disabled={!schema} onchange={onShowLabels} /> Labels
+          </label>
         </div>
       {/if}
     </div>
@@ -219,6 +236,7 @@
   .tool input[type=number] { width:42px; }
   .tool select { max-width:112px; cursor:pointer; }
   .tool input[type=color] { width:24px; height:20px; padding:0; border:none; background:none; cursor:pointer; }
+  .tool input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:var(--accent); }
 
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
   .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 8px; cursor:pointer;

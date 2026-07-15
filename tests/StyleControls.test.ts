@@ -85,4 +85,17 @@ describe('StyleControls (tabbed)', () => {
     await fireEvent.change(screen.getByLabelText('Family'), { target: { value: 'monospace' } });
     expect(get(S.project).settings.contentFont.family).toBe('monospace');
   });
+
+  it('Card → Fields: toggling off Labels / Title sets hideSectionLabels / hideTitle on the template', async () => {
+    const sid = S.addSchema('W');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
+    S.addRecord(sid); // selects it → the schema's template exists
+    render(StyleControls);
+    await tab('Card'); await tab('Fields');
+    await fireEvent.change(screen.getByLabelText('Show field labels'), { target: { checked: false } });
+    await fireEvent.change(screen.getByLabelText('Show title'), { target: { checked: false } });
+    const tpl = get(S.project).schemas[0].cardTemplates[0];
+    expect(tpl.hideSectionLabels).toBe(true);
+    expect(tpl.hideTitle).toBe(true);
+  });
 });
