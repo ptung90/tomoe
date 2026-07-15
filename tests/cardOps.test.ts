@@ -113,6 +113,21 @@ describe('setCardCell / applyCardToRecords', () => {
     expect(rebuilt.edited).toBe(false);                                  // cleared
     expect(ops.isCardStale(rebuilt, p)).toBe(false);                     // restamped → synced
   });
+  it('applyCardToRecords does not wipe image fields beyond the layout\'s captured slot count', () => {
+    let p = proj('fullimage', 3); // fullimage layout has 1 image slot
+    p.schemas[0].fields.push({ id: 'f3', key: 'pic1', label: 'Pic1', type: 'image' });
+    p.schemas[0].fields.push({ id: 'f4', key: 'pic2', label: 'Pic2', type: 'image' });
+    p.records.forEach((r) => { r.fields.pic1 = 'http://x/orig1.png'; r.fields.pic2 = 'http://x/orig2.png'; });
+    p = ops.packAllForSchema(p, 's1');
+    const card0 = p.cards.find((c) => c.recordId === 'r0')!;
+    const id = card0.id;
+    // Card only captured pic1 (the 1 slot 'fullimage' allows); edit it via setCardCell.
+    p = ops.setCardCell(p, id, 0, { image: 'http://x/new1.png' });
+    p = ops.applyCardToRecords(p, id);
+    const r0 = p.records.find((r) => r.id === 'r0')!;
+    expect(r0.fields.pic1).toBe('http://x/new1.png'); // 1st image field reflects the card
+    expect(r0.fields.pic2).toBe('http://x/orig2.png'); // 2nd image field (uncaptured slot) untouched, not wiped
+  });
   it('applyCardToRecords is a no-op when the source record was deleted', () => {
     let p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
     const card0 = p.cards.find((c) => c.recordId === 'r0')!;

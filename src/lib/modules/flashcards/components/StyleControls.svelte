@@ -12,7 +12,6 @@
   import ScanLine from 'lucide-svelte/icons/scan-line';
   import ImageIcon from 'lucide-svelte/icons/image';
   import MoveVertical from 'lucide-svelte/icons/move-vertical';
-  import Rows3 from 'lucide-svelte/icons/rows-3';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
   import { deriveAutoTemplate } from '../cardMapping';
   import type { FontSpec } from '../model';
@@ -20,7 +19,6 @@
   const s = $derived($project.settings);
   const num = (e: Event) => Number((e.target as HTMLInputElement).value);
   const str = (e: Event) => (e.target as HTMLInputElement | HTMLSelectElement).value;
-  const bool = (e: Event) => (e.target as HTMLInputElement).checked;
 
   const FONT_FAMILIES = ['Lexend', 'sans-serif', 'serif', 'monospace', 'Georgia', 'Arial', 'Times New Roman', 'Courier New'];
   const WEIGHTS: { v: number; label: string }[] = [
@@ -117,8 +115,6 @@
             {#each ['center','top','bottom','left','right'] as v (v)}<option value={v}>{v}</option>{/each}
           </select>
         </span>
-        <label class="tool toggle" title="3-card fit (fill height)"><Rows3 size={14} /><input aria-label="3-card fit (fill height)" type="checkbox" checked={s.threeCardFit}
-          onchange={(e) => setSettings({ threeCardFit: bool(e) })} /></label>
       </div>
     </div>
   {/if}
@@ -181,8 +177,6 @@
   .tool input[type=number] { width:42px; }
   .tool select { max-width:112px; cursor:pointer; }
   .tool input[type=color] { width:24px; height:20px; padding:0; border:none; background:none; cursor:pointer; }
-  .tool.toggle { cursor:pointer; }
-  .tool.toggle input[type=checkbox] { width:15px; height:15px; cursor:pointer; }
 
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
   .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 8px; cursor:pointer;

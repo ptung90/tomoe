@@ -60,6 +60,7 @@ describe('flashcards model', () => {
     });
     const p = parseProject(legacy);
     expect(p.schemas[0].cardTemplates[0].layout).toBe('1top-1bot');
+    expect(p.schemas[0].cardTemplates[0].templateType).toBe('single');
     expect((p.schemas[0].cardTemplates[0] as any).cardsPerPage).toBe(3);
     expect(p.cards.every((c) => !(c as any).packedRecordIds?.length)).toBe(true);
     expect(p.cards).toHaveLength(0); // the only card was a compound snapshot — dropped

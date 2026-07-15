@@ -1,6 +1,7 @@
 import { uid, type Project, type Card, type Schema, type CardTemplate, type CardSection, type CardImage } from './model';
 import { deriveAutoTemplate, recordToCard } from './cardMapping';
 import { hashFields } from './lib/hash';
+import { LAYOUT_SLOTS } from './lib/layouts';
 
 function templateFor(schema: Schema): CardTemplate {
   return schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
@@ -98,6 +99,10 @@ export function applyCardToRecords(project: Project, cardId: string): Project {
   const sectionFields = titleField ? textFields.slice(1) : textFields;
   const locale = project.activeLocale;
   const recordId = card.recordId;
+  // The card only captures images up to its template's layout slot count (see recordToCard).
+  // Image fields beyond that were never shown/edited on the card — don't wipe them on apply.
+  const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
+  const capturedImageSlots = LAYOUT_SLOTS[template.layout] ?? 0;
 
   const write = (fields: Record<string, unknown>, key: string | undefined, value: string) => {
     if (!key) return;
@@ -112,6 +117,7 @@ export function applyCardToRecords(project: Project, cardId: string): Project {
     if (titleField) write(fields, titleField.key, asStr(card.title));
     sectionFields.forEach((f, idx) => write(fields, f.key, asStr(card.sections[idx]?.content)));
     imageFields.forEach((f, idx) => {
+      if (idx >= capturedImageSlots) return; // beyond the card's layout slots — leave existing value untouched
       const image = card.images.find((im) => im.slot === idx);
       write(fields, f.key, image?.url ?? '');
     });
