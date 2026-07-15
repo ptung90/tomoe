@@ -10,7 +10,7 @@
   const str = (e: Event) => (e.target as HTMLInputElement | HTMLSelectElement).value;
   const bool = (e: Event) => (e.target as HTMLInputElement).checked;
 
-  const FONT_FAMILIES = ['sans-serif', 'serif', 'monospace', 'Georgia', 'Arial', 'Times New Roman', 'Courier New'];
+  const FONT_FAMILIES = ['Lexend', 'sans-serif', 'serif', 'monospace', 'Georgia', 'Arial', 'Times New Roman', 'Courier New'];
   const WEIGHTS: { v: number; label: string }[] = [
     { v: 400, label: 'Normal' }, { v: 500, label: 'Medium' }, { v: 600, label: 'Semibold' }, { v: 700, label: 'Bold' },
   ];
