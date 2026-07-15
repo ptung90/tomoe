@@ -10,8 +10,8 @@
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
   import { deriveAutoTemplate, recordToCard } from '../cardMapping';
-  import { isCardStale, schemaForCard } from '../cardOps';
-  import { buildCardHTML, buildSheetHTML, getPaperPx } from '../lib/card-render';
+  import { isCardStale } from '../cardOps';
+  import { buildCardHTML, buildSheetHTML, sheetLayout } from '../lib/card-render';
   import { collectPrintSheets } from '../lib/printCards';
   import { resolveStyle } from '../lib/style';
   import type { RecordItem, Schema, CardTemplate, Card } from '../model';
@@ -41,15 +41,19 @@
   });
 
   // One thumbnail per record: the persisted (packed) card if one exists, else auto-derived.
+  // Each card is rendered at its real CUT size (one cell of the N-up sheet), not the full page —
+  // same cellW/cellH the preview uses, so a 3-up card shows a third of the page, not a whole A4.
   const groups = $derived($project.schemas.map((schema) => {
     const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
     const recs = $project.records.filter((r) => r.schemaId === schema.id);
     const packed = $project.cards.filter((c) => c.recordId && recs.some((r) => r.id === c.recordId));
     const packedIds = new Set(packed.map((c) => c.recordId));
     const autoRecs = recs.filter((r) => !packedIds.has(r.id));
-    const paper = getPaperPx(template.size || $project.settings.paperSize, template.style?.orientation ?? template.orientation ?? $project.settings.orientation);
-    const scale = Math.min(1, THUMB_W / paper.w);
-    return { schema, template, recs, packed, autoRecs, paper, scale };
+    const schemaEff = resolveStyle($project.settings, template.style);
+    const lay = sheetLayout(template, schemaEff.paperSize, schemaEff.orientation);
+    const cell = { w: lay.cellW, h: lay.cellH };
+    const scale = Math.min(1, THUMB_W / cell.w);
+    return { schema, template, recs, packed, autoRecs, cell, scale };
   }));
 
   const totalRecords = $derived($project.records.length);
@@ -67,16 +71,14 @@
   function packedCaption(card: Card): string {
     return (card.title as string)?.trim?.() || 'Card';
   }
-  function autoHtml(rec: RecordItem, schema: Schema, template: CardTemplate): string {
+  function autoHtml(rec: RecordItem, schema: Schema, template: CardTemplate, cell: { w: number; h: number }): string {
     const eff = resolveStyle($project.settings, template?.style);
     return buildCardHTML(recordToCard(rec, schema, template, $project.settings, $project.activeLocale),
-                         eff, $project.activeLocale);
+                         eff, $project.activeLocale, false, cell);
   }
-  function packedHtml(card: Card): string {
-    const schema = schemaForCard($project, card);
-    const template = schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null;
+  function packedHtml(card: Card, template: CardTemplate, cell: { w: number; h: number }): string {
     const eff = resolveStyle($project.settings, template?.style, card.style);
-    return buildCardHTML(card, eff, $project.activeLocale); // render the stored snapshot, with resolved style
+    return buildCardHTML(card, eff, $project.activeLocale, false, cell); // stored snapshot, resolved style, at cell size
   }
   async function onApply(cardId: string) {
     if (await confirm("Apply this card's content back to its records? This overwrites the record fields.",
@@ -147,9 +149,9 @@
               <div class="thumb packed">
                 <button type="button" class="thumb-open" title={packedCaption(card)}
                   onclick={() => card.recordId && onOpen(card.recordId)}>
-                  <div class="thumb-frame" style={`width:${Math.round(g.paper.w * g.scale)}px;height:${Math.round(g.paper.h * g.scale)}px;`}>
-                    <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.paper.w}px;height:${g.paper.h}px;`}>
-                      {@html packedHtml(card)}
+                  <div class="thumb-frame" style={`width:${Math.round(g.cell.w * g.scale)}px;height:${Math.round(g.cell.h * g.scale)}px;`}>
+                    <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.cell.w}px;height:${g.cell.h}px;`}>
+                      {@html packedHtml(card, g.template, g.cell)}
                     </div>
                   </div>
                 </button>
@@ -173,9 +175,9 @@
             <!-- Auto-derived cards for records not yet packed -->
             {#each g.autoRecs as rec (rec.id)}
               <button type="button" class="thumb auto" title={caption(rec, g.schema)} onclick={() => onOpen(rec.id)}>
-                <div class="thumb-frame" style={`width:${Math.round(g.paper.w * g.scale)}px;height:${Math.round(g.paper.h * g.scale)}px;`}>
-                  <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.paper.w}px;height:${g.paper.h}px;`}>
-                    {@html autoHtml(rec, g.schema, g.template)}
+                <div class="thumb-frame" style={`width:${Math.round(g.cell.w * g.scale)}px;height:${Math.round(g.cell.h * g.scale)}px;`}>
+                  <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.cell.w}px;height:${g.cell.h}px;`}>
+                    {@html autoHtml(rec, g.schema, g.template, g.cell)}
                   </div>
                 </div>
                 <span class="thumb-cap">{caption(rec, g.schema)}</span>
