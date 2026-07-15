@@ -36,7 +36,7 @@
     ],
     "fileAssociations": [
       {
-        "ext": ["tomoe.json", "json"],
+        "ext": ["tomoe.json", "schema.json", "json"],
         "name": "Tomoe Project",
         "description": "Tomoe project file",
         "role": "Editor"

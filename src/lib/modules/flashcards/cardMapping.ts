@@ -2,6 +2,7 @@ import { uid, type Project, type Schema, type CardTemplate, type RecordItem, typ
 import { resolveLocale } from './lib/card-render';
 import { LAYOUT_SLOTS } from './lib/layouts';
 import { mergeStyle } from './lib/style';
+import { mergeSettingsOverDefaults, type SchemaLibraryEntry } from './io/schemaIO';
 
 const DEFAULT_IMAGE_HEIGHT = 50;
 
@@ -196,4 +197,26 @@ export function setViewFields(p: Project, schemaId: string, templateId: string, 
     cardTemplates[idx] = { ...cardTemplates[idx], fields: keys };
     return { ...s, cardTemplates };
   }) };
+}
+
+// ── Schema Library: insert a library entry into this project ────────────────────────────
+/** Insert a fresh-id copy of a library entry's schema into `project.schemas` (fresh `schema.id`
+ *  via `uid('sch')`; each `cardTemplate.id` regenerated via `uid('tpl')` so packed-card lookups
+ *  by templateId can never collide with the schema this was copied from). If the project had NO
+ *  schemas yet, also adopt the entry's `settings` (merged over DEFAULT_SETTINGS) so a fresh
+ *  project matches the source project's look; a project that already has schemas keeps its own
+ *  global settings untouched. Immutable — the library entry is never mutated. */
+export function insertSchema(p: Project, entry: SchemaLibraryEntry): Project {
+  const schema: Schema = {
+    id: uid('sch'),
+    name: entry.schema.name,
+    fields: structuredClone(entry.schema.fields),
+    cardTemplates: entry.schema.cardTemplates.map((t) => ({ ...structuredClone(t), id: uid('tpl') })),
+  };
+  const wasEmpty = p.schemas.length === 0;
+  return {
+    ...p,
+    schemas: [...p.schemas, schema],
+    settings: wasEmpty ? mergeSettingsOverDefaults(entry.settings) : p.settings,
+  };
 }

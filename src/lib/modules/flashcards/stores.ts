@@ -1,11 +1,12 @@
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
 import * as H from '../../history';
-import { newProject, type Project, type Schema, type SchemaField, type RecordItem, type Settings, type CardTemplate, type StyleOverrides } from './model';
+import { newProject, uid, type Project, type Schema, type SchemaField, type RecordItem, type Settings, type CardTemplate, type StyleOverrides } from './model';
 import * as ops from './recordOps';
 import * as cardMapping from './cardMapping';
 import * as cardOps from './cardOps';
 import * as ai from './lib/ai';
 import { mergeStyle } from './lib/style';
+import { parseSchemaExport, type SchemaExportPayload, type SchemaLibraryEntry } from './io/schemaIO';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -44,6 +45,70 @@ export async function aiGenerateRecords(schemaId: string, instruction: string, c
   return recs.length;
 }
 
+// ── Schema Library (localStorage, app-level — NOT part of the project document; NOT cleared
+// by initProject/loadProject) ────────────────────────────────────────────────────────────
+const SCHEMA_LIBRARY_KEY = 'tomoe.flashcards.schemaLibrary';
+function loadSchemaLibrary(): SchemaLibraryEntry[] {
+  try {
+    const raw = localStorage.getItem(SCHEMA_LIBRARY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function persistSchemaLibrary(list: SchemaLibraryEntry[]): void {
+  try { localStorage.setItem(SCHEMA_LIBRARY_KEY, JSON.stringify(list)); } catch { /* ignore storage errors */ }
+}
+// The list is always re-read from localStorage (the single source of truth) rather than cached
+// in memory — `_schemaLibraryVersion` only drives *when* subscribers recompute/re-render. This
+// keeps the store from ever going stale relative to localStorage (e.g. across tests that clear
+// it directly without going through these actions).
+const _schemaLibraryVersion = writable(0);
+export const schemaLibrary: Readable<SchemaLibraryEntry[]> = derived(_schemaLibraryVersion, () => loadSchemaLibrary());
+
+export function addToLibrary(entry: { name: string; schema: SchemaExportPayload; settings: Settings }): string {
+  const id = uid('lib');
+  const full: SchemaLibraryEntry = {
+    id, name: entry.name, addedAt: Date.now(),
+    schema: structuredClone(entry.schema), settings: structuredClone(entry.settings),
+  };
+  const next = [full, ...loadSchemaLibrary()];
+  persistSchemaLibrary(next);
+  _schemaLibraryVersion.update((n) => n + 1);
+  return id;
+}
+export function removeFromLibrary(id: string): void {
+  const next = loadSchemaLibrary().filter((e) => e.id !== id);
+  persistSchemaLibrary(next);
+  _schemaLibraryVersion.update((n) => n + 1);
+}
+/** Snapshot the CURRENT project's schema (its fields + cardTemplates) + the project's global
+ *  settings into the library, as a new entry. */
+export function addSchemaToLibrary(schemaId: string): void {
+  const p = get(project);
+  const schema = p.schemas.find((s) => s.id === schemaId);
+  if (!schema) return;
+  addToLibrary({ name: schema.name, schema: { name: schema.name, fields: schema.fields, cardTemplates: schema.cardTemplates }, settings: p.settings });
+}
+/** Parse + add a portable `.schema.json` file's contents to the library. Never throws — used by
+ *  both the Schema Library modal's "Import from file…" and the shell open-router (a schema file
+ *  double-clicked/opened must toast, not crash). */
+export function importSchemaFileText(text: string): { ok: boolean; name?: string; error?: string } {
+  try {
+    const { schema, settings } = parseSchemaExport(text);
+    addToLibrary({ name: schema.name, schema, settings });
+    return { ok: true, name: schema.name };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Not a valid Tomoe schema file' };
+  }
+}
+export function insertLibrarySchema(id: string): void {
+  const entry = get(schemaLibrary).find((e) => e.id === id);
+  if (!entry) return;
+  const np = cardMapping.insertSchema(get(project), entry);
+  commit(np);
+  activeSchemaId.set(np.schemas[np.schemas.length - 1].id);
+}
+
 export function initProject(): void {
   history.set(H.createHistory(newProject()));
   filePath.set(null); dirty.set(false);
@@ -71,6 +136,7 @@ export const activeSchemaId = writable<string | null>(null);
 export const schemaEditorOpen = writable<string | '__new__' | null>(null);
 export const cardEditorOpen = writable<string | null>(null);
 export const activeViewId: Writable<string | null> = writable(null);
+export const schemaLibraryOpen: Writable<boolean> = writable(false);
 
 export function selectView(id: string | null): void { activeViewId.set(id); }
 

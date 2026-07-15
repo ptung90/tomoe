@@ -6,6 +6,8 @@ import { get } from 'svelte/store';
 import { activeModuleId, setActiveModule, showToast } from './shell';
 import { pickModuleForOpen, getModule } from './modules/registry';
 import { recordRecent } from './recentFiles';
+import { looksLikeSchemaFile } from './modules/flashcards/io/schemaIO';
+import { importSchemaFileText } from './modules/flashcards/stores';
 
 /**
  * Guard against silently discarding unsaved edits in the active module.
@@ -22,10 +24,33 @@ export async function confirmDiscardIfDirty(): Promise<boolean> {
   );
 }
 
+/**
+ * A deliberate, minimal shell→flashcards coupling: a `.schema.json` file (by extension or by
+ * content sniff) is a portable Schema Library share, not a project. Handling it is
+ * non-destructive — it never touches the active document and never switches modules — so this
+ * check runs BEFORE the dirty-guard/module routing in `openPath`: there is nothing to discard
+ * and nothing to route. Returns true when the file was handled as a schema import (caller should
+ * stop), false otherwise (caller proceeds with normal module routing).
+ */
+function tryImportSchemaFile(path: string, text: string): boolean {
+  if (!path.endsWith('.schema.json') && !looksLikeSchemaFile(text)) return false;
+  const res = importSchemaFileText(text);
+  if (res.ok) showToast(`Added '${res.name}' to the schema library`);
+  else showToast(res.error ?? 'Not a valid Tomoe schema file', 'error');
+  return true;
+}
+
 export async function openPath(path: string): Promise<void> {
+  let text: string;
+  try {
+    text = await readTextFile(path);
+  } catch (e) {
+    showToast(`Cannot open file: ${(e as Error).message}`, 'error');
+    return;
+  }
+  if (tryImportSchemaFile(path, text)) return;
   if (!(await confirmDiscardIfDirty())) return;
   try {
-    const text = await readTextFile(path);
     const mod = pickModuleForOpen(path, text);
     setActiveModule(mod.id);
     mod.open(text, path);
@@ -36,7 +61,7 @@ export async function openPath(path: string): Promise<void> {
 }
 
 export async function pickOpen(): Promise<void> {
-  const sel = await open({ multiple: false, filters: [{ name: 'Tomoe / JSON', extensions: ['tomoe.json', 'json'] }] });
+  const sel = await open({ multiple: false, filters: [{ name: 'Tomoe / JSON', extensions: ['tomoe.json', 'schema.json', 'json'] }] });
   if (typeof sel === 'string') await openPath(sel);
 }
 
