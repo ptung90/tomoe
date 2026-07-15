@@ -223,7 +223,8 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
       '" style="' + sizeStyle + borderStyle + '">' +
       (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '') +
-      '<div class="fc-image-area" style="height:' + imgH + 'px;position:relative;">' + slots + handles + '</div>' +
+      // Image auto-fills the empty middle between title and text; imageHeightPercent is the floor (min-height).
+      '<div class="fc-image-area" style="min-height:' + imgH + 'px;position:relative;flex:1 1 auto;">' + slots + handles + '</div>' +
       '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
       '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' + sectionsHtml + '</div>' +
       '</div></div>'

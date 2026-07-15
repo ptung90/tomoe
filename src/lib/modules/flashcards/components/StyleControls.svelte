@@ -6,6 +6,7 @@
   import AlignLeft from 'lucide-svelte/icons/align-left';
   import AlignCenter from 'lucide-svelte/icons/align-center';
   import AlignRight from 'lucide-svelte/icons/align-right';
+  import AlignJustify from 'lucide-svelte/icons/align-justify';
   import Square from 'lucide-svelte/icons/square';
   import SquareDashed from 'lucide-svelte/icons/square-dashed';
   import Spline from 'lucide-svelte/icons/spline';
@@ -33,8 +34,8 @@
   const WEIGHTS: { v: number; label: string }[] = [
     { v: 400, label: 'Normal' }, { v: 500, label: 'Medium' }, { v: 600, label: 'Semibold' }, { v: 700, label: 'Bold' },
   ];
-  const ALIGNS = ['left', 'center', 'right'] as const;
-  const ALIGN_ICON = { left: AlignLeft, center: AlignCenter, right: AlignRight };
+  const ALIGNS = ['left', 'center', 'right', 'justify'] as const;
+  const ALIGN_ICON = { left: AlignLeft, center: AlignCenter, right: AlignRight, justify: AlignJustify };
 
   // Image-area height is a per-schema template property; resolve it from the selected record.
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);

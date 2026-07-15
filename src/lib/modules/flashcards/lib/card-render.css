@@ -13,7 +13,7 @@
 .fc-section__content ol { list-style:decimal; }
 .fc-section__content ul ul { list-style:circle; }
 .fc-section__content li { margin-bottom:1px; }
-.fc-image-slot { background:#e5e7eb; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
+.fc-image-slot { background:transparent; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
 .fc-image-slot .empty-placeholder { color:#9ca3af; font-size:11px; text-align:center; pointer-events:none; }
 .fc-image-slot > div.img-bg { position:absolute; inset:0; }
 .fc-img-label { padding:2px 5px; font-size:0.78em; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -35,6 +35,8 @@
 /* single-image, non-grid layouts: the lone slot fills its image area */
 .fc-layout-1full .fc-image-slot,
 .fc-layout-title-img-text .fc-image-slot { width:100%; height:100%; }
+/* title-img-text: image area grows to fill the middle; text sizes to its content below it */
+.fc-layout-title-img-text .fc-text-area { flex:0 0 auto; }
 /* 1big-2small & 1left-2right: big/left cell (col 1) spans both rows; two cells stack in col 2 */
 .fc-layout-1big-2small .fc-image-area,
 .fc-layout-1left-2right .fc-image-area { display:grid; gap:2px; }

@@ -70,6 +70,19 @@ describe('buildCardHTML grid/fulltext/fullimage', () => {
     expect((html.match(/fc-image-slot-\d/g) || []).length).toBe(1);
     expect(html).toContain('http://x/o.png');
   });
+  it('title-img-text: image area grows to fill (flex) with height% as a min-height, not a fixed height', () => {
+    const html = buildCardHTML(card({
+      layout: 'title-img-text', title: 'Owl', imageHeightPercent: 40,
+      images: [{ slot: 0, url: 'http://x/o.png' }],
+      sections: [{ id: 's1', label: '', content: 'a bird' }],
+    }), DEFAULT_SETTINGS, 'en');
+    const area = html.match(/fc-image-area" style="([^"]*)"/);
+    expect(area).toBeTruthy();
+    expect(area![1]).toContain('flex:1 1 auto');
+    expect(area![1]).toMatch(/min-height:\d+px/);
+    // no fixed `height:NNpx` on the image area (min-height only)
+    expect(area![1]).not.toMatch(/[^-]height:\d+px/);
+  });
   it('resolves the requested locale for title/sections', () => {
     const html = buildCardHTML(card({
       layout: 'fulltext',
