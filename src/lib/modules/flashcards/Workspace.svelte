@@ -18,8 +18,8 @@
   import PanelLeft from 'lucide-svelte/icons/panel-left';
   import PanelRight from 'lucide-svelte/icons/panel-right';
 
-  let leftWidth = $state(300);
-  let rightWidth = $state(440);
+  let leftWidth = $state(250);
+  let rightWidth = $state(540);
   let leftHidden = $state(false);
   let rightHidden = $state(false);
   let view = $state<'records' | 'cards'>('records');
@@ -96,7 +96,7 @@
         role="separator"
         aria-orientation="vertical"
         aria-label="resize sidebar"
-        use:dragX={(dx) => (leftWidth = Math.max(220, Math.min(560, leftWidth + dx)))}
+        use:dragX={(dx) => (leftWidth = Math.max(190, Math.min(520, leftWidth + dx)))}
       ></div>
       <div class="right"><RecordDetail /></div>
       <div
@@ -105,7 +105,7 @@
         role="separator"
         aria-orientation="vertical"
         aria-label="resize preview"
-        use:dragX={(dx) => (rightWidth = Math.max(240, Math.min(720, rightWidth - dx)))}
+        use:dragX={(dx) => (rightWidth = Math.max(430, Math.min(860, rightWidth - dx)))}
       ></div>
       <div class="preview-pane">{#if !rightHidden}<CardPreview />{/if}</div>
     </div>

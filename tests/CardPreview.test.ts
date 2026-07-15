@@ -42,6 +42,17 @@ describe('CardPreview', () => {
     expect(container.querySelector('.fc-sheet')).not.toBeInTheDocument();
   });
 
+  it('status bar shows a zoom readout: auto-fit by default, explicit after zooming, Fit resets it', async () => {
+    render(CardPreview);
+    const pct = screen.getByRole('button', { name: 'Fit to pane' });
+    expect(pct).toHaveTextContent('%');
+    expect(pct.className).toContain('auto');              // auto-fit initially
+    await fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(pct.className).not.toContain('auto');          // now an explicit user zoom
+    await fireEvent.click(pct);                            // click % = Fit to pane
+    expect(pct.className).toContain('auto');
+  });
+
   it('Fixed: changing Cards/page commits cardsPerPage via setTemplateLayout', async () => {
     const sid = get(S.project).schemas[0].id;
     render(CardPreview);

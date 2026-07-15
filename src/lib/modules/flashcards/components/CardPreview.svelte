@@ -121,10 +121,6 @@
       onclick={() => setSettings({ orientation: $project.settings.orientation === 'portrait' ? 'landscape' : 'portrait' })}>
       {$project.settings.orientation === 'landscape' ? 'Landscape' : 'Portrait'}
     </button>
-    <div class="seg mode-toggle" role="tablist" aria-label="Preview mode">
-      <button type="button" role="tab" aria-selected={mode === 'card'} class:on={mode === 'card'} onclick={() => (mode = 'card')}>Card</button>
-      <button type="button" role="tab" aria-selected={mode === 'sheet'} class:on={mode === 'sheet'} onclick={() => (mode = 'sheet')}>Sheet</button>
-    </div>
     <button type="button" class="style-toggle" class:on={showStyle} aria-label="style" onclick={() => (showStyle = !showStyle)}>
       <Palette size={15} />
     </button>
@@ -141,6 +137,21 @@
         </div>
       </div>
     </div>
+    <footer class="preview-statusbar">
+      <div class="seg" role="tablist" aria-label="Preview mode">
+        <button type="button" role="tab" aria-selected={mode === 'card'} class:on={mode === 'card'} onclick={() => (mode = 'card')}>Card</button>
+        <button type="button" role="tab" aria-selected={mode === 'sheet'} class:on={mode === 'sheet'} onclick={() => (mode = 'sheet')}>Sheet</button>
+      </div>
+      <span class="sb-info" title="{mode === 'sheet' ? 'Sheet' : 'Card'} size at 100%">
+        {eff.paperSize} · {orient === 'landscape' ? 'landscape' : 'portrait'} · {paper.w}×{paper.h}px
+      </span>
+      <div class="zoom-controls" role="group" aria-label="Zoom">
+        <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(scale, 1))}>−</button>
+        <button type="button" class="zoom-pct" class:auto={userZoom === null}
+          title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(scale * 100)}%</button>
+        <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(scale, -1))}>+</button>
+      </div>
+    </footer>
   {:else}
     <EmptyState icon={ImageIcon} title="No card to preview"
       hint="Select a record on the left to see its card here." />
@@ -188,4 +199,18 @@
     box-shadow:0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.14);
   }
   .preview-scaler { transform-origin:top left; }
+
+  /* Thin status bar under the canvas: preview-mode switch (Card/Sheet is a preview concern,
+     not a style setting) + viewport size + zoom readout. */
+  .preview-statusbar { display:flex; align-items:center; gap:10px; flex:none; padding:4px 10px;
+    background:var(--surface); border-top:1px solid var(--border); font-size:11px; color:var(--text-muted); }
+  .preview-statusbar .seg button { padding:2px 9px; font-size:11px; }
+  .sb-info { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .zoom-controls { display:inline-flex; align-items:center; gap:2px; flex:none; }
+  .zoom-controls button { border:1px solid var(--border); background:var(--bg); color:var(--text); font:inherit;
+    border-radius:6px; padding:2px 7px; cursor:pointer; transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .zoom-controls button:hover { background:var(--accent-weak); color:var(--accent); border-color:var(--accent); }
+  .zoom-controls button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .zoom-pct { min-width:46px; text-align:center; font-variant-numeric:tabular-nums; }
+  .zoom-pct.auto { color:var(--text-muted); }
 </style>
