@@ -87,21 +87,20 @@ describe('StyleControls (tabbed)', () => {
     expect(get(S.project).settings.contentFont.family).toBe('monospace');
   });
 
-  it('Card → Fields: toggling off Labels / Title sets hideSectionLabels / hideTitle on the template', async () => {
+  it('Card → Fields: toggling Labels sets hideSectionLabels (there is no separate Title toggle — hide the title field via the checklist)', async () => {
     const sid = S.addSchema('W');
     S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
     S.addRecord(sid); // selects it → the schema's template exists
     render(StyleControls);
     await tab('Fields');
-    await fireEvent.change(screen.getByLabelText('Show field labels'), { target: { checked: false } });
-    await fireEvent.change(screen.getByLabelText('Show title'), { target: { checked: false } });
-    const tpl = get(S.project).schemas[0].cardTemplates[0];
-    expect(tpl.hideSectionLabels).toBe(true);
-    expect(tpl.hideTitle).toBe(true);
+    // "Show on card" has only the Labels eye toggle now; the Title toggle was removed (redundant with the field checklist).
+    expect(screen.queryByRole('button', { name: 'Show title' })).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Show field labels' }));
+    expect(get(S.project).schemas[0].cardTemplates[0].hideSectionLabels).toBe(true);
   });
 });
 
-describe('StyleControls (scope switcher: Global / This type / This card)', () => {
+describe('StyleControls (scope switcher: Global / This view / This card)', () => {
   function seedSelected() {
     const sid = S.addSchema('Words');
     S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
@@ -109,9 +108,9 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     return sid;
   }
 
-  it('This type / This card are disabled until a schema / packed card exist', () => {
+  it('This view / This card are disabled until a schema / packed card exist', () => {
     render(StyleControls);
-    expect(screen.getByRole('tab', { name: 'This type' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'This view' })).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'This card' })).toBeDisabled();
   });
 
@@ -122,10 +121,10 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     expect(get(S.project).settings.border.width).toBe(6);
   });
 
-  it('This type — Border width writes to template.style, not settings', async () => {
+  it('This view — Border width writes to template.style, not settings', async () => {
     const sid = seedSelected();
     render(StyleControls);
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     await tab('Border');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9' } });
     expect(get(S.project).schemas[0].cardTemplates[0].style?.border?.width).toBe(9);
@@ -154,11 +153,11 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     expect((screen.getByLabelText('Width') as HTMLInputElement).value).toBe('22');
   });
 
-  it('reset at This type scope clears the schema override, falling back to global', async () => {
+  it('reset at This view scope clears the schema override, falling back to global', async () => {
     const sid = seedSelected();
     S.setTemplateStyle(sid, { border: { width: 22 } });
     render(StyleControls);
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     await tab('Border');
     expect(screen.getByLabelText('Width')).toHaveValue(22);
     await fireEvent.click(screen.getByLabelText('Reset border'));
@@ -179,15 +178,15 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     void sid;
     render(StyleControls);
     expect(screen.getByText(/applies to every card/i)).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     expect(screen.getByText(/Words/)).toBeInTheDocument();
   });
 
   it('reset-all is disabled with no overrides and clears every override for the scope when clicked', async () => {
     const sid = seedSelected();
     render(StyleControls);
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
-    const resetAll = screen.getByRole('button', { name: 'Reset all This type overrides' });
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
+    const resetAll = screen.getByRole('button', { name: 'Reset all This view overrides' });
     expect(resetAll).toBeDisabled();
 
     S.setTemplateStyle(sid, { border: { width: 9 } });
@@ -204,5 +203,78 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     seedSelected();
     render(StyleControls);
     expect(screen.queryByRole('button', { name: /Reset all/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('StyleControls — "This card" cross-view isolation (2 views, only one packed)', () => {
+  it('while a view WITHOUT a packed card is active, "This card" stays disabled and a style edit lands ' +
+    'on Global, never on the OTHER (packed) view\'s card', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
+    S.addRecord(sid); // selects it; schema still has no persisted views (implicit view 1)
+    S.packAllForSchema(sid); // packs a card for the (still-implicit) view 1
+    S.addView(sid); // materializes view 1 (now real), appends view 2, activeViewId -> view 2 (unpacked)
+
+    const view1Id = get(S.project).schemas[0].cardTemplates[0].id;
+    const packedCard = get(S.project).cards.find((c) => c.templateId === view1Id);
+    expect(packedCard).toBeTruthy(); // view 1's card survived materialization (deterministic auto id)
+
+    render(StyleControls);
+    expect(screen.getByRole('tab', { name: 'This card' })).toBeDisabled(); // view 2 has no card of its own
+    // A disabled tab can't be clicked into by a real user — scope stays at its default (Global).
+
+    await tab('Border');
+    await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '31' } });
+
+    expect(get(S.project).settings.border.width).toBe(31); // the edit landed at Global (the only reachable scope)
+    const cardAfter = get(S.project).cards.find((c) => c.id === packedCard!.id)!;
+    expect(cardAfter.style?.border?.width).not.toBe(31); // did NOT leak onto view 1's packed card
+  });
+});
+
+describe('StyleControls — Fields checklist (per view)', () => {
+  it('a per-schema field checklist toggles the active view\'s template.fields', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    render(StyleControls);
+    await tab('Fields');
+    await fireEvent.click(screen.getByLabelText('Def'));
+    const tpl = get(S.project).schemas[0].cardTemplates[0];
+    expect(tpl.fields).toEqual(['title']); // unchecking Def from "all" leaves Title only
+  });
+
+  it('re-checking a field adds it back to the explicit selection', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    render(StyleControls);
+    await tab('Fields');
+    await fireEvent.click(screen.getByLabelText('Def'));   // -> ['title']
+    await fireEvent.click(screen.getByLabelText('Def'));   // re-check -> ['title', 'def']
+    expect(get(S.project).schemas[0].cardTemplates[0].fields).toEqual(['title', 'def']);
+  });
+
+  it('the field checklist targets the active view, leaving other views\' selection untouched', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    S.setTemplateLayout(sid, { layout: 'fulltext' }); // creates view 1
+    S.addView(sid);                                   // view 2, becomes active
+    render(StyleControls);
+    await tab('Fields');
+    await fireEvent.click(screen.getByLabelText('Def'));
+    const tpls = get(S.project).schemas[0].cardTemplates;
+    expect(tpls[1].fields).toEqual(['title']); // active (view 2) changed
+    expect(tpls[0].fields).toBeUndefined();    // view 1 untouched
   });
 });

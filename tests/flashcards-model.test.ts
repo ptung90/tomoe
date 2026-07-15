@@ -104,6 +104,22 @@ describe('flashcards model', () => {
     expect(t.style.orientation).toBe('landscape');
     expect(t.orientation).toBeUndefined();
   });
+  it('parseProject migrates legacy hideTitle:true → drops the schema title field from the view + clears the flag', () => {
+    const legacy = JSON.stringify({
+      projectName: 'HT', schemas: [
+        { id: 'sch1', name: 'Words',
+          fields: [
+            { id: 'f1', key: 'name', label: 'Name', type: 'text' },
+            { id: 'f2', key: 'def', label: 'Def', type: 'text' },
+          ],
+          cardTemplates: [{ id: 't1', templateType: 'single', layout: 'fulltext', size: null, hideTitle: true, mapping: {} }] },
+      ],
+      records: [], cards: [],
+    });
+    const t = parseProject(legacy).schemas[0].cardTemplates[0] as any;
+    expect(t.hideTitle).toBeUndefined();                 // flag gone
+    expect(t.fields).toEqual(['def']);                   // title field ('name', schema's first text) dropped; rest kept
+  });
 });
 
 describe('layout registry', () => {

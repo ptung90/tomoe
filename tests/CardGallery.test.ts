@@ -95,6 +95,54 @@ describe('CardGallery — packed cards', () => {
   });
 });
 
+describe('CardGallery — multi-view', () => {
+  it('shows a view-group per view, each with one thumb per record, when a schema has multiple views', () => {
+    const sid = seed('1top-1bot', 3);
+    S.addView(sid);
+    const { container } = render(CardGallery, { onOpen: vi.fn() });
+    const viewGroups = container.querySelectorAll('.view-group');
+    expect(viewGroups).toHaveLength(2);
+    viewGroups.forEach((vg) => expect(vg.querySelectorAll('.thumb')).toHaveLength(3));
+  });
+  it('a single-view schema shows no view-name heading (back-compat, unchanged look)', () => {
+    seed('1top-1bot', 2);
+    const { container } = render(CardGallery, { onOpen: vi.fn() });
+    expect(container.querySelector('.view-name')).not.toBeInTheDocument();
+  });
+  it('Pack all packs every record for every view of the schema', async () => {
+    const sid = seed('1top-1bot', 2);
+    S.addView(sid);
+    const { getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    await fireEvent.click(getByRole('button', { name: /pack all/i }));
+    expect(get(S.project).cards.length).toBe(4); // 2 records x 2 views
+  });
+});
+
+describe('CardGallery — virgin schema (cardTemplates never materialized)', () => {
+  it('pack + edit on a schema that never had setTemplateLayout/Style/addView called still shows the EDITED packed card, not a fresh auto thumb', async () => {
+    // Deliberately do NOT call S.setTemplateLayout/setTemplateStyle/addView — this schema's
+    // cardTemplates stays [] (a "virgin" schema), exercising deriveAutoTemplate's deterministic id.
+    S.initProject();
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    expect(get(S.project).schemas[0].cardTemplates).toHaveLength(0); // still virgin
+
+    S.packAllForSchema(sid);
+    const cardId = get(S.project).cards[0].id;
+    S.setCardCell(cardId, 0, { content: 'EDITED CONTENT' });
+    expect(get(S.project).cards[0].edited).toBe(true);
+
+    const { container } = render(CardGallery, { onOpen: vi.fn() });
+    expect(container.querySelectorAll('.thumb.packed').length).toBe(1);
+    expect(container.querySelectorAll('.thumb.auto').length).toBe(0);
+    expect(container.querySelector('.badge.edited')).toBeInTheDocument();
+  });
+});
+
 describe('CardGallery — edit + apply', () => {
   it('Edit button opens the card editor', async () => {
     const sid = seed('1top-1bot', 1);

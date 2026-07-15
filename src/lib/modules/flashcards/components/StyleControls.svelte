@@ -17,15 +17,17 @@
   import MoveVertical from 'lucide-svelte/icons/move-vertical';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
   import X from 'lucide-svelte/icons/x';
+  import Eye from 'lucide-svelte/icons/eye';
+  import EyeOff from 'lucide-svelte/icons/eye-off';
   import Globe from 'lucide-svelte/icons/globe';
   import Layers from 'lucide-svelte/icons/layers';
   import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
   import {
-    project, selectedRecordId, setSettings, setTemplateLayout,
-    setTemplateStyle, setCardStyle, clearStyleOverride, resetScopeStyle,
+    project, selectedRecordId, activeViewId, setSettings, setTemplateLayout,
+    setTemplateStyle, setCardStyle, clearStyleOverride, resetScopeStyle, setViewFields,
   } from '../stores';
-  import { deriveAutoTemplate } from '../cardMapping';
-  import { sheetLayout } from '../lib/card-render';
+  import { deriveAutoTemplate, viewLabel } from '../cardMapping';
+  import { sheetLayout, sheetGrid } from '../lib/card-render';
   import { resolveStyle } from '../lib/style';
   import type { FontSpec, StyleOverrides } from '../model';
 
@@ -42,13 +44,24 @@
   // Image-area height is a per-schema template property; resolve it from the selected record.
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((x) => x.id === record.schemaId) ?? null) : null);
-  const template = $derived(schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null);
-  // The selected record's packed card (if it has been generated) — style overrides can only be written
-  // onto a real card, so "This card" scope is only available once one exists.
-  const card = $derived(record ? ($project.cards.find((c) => c.recordId === record.id) ?? null) : null);
+  // Every view of the schema, and the one this panel edits — same fallback rule CardPreview uses,
+  // so both stay in sync via the shared activeViewId store.
+  const views = $derived(schema ? (schema.cardTemplates.length ? schema.cardTemplates : [deriveAutoTemplate(schema)]) : []);
+  const template = $derived(views.find((v) => v.id === $activeViewId) ?? views[0] ?? null);
+  const activeViewName = $derived(schema && template ? viewLabel(template, schema, Math.max(0, views.findIndex((v) => v.id === template!.id))) : '');
+  // The selected record's packed card FOR THE ACTIVE VIEW — style overrides can only be written
+  // onto a real card, so "This card" scope is only available once one exists for this view.
+  // deriveAutoTemplate now mints a DETERMINISTIC id per schema (see cardMapping.ts), so this
+  // recordId-only fallback is no longer needed to survive a mismatched auto-template id — it's kept
+  // as belt-and-suspenders for the single implicit-view case only (guarded to views.length <= 1):
+  // a schema with just one (still-synthetic, unmaterialized) view has no ambiguity between views anyway.
+  const card = $derived(record && template ? (
+    $project.cards.find((c) => c.recordId === record.id && c.templateId === template.id)
+      ?? (views.length <= 1 ? $project.cards.find((c) => c.recordId === record.id) ?? null : null)
+  ) : null);
   const imgHeightApplies = $derived(!!template && template.layout !== 'fulltext' && template.layout !== 'fullimage');
 
-  // ── Cascade scope: Global (settings) → This type (template.style) → This card (card.style) ──
+  // ── Cascade scope: Global (settings) → This view (template.style) → This card (card.style) ──
   let scope = $state<'global' | 'schema' | 'card'>('global');
   const eff = $derived(resolveStyle($project.settings, template?.style, card?.style));
   // The override object at the CURRENT scope — used to show "set here" vs "inherited" + drive reset.
@@ -57,14 +70,14 @@
   );
   function write(patch: StyleOverrides): void {
     if (scope === 'global') setSettings(patch);
-    else if (scope === 'schema' && schema) setTemplateStyle(schema.id, patch);
+    else if (scope === 'schema' && schema && template) setTemplateStyle(schema.id, patch, template.id);
     else if (scope === 'card' && card) setCardStyle(card.id, patch);
   }
   function hasOverride(key: keyof StyleOverrides): boolean {
     return scope !== 'global' && !!scopeStyle && scopeStyle[key] !== undefined;
   }
   function resetOverride(key: keyof StyleOverrides): void {
-    if (scope === 'schema' && schema) clearStyleOverride('schema', schema.id, key);
+    if (scope === 'schema' && schema && template) clearStyleOverride('schema', schema.id, key, template.id);
     else if (scope === 'card' && card) clearStyleOverride('card', card.id, key);
   }
   // How many properties are overridden at the current scope, and a plain-language description of it.
@@ -73,39 +86,51 @@
     scope === 'global'
       ? 'Base style — applies to every card.'
       : scope === 'schema'
-        ? `“${schema?.name ?? 'this type'}” · blank fields inherit Global`
-        : 'This card only · blank fields inherit its type',
+        ? `“${schema ? (views.length > 1 ? `${schema.name} · ${activeViewName}` : schema.name) : 'this view'}” · blank fields inherit Global`
+        : 'This card only · blank fields inherit its view',
   );
   function resetScope(): void {
-    if (scope === 'schema' && schema) resetScopeStyle('schema', schema.id);
+    if (scope === 'schema' && schema && template) resetScopeStyle('schema', schema.id, template.id);
     else if (scope === 'card' && card) resetScopeStyle('card', card.id);
   }
   function onImageHeight(e: Event) {
-    if (!schema) return;
+    if (!schema || !template) return;
     const v = Math.round(Number((e.target as HTMLInputElement).value)) || 50;
-    setTemplateLayout(schema.id, { imageHeightPercent: Math.min(95, Math.max(5, v)) });
+    setTemplateLayout(schema.id, { imageHeightPercent: Math.min(95, Math.max(5, v)) }, template.id);
   }
 
   // Cards/page (N-up tiling): Fixed grid (cardsPerPage) or Auto-fit (real-size cardSize).
   const orient = $derived(eff.orientation);
   const resolvedPerPage = $derived(template ? sheetLayout(template, eff.paperSize, orient).perPage : 0);
-  const CARDS_PER_PAGE = [1, 2, 3, 4, 6, 8, 9, 12];
   const CARD_SIZES = ['A5', 'A6', 'A7', 'A8'];
   function onAutoFitMode(autoFit: boolean) {
-    if (schema) setTemplateLayout(schema.id, { autoFit });
+    if (schema && template) setTemplateLayout(schema.id, { autoFit }, template.id);
   }
-  function onCardsPerPage(e: Event) {
-    if (schema) setTemplateLayout(schema.id, { cardsPerPage: Number((e.target as HTMLSelectElement).value), autoFit: false });
+  // Derived defaults so a file that only has `cardsPerPage` shows sensible cols/rows (not blank).
+  const gridCols = $derived(template ? (template.gridCols ?? sheetGrid(template.cardsPerPage ?? 1, orient).cols) : 1);
+  const gridRows = $derived(template ? (template.gridRows ?? sheetGrid(template.cardsPerPage ?? 1, orient).rows) : 1);
+  function onGridCols(e: Event) {
+    if (schema && template) setTemplateLayout(schema.id, { gridCols: Math.max(1, Math.round(num(e))), gridRows, autoFit: false }, template.id);
+  }
+  function onGridRows(e: Event) {
+    if (schema && template) setTemplateLayout(schema.id, { gridCols, gridRows: Math.max(1, Math.round(num(e))), autoFit: false }, template.id);
   }
   function onCardSize(e: Event) {
-    if (schema) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true });
+    if (schema && template) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true }, template.id);
   }
-  // Fields: show/hide the card title (first text field) and the "• label:" prefix on each field.
-  function onShowTitle(e: Event) {
-    if (schema) setTemplateLayout(schema.id, { hideTitle: !(e.target as HTMLInputElement).checked });
+  // "Labels" = show/hide the "• label:" prefix on each section (a styling toggle, distinct from the
+  // per-view field checklist). Hiding the title field is done by unchecking it in the checklist.
+  function toggleLabels() {
+    if (schema && template) setTemplateLayout(schema.id, { hideSectionLabels: !template.hideSectionLabels }, template.id);
   }
-  function onShowLabels(e: Event) {
-    if (schema) setTemplateLayout(schema.id, { hideSectionLabels: !(e.target as HTMLInputElement).checked });
+  // Field checklist (per view): empty template.fields == "all fields" (matches recordToCard);
+  // toggling starts from that implicit full set, then adds/removes explicitly.
+  function onToggleField(key: string): void {
+    if (!schema || !template) return;
+    const allKeys = schema.fields.map((f) => f.key);
+    const cur = template.fields?.length ? template.fields : allKeys;
+    const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
+    setViewFields(schema.id, template.id, next);
   }
 
   // One flat row of tabs (no Text/Card/Image grouping, no sub-pills).
@@ -120,7 +145,7 @@
       <button type="button" role="tab" aria-selected={scope === 'global'} class:on={scope === 'global'}
         onclick={() => (scope = 'global')}><Globe size={13} />Global</button>
       <button type="button" role="tab" aria-selected={scope === 'schema'} class:on={scope === 'schema'}
-        disabled={!schema} onclick={() => (scope = 'schema')}><Layers size={13} />This type</button>
+        disabled={!schema} onclick={() => (scope = 'schema')}><Layers size={13} />This view</button>
       <button type="button" role="tab" aria-selected={scope === 'card'} class:on={scope === 'card'}
         disabled={!card} onclick={() => (scope = 'card')}><Square size={13} />This card</button>
     </div>
@@ -132,7 +157,7 @@
         {overrideCount ? `${overrideCount} set here` : 'all inherited'}
       </span>
       <button type="button" class="reset-all" disabled={overrideCount === 0}
-        aria-label={`Reset all ${scope === 'schema' ? 'This type' : 'This card'} overrides`}
+        aria-label={`Reset all ${scope === 'schema' ? 'This view' : 'This card'} overrides`}
         onclick={resetScope}><RotateCcw size={12} />Reset</button>
     {/if}
   </div>
@@ -207,11 +232,13 @@
             disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
         </div>
         {#if !template?.autoFit}
-          <span class="tool" title="Cards per page"><LayoutGrid size={14} />
-            <select aria-label="Cards per page" value={template?.cardsPerPage ?? 1} disabled={!schema} onchange={onCardsPerPage}>
-              {#each CARDS_PER_PAGE as n (n)}<option value={n}>{n}</option>{/each}
-            </select>
+          <span class="tool" title="Columns"><LayoutGrid size={14} />
+            <input aria-label="Columns" type="number" min="1" value={gridCols} disabled={!schema} onchange={onGridCols} />
           </span>
+          <span class="tool" title="Rows"><LayoutGrid size={14} />
+            <input aria-label="Rows" type="number" min="1" value={gridRows} disabled={!schema} onchange={onGridRows} />
+          </span>
+          <span class="hint">≈ {resolvedPerPage}/page</span>
         {:else}
           <span class="tool" title="Card size"><LayoutGrid size={14} />
             <select aria-label="Card size" value={template?.cardSize ?? 'A7'} disabled={!schema} onchange={onCardSize}>
@@ -222,14 +249,30 @@
         {/if}
       </div>
     {:else}
-      <div class="toolbar">
-        <label class="tool" title="Show the card title (the record's first text field)">
-          <input type="checkbox" aria-label="Show title" checked={!template?.hideTitle} disabled={!schema} onchange={onShowTitle} /> Title
-        </label>
-        <label class="tool" title="Show the “• label:” prefix before each field's value">
-          <input type="checkbox" aria-label="Show field labels" checked={!template?.hideSectionLabels} disabled={!schema} onchange={onShowLabels} /> Labels
-        </label>
+      <div class="display-group" role="group" aria-label="Show on card">
+        <span class="group-label">Show on card</span>
+        <div class="toolbar">
+          <button type="button" class="eye-toggle" class:off={template?.hideSectionLabels} aria-label="Show field labels"
+            aria-pressed={!template?.hideSectionLabels} disabled={!schema}
+            title="Show the “• label:” prefix before each field's value" onclick={toggleLabels}>
+            {#if template?.hideSectionLabels}<EyeOff size={13} />{:else}<Eye size={13} />{/if} Labels
+          </button>
+        </div>
       </div>
+      {#if schema}
+        <div class="field-checklist" role="group" aria-label="Fields in this view">
+          <span class="group-label">Fields in this view</span>
+          <div class="toolbar">
+            {#each schema.fields as f (f.key)}
+              <label class="tool">
+                <input type="checkbox" aria-label={f.label}
+                  checked={(template?.fields?.length ?? 0) === 0 ? true : template!.fields!.includes(f.key)}
+                  onchange={() => onToggleField(f.key)} /> {f.label}
+              </label>
+            {/each}
+          </div>
+        </div>
+      {/if}
     {/if}
   </div>
 </div>
@@ -277,7 +320,7 @@
 {/snippet}
 
 <style>
-  .style-controls { display:flex; flex-direction:column; height:186px;
+  .style-controls { display:flex; flex-direction:column; height:252px;
     background:var(--surface); border-bottom:1px solid var(--border); }
   .tabs { display:flex; gap:2px; padding:6px 8px 0; border-bottom:1px solid var(--border); flex:none;
     flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
@@ -313,7 +356,7 @@
   .seg button.on { background:var(--accent); color:#fff; }
   .seg button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 
-  /* Scope switcher — the "level" selector: which of Global / This type / This card the edits below target. */
+  /* Scope switcher — the "level" selector: which of Global / This view / This card the edits below target. */
   .scope-row { display:flex; align-items:center; gap:8px; padding:7px 10px 0; flex:none; }
   .scope-label { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); flex:none; }
   .scope-switch { display:flex; flex:1; border:1px solid var(--border); border-radius:7px; overflow:hidden; background:var(--bg); }
@@ -338,6 +381,22 @@
   .reset-all:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
   .reset-all:disabled { opacity:.38; cursor:not-allowed; }
   .reset-all:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
+  /* Shared small section heading (Show on card / Fields in this view). */
+  .group-label { display:block; font-size:10px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  /* "Show on card" — visibility toggles (eye chips): a different shape/affordance from the
+     field-selection checkboxes below, so the two groups aren't confused. */
+  .display-group { padding-bottom:2px; }
+  .eye-toggle { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--accent); border-radius:999px;
+    background:var(--accent-weak); color:var(--accent); font:inherit; font-size:12px; padding:3px 11px; cursor:pointer;
+    transition:background .12s ease, color .12s ease, border-color .12s ease, opacity .12s ease; }
+  .eye-toggle:hover:not(:disabled) { background:var(--accent); color:#fff; }
+  .eye-toggle.off { border-color:var(--border); background:var(--bg); color:var(--text-muted); }
+  .eye-toggle.off:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:var(--accent-weak); }
+  .eye-toggle:disabled { opacity:.38; cursor:not-allowed; }
+  .eye-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .field-checklist { padding:8px 10px 0; border-top:1px solid var(--border); margin-top:8px; }
 
   /* Reset-to-inherited — shown next to a group's controls once this scope has its own override.
      Accent-tinted so "set here" groups are visually distinct from inherited ones. */

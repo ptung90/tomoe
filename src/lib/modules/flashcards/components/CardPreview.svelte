@@ -2,8 +2,9 @@
   import '../lib/card-render.css';
   import Palette from 'lucide-svelte/icons/palette';
   import ImageIcon from 'lucide-svelte/icons/image';
-  import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
-  import { deriveAutoTemplate, recordToCard, chunkRecords } from '../cardMapping';
+  import Plus from 'lucide-svelte/icons/plus';
+  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView } from '../stores';
+  import { deriveAutoTemplate, recordToCard, chunkRecords, viewLabel } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
   import { resolveStyle } from '../lib/style';
   import { LAYOUTS } from '../lib/layouts';
@@ -21,11 +22,14 @@
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
-  const template = $derived(schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null);
-  // Resolved cascade: global settings → per-schema template.style → the selected record's packed-card style.
-  // `schemaEff` (no card layer) drives sheet-mode rendering, where buildSheetHTML resolves each cell's
-  // OWN card.style — layering the selected card's style into the shared base would leak it to every cell.
-  const selectedCard = $derived(record ? ($project.cards.find((c) => c.recordId === record.id) ?? null) : null);
+  // Every view of the schema (>=1 — auto-derived if the schema has no cardTemplates yet).
+  const views = $derived(schema ? (schema.cardTemplates.length ? schema.cardTemplates : [deriveAutoTemplate(schema)]) : []);
+  // The view every control below targets. Falls back to the schema's first view whenever the stored
+  // id doesn't name one of THIS schema's views (fresh project, or the record just switched schema).
+  const resolvedActiveId = $derived(views.find((v) => v.id === $activeViewId)?.id ?? views[0]?.id ?? null);
+  const template = $derived(views.find((v) => v.id === resolvedActiveId) ?? null);
+
+  const selectedCard = $derived(record && template ? ($project.cards.find((c) => c.recordId === record.id && c.templateId === template.id) ?? null) : null);
   const schemaEff = $derived(template ? resolveStyle($project.settings, template.style) : $project.settings);
   const eff = $derived(template ? resolveStyle(schemaEff, selectedCard?.style) : $project.settings);
   const orient = $derived(eff.orientation);
@@ -47,7 +51,7 @@
     const onWheel = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      userZoom = zoomStep(scale, e.deltaY);
+      userZoom = zoomStep(displayScale, e.deltaY);
     };
     const onDblClick = () => { userZoom = null; };
     const onDown = (e: MouseEvent) => {
@@ -73,20 +77,35 @@
       window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
     } };
   }
-  const cardHtml = $derived.by(() => {
-    if (!record || !schema || !template) return '';
-    return buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
-                         eff, $project.activeLocale, false, cellPx);
+  // One rendered card per view, side by side — each at ITS OWN resolved style/cell size (so an
+  // Image-only view and a Content-only view keep their real proportions, not the active view's).
+  const viewCards = $derived.by(() => {
+    if (!record || !schema) return [] as { id: string; label: string; html: string; cellPx: { w: number; h: number } }[];
+    return views.map((v, i) => {
+      const vCard = $project.cards.find((c) => c.recordId === record.id && c.templateId === v.id) ?? null;
+      const vSchemaEff = resolveStyle($project.settings, v.style);
+      const vEff = resolveStyle(vSchemaEff, vCard?.style);
+      const vLay = sheetLayout(v, vEff.paperSize, vEff.orientation);
+      const vCellPx = { w: vLay.cellW, h: vLay.cellH };
+      const html = buildCardHTML(recordToCard(record, schema, v, $project.settings, $project.activeLocale), vEff, $project.activeLocale, false, vCellPx);
+      return { id: v.id, label: viewLabel(v, schema, i), html, cellPx: vCellPx };
+    });
   });
+  // Each column fits within an equal share of the pane's width; explicit userZoom overrides all columns.
+  const colBudget = $derived(Math.max(80, (paneW - 40 - Math.max(0, views.length - 1) * 16) / Math.max(1, views.length)));
+  function colScale(cellW: number): number { return Math.max(0.05, Math.min(1, colBudget / cellW)); }
+  // The scale the ACTIVE view is actually shown at — what the status-bar % must report (and the base
+  // for the −/+ buttons). Card mode auto-fits each column to its share of the pane (colScale), so a
+  // multi-view pane is NOT the single-card fitScale; sheet mode uses the full-pane fitScale.
+  const displayScale = $derived(mode === 'sheet' ? scale : (userZoom ?? colScale(cellPx.w)));
 
-  // Sheet mode: every record of the schema mapped to a card (packed-or-derived, same as
-  // collectPrintSheets), chunked by the resolved per-page count; show the chunk that
-  // contains the currently selected record.
+  // Sheet mode: every record of the schema mapped through the ACTIVE view (packed-or-derived, same
+  // as collectPrintSheets does per view), chunked by that view's resolved per-page count.
   const schemaCards = $derived.by(() => {
     if (!schema || !template) return [] as Card[];
     return $project.records
       .filter((r) => r.schemaId === schema.id)
-      .map((r) => $project.cards.find((c) => c.recordId === r.id) ??
+      .map((r) => $project.cards.find((c) => c.recordId === r.id && c.templateId === template.id) ??
         recordToCard(r, schema, template, $project.settings, $project.activeLocale));
   });
   const sheetChunk = $derived.by(() => {
@@ -98,10 +117,12 @@
     if (!lay) return '';
     return buildSheetHTML(sheetChunk, lay, schemaEff, $project.activeLocale);
   });
-  const displayHtml = $derived(mode === 'sheet' ? sheetHtml : cardHtml);
 
   function onLayout(e: Event) {
-    if (schema) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value });
+    if (schema && template) setTemplateLayout(schema.id, { layout: (e.target as HTMLSelectElement).value }, template.id);
+  }
+  function onAddView() {
+    if (schema) addView(schema.id);
   }
 </script>
 
@@ -126,17 +147,47 @@
     </button>
   </header>
 
+  {#if schema}
+    <div class="view-bar" role="tablist" aria-label="Views">
+      {#each views as v, i (v.id)}
+        <button type="button" role="tab" aria-selected={v.id === resolvedActiveId} class:on={v.id === resolvedActiveId}
+          onclick={() => selectView(v.id)}>{viewLabel(v, schema, i)}</button>
+      {/each}
+      <button type="button" class="add-view" aria-label="Add view" onclick={onAddView}><Plus size={13} /></button>
+    </div>
+  {/if}
+
   {#if showStyle}<StyleControls />{/if}
 
   {#if record && schema}
-    <div class="preview-scroll" class:panable={userZoom !== null} class:grabbing={dragging} use:zoomPan
-      title="Ctrl/⌘ + scroll to zoom · drag to pan · double-click to fit">
-      <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
-        <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
-          {@html displayHtml}
+    {#if mode === 'card'}
+      <div class="preview-scroll views-row" class:panable={userZoom !== null} class:grabbing={dragging} use:zoomPan
+        title="Ctrl/⌘ + scroll to zoom · drag to pan · double-click to fit">
+        {#each viewCards as vc (vc.id)}
+          {@const vScale = userZoom ?? colScale(vc.cellPx.w)}
+          <div class="view-col" class:active={vc.id === resolvedActiveId}
+            role="button" tabindex="0" aria-label={`Focus ${vc.label}`}
+            onclick={() => selectView(vc.id)}
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectView(vc.id); } }}>
+            <span class="view-col-label">{vc.label}</span>
+            <div class="preview-frame" style={`width:${Math.round(vc.cellPx.w * vScale)}px;height:${Math.round(vc.cellPx.h * vScale)}px;`}>
+              <div class="preview-scaler" style={`transform:scale(${vScale});width:${vc.cellPx.w}px;height:${vc.cellPx.h}px;`}>
+                {@html vc.html}
+              </div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="preview-scroll" class:panable={userZoom !== null} class:grabbing={dragging} use:zoomPan
+        title="Ctrl/⌘ + scroll to zoom · drag to pan · double-click to fit">
+        <div class="preview-frame" style={`width:${Math.round(paper.w * scale)}px;height:${Math.round(paper.h * scale)}px;`}>
+          <div class="preview-scaler" style={`transform:scale(${scale});width:${paper.w}px;height:${paper.h}px;`}>
+            {@html sheetHtml}
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
     <footer class="preview-statusbar">
       <div class="seg" role="tablist" aria-label="Preview mode">
         <button type="button" role="tab" aria-selected={mode === 'card'} class:on={mode === 'card'} onclick={() => (mode = 'card')}>Card</button>
@@ -146,10 +197,10 @@
         {eff.paperSize} · {orient === 'landscape' ? 'landscape' : 'portrait'} · {paper.w}×{paper.h}px
       </span>
       <div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(scale, 1))}>−</button>
+        <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(displayScale, 1))}>−</button>
         <button type="button" class="zoom-pct" class:auto={userZoom === null}
-          title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(scale * 100)}%</button>
-        <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(scale, -1))}>+</button>
+          title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(displayScale * 100)}%</button>
+        <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(displayScale, -1))}>+</button>
       </div>
     </footer>
   {:else}
@@ -173,6 +224,20 @@
     outline:2px solid var(--accent); outline-offset:1px; }
   .style-toggle { margin-left:auto; display:inline-flex; align-items:center; }
 
+  .view-bar { display:flex; align-items:center; gap:4px; flex-wrap:wrap; padding:6px 12px;
+    background:var(--surface); border-bottom:1px solid var(--border); }
+  .view-bar button[role=tab] { border:1px solid var(--border); background:var(--bg); color:var(--text-muted);
+    border-radius:999px; padding:3px 10px; font:inherit; font-size:11px; cursor:pointer;
+    transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .view-bar button[role=tab]:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
+  .view-bar button[role=tab].on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .view-bar button[role=tab]:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .add-view { border:1px dashed var(--border); background:transparent; color:var(--text-muted);
+    border-radius:999px; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:border-color .12s ease, color .12s ease; }
+  .add-view:hover { border-color:var(--accent); color:var(--accent); }
+  .add-view:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
   .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 10px; cursor:pointer;
     font:inherit; font-size:12px; transition:background .12s ease, color .12s ease; }
@@ -192,11 +257,23 @@
   /* When zoomed (userZoom set), the canvas is draggable to pan. */
   .preview-scroll.panable { cursor:grab; }
   .preview-scroll.grabbing { cursor:grabbing; }
+  .preview-scroll.views-row { flex-wrap:wrap; gap:16px; justify-content:flex-start; }
+  .view-col { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    border-radius:6px; padding:6px; transition:background .12s ease; }
+  .view-col:hover:not(.active) { background:var(--accent-weak); }
+  .view-col:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .view-col-label { font-size:11px; font-weight:600; color:var(--text-muted); transition:color .12s ease; }
+  .view-col.active .view-col-label { color:var(--accent); }
   /* Layout box = scaled size, so flex can center it; the scaler renders the full-size card into it. */
   .preview-frame {
     flex:none;
     border-radius:2px;
     box-shadow:0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.14);
+  }
+  .view-col.active .preview-frame {
+    outline:2px solid var(--accent);
+    outline-offset:3px;
+    box-shadow:0 1px 2px rgba(0,0,0,.08), 0 10px 28px rgba(0,0,0,.16);
   }
   .preview-scaler { transform-origin:top left; }
 

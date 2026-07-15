@@ -38,7 +38,11 @@
       await writeFile(path, bytes);
       showToast('Exported PDF');
     } catch (e) {
-      showToast(`Export failed: ${(e as Error).message}`, 'error');
+      // Tauri command rejections (and some webview/canvas errors) can reject with a bare string
+      // or plain object rather than an Error — `(e as Error).message` on those is `undefined`,
+      // which is why this used to surface as the unhelpful "Export failed: undefined".
+      const msg = e instanceof Error ? e.message : String(e);
+      showToast(`Export failed: ${msg || 'unknown error'}`, 'error');
     } finally {
       exporting = false;
     }

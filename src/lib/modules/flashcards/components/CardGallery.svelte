@@ -9,7 +9,7 @@
   import Upload from 'lucide-svelte/icons/upload';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
-  import { deriveAutoTemplate, recordToCard } from '../cardMapping';
+  import { deriveAutoTemplate, recordToCard, viewLabel } from '../cardMapping';
   import { isCardStale } from '../cardOps';
   import { buildCardHTML, buildSheetHTML, sheetLayout } from '../lib/card-render';
   import { collectPrintSheets } from '../lib/printCards';
@@ -46,17 +46,22 @@
   // One thumbnail per record: the persisted (packed) card if one exists, else auto-derived.
   // Each card is rendered at its real CUT size (one cell of the N-up sheet), not the full page —
   // same cellW/cellH the preview uses, so a 3-up card shows a third of the page, not a whole A4.
+  // Per schema, per VIEW (a schema with no views yet behaves as one auto-derived view — back-compat).
   const groups = $derived($project.schemas.map((schema) => {
-    const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
+    const views = schema.cardTemplates.length ? schema.cardTemplates : [deriveAutoTemplate(schema)];
     const recs = $project.records.filter((r) => r.schemaId === schema.id);
-    const packed = $project.cards.filter((c) => c.recordId && recs.some((r) => r.id === c.recordId));
-    const packedIds = new Set(packed.map((c) => c.recordId));
-    const autoRecs = recs.filter((r) => !packedIds.has(r.id));
-    const schemaEff = resolveStyle($project.settings, template.style);
-    const lay = sheetLayout(template, schemaEff.paperSize, schemaEff.orientation);
-    const cell = { w: lay.cellW, h: lay.cellH };
-    const scale = Math.min(1, THUMB_W / cell.w) * zoom;
-    return { schema, template, recs, packed, autoRecs, cell, scale };
+    const viewGroups = views.map((template, i) => {
+      const packed = $project.cards.filter((c) => c.templateId === template.id && c.recordId && recs.some((r) => r.id === c.recordId));
+      const packedIds = new Set(packed.map((c) => c.recordId));
+      const autoRecs = recs.filter((r) => !packedIds.has(r.id));
+      const schemaEff = resolveStyle($project.settings, template.style);
+      const lay = sheetLayout(template, schemaEff.paperSize, schemaEff.orientation);
+      const cell = { w: lay.cellW, h: lay.cellH };
+      const scale = Math.min(1, THUMB_W / cell.w) * zoom;
+      return { template, viewName: viewLabel(template, schema, i), packed, autoRecs, cell, scale };
+    });
+    const totalCards = viewGroups.reduce((n, v) => n + v.packed.length + v.autoRecs.length, 0);
+    return { schema, recs, views: viewGroups, totalCards };
   }));
 
   const totalRecords = $derived($project.records.length);
@@ -123,7 +128,7 @@
       <section class="group">
         <header class="group-head">
           <span class="group-name">{g.schema.name}</span>
-          <span class="count">{g.packed.length + g.autoRecs.length} card{g.packed.length + g.autoRecs.length === 1 ? '' : 's'}</span>
+          <span class="count">{g.totalCards} card{g.totalCards === 1 ? '' : 's'}</span>
           {#if g.recs.length > 0}
             <button type="button" class="pack-all" onclick={() => packAllForSchema(g.schema.id)}>
               <Package size={13} /> Pack all
@@ -131,52 +136,57 @@
           {/if}
         </header>
 
-        {#if g.packed.length === 0 && g.autoRecs.length === 0}
+        {#if g.recs.length === 0}
           <p class="hint">No records in this schema yet.</p>
         {:else}
-          <div class="grid">
-            <!-- Persisted packed cards (snapshots) -->
-            {#each g.packed as card (card.id)}
-              {@const stale = isCardStale(card, $project)}
-              {@const edited = !!card.edited}
-              <div class="thumb packed">
-                <button type="button" class="thumb-open" title={packedCaption(card)}
-                  onclick={() => card.recordId && onOpen(card.recordId)}>
-                  <div class="thumb-frame" style={`width:${Math.round(g.cell.w * g.scale)}px;height:${Math.round(g.cell.h * g.scale)}px;`}>
-                    <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.cell.w}px;height:${g.cell.h}px;`}>
-                      {@html packedHtml(card, g.template, g.cell)}
+          {#each g.views as v (v.template.id)}
+            <div class="view-group">
+              {#if g.views.length > 1}<h4 class="view-name">{v.viewName}</h4>{/if}
+              <div class="grid">
+                <!-- Persisted packed cards (snapshots) -->
+                {#each v.packed as card (card.id)}
+                  {@const stale = isCardStale(card, $project)}
+                  {@const edited = !!card.edited}
+                  <div class="thumb packed">
+                    <button type="button" class="thumb-open" title={packedCaption(card)}
+                      onclick={() => card.recordId && onOpen(card.recordId)}>
+                      <div class="thumb-frame" style={`width:${Math.round(v.cell.w * v.scale)}px;height:${Math.round(v.cell.h * v.scale)}px;`}>
+                        <div class="thumb-scaler" style={`transform:scale(${v.scale});width:${v.cell.w}px;height:${v.cell.h}px;`}>
+                          {@html packedHtml(card, v.template, v.cell)}
+                        </div>
+                      </div>
+                    </button>
+                    <div class="thumb-meta">
+                      <span class="badge {edited ? 'edited' : stale ? 'stale' : 'synced'}">{edited ? 'Edited' : stale ? 'Stale' : 'Synced'}</span>
+                      <button type="button" class="icon-act" aria-label="edit card" title="Edit card"
+                        onclick={() => cardEditorOpen.set(card.id)}><Pencil size={13} /></button>
+                      {#if edited}
+                        <button type="button" class="icon-act" aria-label="apply to records" title="Apply to records"
+                          onclick={() => onApply(card.id)}><Upload size={13} /></button>
+                      {/if}
+                      {#if stale || edited}
+                        <button type="button" class="icon-act" aria-label="regenerate" title="Regenerate from records"
+                          onclick={() => regenerateCard(card.id)}><RefreshCw size={13} /></button>
+                      {/if}
+                      <button type="button" class="icon-act danger" aria-label="delete" title="Delete card"
+                        onclick={() => deleteCard(card.id)}><Trash2 size={13} /></button>
                     </div>
                   </div>
-                </button>
-                <div class="thumb-meta">
-                  <span class="badge {edited ? 'edited' : stale ? 'stale' : 'synced'}">{edited ? 'Edited' : stale ? 'Stale' : 'Synced'}</span>
-                  <button type="button" class="icon-act" aria-label="edit card" title="Edit card"
-                    onclick={() => cardEditorOpen.set(card.id)}><Pencil size={13} /></button>
-                  {#if edited}
-                    <button type="button" class="icon-act" aria-label="apply to records" title="Apply to records"
-                      onclick={() => onApply(card.id)}><Upload size={13} /></button>
-                  {/if}
-                  {#if stale || edited}
-                    <button type="button" class="icon-act" aria-label="regenerate" title="Regenerate from records"
-                      onclick={() => regenerateCard(card.id)}><RefreshCw size={13} /></button>
-                  {/if}
-                  <button type="button" class="icon-act danger" aria-label="delete" title="Delete card"
-                    onclick={() => deleteCard(card.id)}><Trash2 size={13} /></button>
-                </div>
+                {/each}
+                <!-- Auto-derived cards for records not yet packed (for this view) -->
+                {#each v.autoRecs as rec (rec.id)}
+                  <button type="button" class="thumb auto" title={caption(rec, g.schema)} onclick={() => onOpen(rec.id)}>
+                    <div class="thumb-frame" style={`width:${Math.round(v.cell.w * v.scale)}px;height:${Math.round(v.cell.h * v.scale)}px;`}>
+                      <div class="thumb-scaler" style={`transform:scale(${v.scale});width:${v.cell.w}px;height:${v.cell.h}px;`}>
+                        {@html autoHtml(rec, g.schema, v.template, v.cell)}
+                      </div>
+                    </div>
+                    <span class="thumb-cap">{caption(rec, g.schema)}</span>
+                  </button>
+                {/each}
               </div>
-            {/each}
-            <!-- Auto-derived cards for records not yet packed -->
-            {#each g.autoRecs as rec (rec.id)}
-              <button type="button" class="thumb auto" title={caption(rec, g.schema)} onclick={() => onOpen(rec.id)}>
-                <div class="thumb-frame" style={`width:${Math.round(g.cell.w * g.scale)}px;height:${Math.round(g.cell.h * g.scale)}px;`}>
-                  <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.cell.w}px;height:${g.cell.h}px;`}>
-                    {@html autoHtml(rec, g.schema, g.template, g.cell)}
-                  </div>
-                </div>
-                <span class="thumb-cap">{caption(rec, g.schema)}</span>
-              </button>
-            {/each}
-          </div>
+            </div>
+          {/each}
         {/if}
       </section>
     {/each}
@@ -241,6 +251,9 @@
   .pack-all:hover { background:var(--accent-weak); color:var(--accent); }
   .pack-all:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .hint { color:var(--text-muted); font-size:12px; margin:0; }
+  .view-group { display:flex; flex-direction:column; gap:8px; }
+  .view-name { margin:0; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--text-muted); }
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px; align-items:start; }
 
   .thumb { display:flex; flex-direction:column; align-items:center; gap:6px; border:none; background:transparent;

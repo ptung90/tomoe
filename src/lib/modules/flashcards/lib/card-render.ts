@@ -295,7 +295,7 @@ export function sheetGrid(n: number, orientation: string): { cols: number; rows:
 /** Resolve grid + cell px for a template's tiling on a sheet. Pure.
  *  fixed grid → cells fill the sheet (fillCell=true); auto-fit → real-size cards packed floor(sheet/card). */
 export function sheetLayout(
-  opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number },
+  opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number; gridCols?: number; gridRows?: number },
   sheetSize: string, orientation: string,
 ): { cols: number; rows: number; cellW: number; cellH: number; perPage: number; fillCell: boolean; sheetW: number; sheetH: number; orient: string } {
   const sheet = getPaperPx(sheetSize, orientation);
@@ -304,6 +304,13 @@ export function sheetLayout(
     const cols = Math.max(1, Math.floor(sheet.w / card.w));
     const rows = Math.max(1, Math.floor(sheet.h / card.h));
     return { cols, rows, cellW: card.w, cellH: card.h, perPage: cols * rows, fillCell: false, sheetW: sheet.w, sheetH: sheet.h, orient: orientation };
+  }
+  // Explicit arbitrary grid (user-picked Cols x Rows) wins over the cardsPerPage preset lookup.
+  // No landscape swap here — the user chose these dimensions directly.
+  if ((opts.gridCols ?? 0) >= 1 && (opts.gridRows ?? 0) >= 1) {
+    const cols = Math.max(1, opts.gridCols!);
+    const rows = Math.max(1, opts.gridRows!);
+    return { cols, rows, cellW: Math.floor(sheet.w / cols), cellH: Math.floor(sheet.h / rows), perPage: cols * rows, fillCell: true, sheetW: sheet.w, sheetH: sheet.h, orient: orientation };
   }
   const { cols, rows } = sheetGrid(Math.max(1, opts.cardsPerPage || 1), orientation);
   return { cols, rows, cellW: Math.floor(sheet.w / cols), cellH: Math.floor(sheet.h / rows), perPage: cols * rows, fillCell: true, sheetW: sheet.w, sheetH: sheet.h, orient: orientation };
