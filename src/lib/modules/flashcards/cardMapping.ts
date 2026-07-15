@@ -1,4 +1,4 @@
-import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides } from './model';
+import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides, type SchemaField } from './model';
 import { resolveLocale } from './lib/card-render';
 import { LAYOUT_SLOTS } from './lib/layouts';
 import { mergeStyle } from './lib/style';
@@ -32,8 +32,12 @@ export function recordToCard(
   record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
 ): Card {
   const orientation = template.style?.orientation ?? template.orientation ?? settings.orientation;
-  const textFields = schema.fields.filter((f) => f.type !== 'image');
-  const imageFields = schema.fields.filter((f) => f.type === 'image');
+  // A view (template.fields) selects + orders a subset of the schema's fields; empty/undefined = all.
+  const activeFields: SchemaField[] = template.fields?.length
+    ? template.fields.map((k) => schema.fields.find((f) => f.key === k)).filter((f): f is SchemaField => !!f)
+    : schema.fields;
+  const textFields = activeFields.filter((f) => f.type !== 'image');
+  const imageFields = activeFields.filter((f) => f.type === 'image');
   const titleField = textFields[0] ?? null;
   const sectionFields = titleField ? textFields.slice(1) : textFields;
   const slotCount = LAYOUT_SLOTS[template.layout] ?? 0;
@@ -58,6 +62,24 @@ export function recordToCard(
     recordId: record.id,
     templateId: template.id,
   };
+}
+
+const MAX_VIEW_LABEL = 24;
+/** The display name for a view (a CardTemplate): the explicit `name` if set; else the label of
+ *  its one selected field; else its selected fields' labels joined (truncated); else "View {n}"
+ *  (1-based `index` — the caller passes the template's position in `schema.cardTemplates`). Pure. */
+export function viewLabel(template: CardTemplate, schema: Schema, index: number): string {
+  if (template.name) return template.name;
+  const keys = template.fields ?? [];
+  if (keys.length === 1) {
+    const f = schema.fields.find((x) => x.key === keys[0]);
+    if (f) return f.label;
+  } else if (keys.length > 1) {
+    const labels = keys.map((k) => schema.fields.find((x) => x.key === k)?.label ?? k);
+    const joined = labels.join(' + ');
+    return joined.length > MAX_VIEW_LABEL ? joined.slice(0, MAX_VIEW_LABEL - 1) + '…' : joined;
+  }
+  return `View ${index + 1}`;
 }
 
 export function applySettings(p: Project, patch: Partial<Settings> | StyleOverrides): Project {

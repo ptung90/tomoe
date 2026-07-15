@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
-import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, chunkRecords } from '../src/lib/modules/flashcards/cardMapping';
+import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, chunkRecords, viewLabel } from '../src/lib/modules/flashcards/cardMapping';
 
 function schema(): Schema {
   return { id: 's1', name: 'Words', cardTemplates: [], fields: [
@@ -81,5 +81,71 @@ describe('chunkRecords', () => {
     expect(chunkRecords([1, 2], 1)).toEqual([[1], [2]]);
     expect(chunkRecords([], 3)).toEqual([]);
     expect(chunkRecords([1, 2], 0)).toEqual([[1], [2]]); // size<1 → 1
+  });
+});
+
+describe('recordToCard — field selection (views)', () => {
+  const rec: RecordItem = { id: 'r1', schemaId: 's1', fieldsHash: '', fields: {
+    title: { en: 'Owl', vi: 'Cú' }, def: { en: 'a bird', vi: 'con chim' }, pic: 'http://x/o.png',
+  } };
+  it('template.fields=["pic"] with a fullimage layout includes only the image, no title/sections', () => {
+    const t = { ...deriveAutoTemplate(schema()), layout: 'fullimage', fields: ['pic'] };
+    const c = recordToCard(rec, schema(), t, DEFAULT_SETTINGS, 'en');
+    expect(c.images[0]).toMatchObject({ slot: 0, url: 'http://x/o.png' });
+    expect(c.title).toBe('');
+    expect(c.sections).toHaveLength(0);
+  });
+  it('template.fields=["def"] with fulltext includes only that field, as the title (the one remaining text field)', () => {
+    const t = { ...deriveAutoTemplate(schema()), layout: 'fulltext', fields: ['def'] };
+    const c = recordToCard(rec, schema(), t, DEFAULT_SETTINGS, 'en');
+    expect(c.title).toBe('a bird');
+    expect(c.sections).toHaveLength(0);
+    expect(c.images).toHaveLength(0);
+  });
+  it('template.fields in a custom order puts the FIRST listed text field as the title', () => {
+    const t = { ...deriveAutoTemplate(schema()), layout: 'fulltext', fields: ['def', 'title'] };
+    const c = recordToCard(rec, schema(), t, DEFAULT_SETTINGS, 'en');
+    expect(c.title).toBe('a bird');
+    expect(c.sections).toHaveLength(1);
+    expect(c.sections[0].label).toBe('Title');
+    expect(c.sections[0].content).toBe('Owl');
+  });
+  it('an empty fields array behaves like undefined — all fields, unchanged', () => {
+    const t = { ...deriveAutoTemplate(schema()), fields: [] };
+    const c = recordToCard(rec, schema(), t, DEFAULT_SETTINGS, 'en');
+    expect(c.title).toBe('Owl');
+    expect(c.sections).toHaveLength(1);
+    expect(c.images).toHaveLength(1);
+  });
+});
+
+describe('viewLabel', () => {
+  const sch = schema();
+  it('uses the explicit name when set', () => {
+    const t = { ...deriveAutoTemplate(sch), name: 'Cover' };
+    expect(viewLabel(t, sch, 0)).toBe('Cover');
+  });
+  it('derives from a single selected field\'s label', () => {
+    const t = { ...deriveAutoTemplate(sch), fields: ['pic'] };
+    expect(viewLabel(t, sch, 0)).toBe('Pic');
+  });
+  it('joins several selected fields\' labels with " + "', () => {
+    const t = { ...deriveAutoTemplate(sch), fields: ['title', 'def'] };
+    expect(viewLabel(t, sch, 0)).toBe('Title + Definition');
+  });
+  it('truncates a long joined label to <=24 chars with a trailing ellipsis', () => {
+    const longSchema: Schema = { id: 's2', name: 'Long', cardTemplates: [], fields: [
+      { id: 'f1', key: 'a', label: 'A Very Long Field Label', type: 'text' },
+      { id: 'f2', key: 'b', label: 'Another Long Field Label', type: 'text' },
+    ] };
+    const t = { ...deriveAutoTemplate(longSchema), fields: ['a', 'b'] };
+    const label = viewLabel(t, longSchema, 0);
+    expect(label.length).toBeLessThanOrEqual(24);
+    expect(label.endsWith('…')).toBe(true);
+  });
+  it('falls back to "View {n}" (1-based) when no fields are selected and no name is set', () => {
+    const t = deriveAutoTemplate(sch); // no fields, no name
+    expect(viewLabel(t, sch, 0)).toBe('View 1');
+    expect(viewLabel(t, sch, 2)).toBe('View 3');
   });
 });
