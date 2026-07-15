@@ -11,11 +11,19 @@
     // and init cropper only once the image has loaded so it sizes to the container, not
     // the natural size (which would overflow the modal and hide the right handle).
     node.crossOrigin = 'anonymous';
-    const init = () => { if (!cropper) cropper = new Cropper(node, { viewMode: 1, autoCropArea: 1, background: false }); };
+    // Init on the next frame, never synchronously: a data-URL src is `complete`
+    // immediately, so an inline init would run before the <img> is laid out at
+    // its CSS-constrained size — cropper would then size its canvas to the image's
+    // natural width, overflow the modal, and clip the right/bottom resize handles.
+    let raf = 0;
+    const init = () => {
+      if (cropper || raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; if (!cropper) cropper = new Cropper(node, { viewMode: 1, autoCropArea: 1, background: false }); });
+    };
     node.addEventListener('load', init, { once: true });
     node.src = src;
     if (node.complete && node.naturalWidth) init();
-    return { destroy() { node.removeEventListener('load', init); cropper?.destroy(); cropper = undefined; } };
+    return { destroy() { node.removeEventListener('load', init); if (raf) cancelAnimationFrame(raf); cropper?.destroy(); cropper = undefined; } };
   }
   const setAspect = (r: number) => cropper?.setAspectRatio(r);
   function apply() {
