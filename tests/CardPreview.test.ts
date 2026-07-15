@@ -90,3 +90,36 @@ describe('CardPreview', () => {
     expect(h3).toBeLessThan(h1); // one cell of a 3-up sheet, not the full page
   });
 });
+
+describe('CardPreview — views', () => {
+  it('shows a "View 1" chip by default (single implicit view) and exactly one .fc-card', () => {
+    const { container } = render(CardPreview);
+    expect(screen.getByRole('tab', { name: 'View 1' })).toBeInTheDocument();
+    expect(container.querySelectorAll('.fc-card')).toHaveLength(1);
+  });
+
+  it('Add view (+) adds a 2nd view, shown side by side, and makes it active', async () => {
+    const { container } = render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add view' }));
+    expect(container.querySelectorAll('.fc-card')).toHaveLength(2);
+    expect(screen.getByRole('tab', { name: 'View 2' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('clicking a view chip makes it active; the layout dropdown then targets that view only', async () => {
+    const sid = get(S.project).schemas[0].id;
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add view' })); // active view is now View 2
+    await fireEvent.click(screen.getByRole('tab', { name: 'View 1' }));       // switch back to View 1
+    await fireEvent.change(screen.getByLabelText(/layout/i), { target: { value: '2x2' } });
+    const tpls = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates;
+    expect(tpls[0].layout).toBe('2x2');
+    expect(tpls[1].layout).not.toBe('2x2');
+  });
+
+  it('Sheet mode shows exactly one sheet (the active view\'s), even with 2 views', async () => {
+    render(CardPreview);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add view' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'Sheet' }));
+    expect(document.querySelectorAll('.fc-sheet')).toHaveLength(1);
+  });
+});
