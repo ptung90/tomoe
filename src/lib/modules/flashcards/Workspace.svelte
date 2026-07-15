@@ -12,7 +12,7 @@
   import Printer from 'lucide-svelte/icons/printer';
 
   let leftWidth = $state(300);
-  let rightWidth = $state(360);
+  let rightWidth = $state(440);
   let view = $state<'records' | 'cards'>('records');
   const printCount = $derived(collectPrintCards($project).length);
 </script>
