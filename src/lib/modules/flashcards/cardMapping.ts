@@ -1,6 +1,7 @@
-import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings } from './model';
+import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides } from './model';
 import { resolveLocale } from './lib/card-render';
 import { LAYOUT_SLOTS } from './lib/layouts';
+import { mergeStyle } from './lib/style';
 
 const DEFAULT_IMAGE_HEIGHT = 50;
 
@@ -75,5 +76,13 @@ export function applyTemplatePatch(p: Project, schemaId: string, patch: Partial<
     if (s.id !== schemaId) return s;
     const existing = s.cardTemplates[0] ?? deriveAutoTemplate(s);
     return { ...s, cardTemplates: [{ ...existing, ...patch }, ...s.cardTemplates.slice(1)] };
+  }) };
+}
+
+export function applyTemplateStyle(p: Project, schemaId: string, patch: StyleOverrides): Project {
+  return { ...p, schemas: p.schemas.map((s) => {
+    if (s.id !== schemaId) return s;
+    const existing = s.cardTemplates[0] ?? deriveAutoTemplate(s);
+    return { ...s, cardTemplates: [{ ...existing, style: mergeStyle(existing.style, patch) }, ...s.cardTemplates.slice(1)] };
   }) };
 }

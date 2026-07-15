@@ -26,3 +26,14 @@ export function resolveStyle(base: Settings, ...layers: (StyleOverrides | undefi
   }
   return out;
 }
+
+/** Deep-merge a StyleOverrides patch onto an (optional) base override object.
+ *  Nested border/image/titleFont/contentFont merge field-by-field; scalars replace. Pure; base untouched. */
+export function mergeStyle(base: StyleOverrides | undefined, patch: StyleOverrides): StyleOverrides {
+  const out: StyleOverrides = { ...base, ...patch };
+  if (base?.border || patch.border) out.border = { ...(base?.border ?? {}), ...(patch.border ?? {}) };
+  if (base?.image || patch.image) out.image = { ...(base?.image ?? {}), ...(patch.image ?? {}) };
+  if (base?.titleFont || patch.titleFont) out.titleFont = { ...(base?.titleFont ?? {}), ...(patch.titleFont ?? {}) };
+  if (base?.contentFont || patch.contentFont) out.contentFont = { ...(base?.contentFont ?? {}), ...(patch.contentFont ?? {}) };
+  return out;
+}
