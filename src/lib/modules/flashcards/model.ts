@@ -39,7 +39,7 @@ export function serializeProject(p: Project): string { return JSON.stringify(p, 
 
 // ── Migration: removed compound/3card layouts → single-card + cardsPerPage ──
 const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number }> = {
-  '3card':     { layout: '1top-1bot', cardsPerPage: 3 },
+  '3card':     { layout: 'title-img-text', cardsPerPage: 3 },
   '2img-2txt': { layout: '1top-1bot', cardsPerPage: 2 },
   '3img-3txt': { layout: '1top-1bot', cardsPerPage: 3 },
   'img3-txt3': { layout: '1top-1bot', cardsPerPage: 3 },

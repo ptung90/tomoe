@@ -23,10 +23,10 @@ describe('CardPreview', () => {
     render(CardPreview);
     expect(screen.getByText(/no card to preview/i)).toBeInTheDocument();
   });
-  it('offers the 11 single-card layouts in the layout selector', () => {
+  it('offers the 12 single-card layouts in the layout selector', () => {
     render(CardPreview);
     const sel = screen.getByLabelText(/layout/i) as HTMLSelectElement;
-    expect(sel.querySelectorAll('option').length).toBe(11);
+    expect(sel.querySelectorAll('option').length).toBe(12);
   });
 
   it('Sheet toggle renders a .fc-sheet', async () => {

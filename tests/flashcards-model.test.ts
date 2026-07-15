@@ -59,7 +59,7 @@ describe('flashcards model', () => {
       ],
     });
     const p = parseProject(legacy);
-    expect(p.schemas[0].cardTemplates[0].layout).toBe('1top-1bot');
+    expect(p.schemas[0].cardTemplates[0].layout).toBe('title-img-text');
     expect(p.schemas[0].cardTemplates[0].templateType).toBe('single');
     expect((p.schemas[0].cardTemplates[0] as any).cardsPerPage).toBe(3);
     expect(p.cards.every((c) => !(c as any).packedRecordIds?.length)).toBe(true);
@@ -68,9 +68,9 @@ describe('flashcards model', () => {
 });
 
 describe('layout registry', () => {
-  it('exposes 11 unique layout ids', () => {
-    expect(LAYOUTS).toHaveLength(11);
-    expect(new Set(LAYOUTS.map((l) => l.id)).size).toBe(11);
+  it('exposes 12 unique layout ids', () => {
+    expect(LAYOUTS).toHaveLength(12);
+    expect(new Set(LAYOUTS.map((l) => l.id)).size).toBe(12);
   });
   it('1big-2small has 3 slots', () => {
     expect(LAYOUT_SLOTS['1big-2small']).toBe(3);
