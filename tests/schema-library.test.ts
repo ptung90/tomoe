@@ -86,6 +86,58 @@ describe('schema library store', () => {
     S.insertLibrarySchema('missing');
     expect(get(S.project).schemas).toHaveLength(0);
   });
+
+  it('renameLibraryEntry sets entry.name AND entry.schema.name and persists', () => {
+    const id = S.addToLibrary({ name: 'Old', schema: { name: 'Old', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    S.renameLibraryEntry(id, 'New');
+    const entry = get(S.schemaLibrary)[0];
+    expect(entry.name).toBe('New');
+    expect(entry.schema.name).toBe('New');
+    const stored = JSON.parse(localStorage.getItem('tomoe.flashcards.schemaLibrary')!);
+    expect(stored[0].name).toBe('New');
+    expect(stored[0].schema.name).toBe('New');
+  });
+
+  it('setLibraryEntryFields replaces the fields immutably and persists', () => {
+    const id = S.addToLibrary({
+      name: 'X',
+      schema: { name: 'X', fields: [{ id: 'f1', key: 'a', label: 'A', type: 'text', multilingual: true }], cardTemplates: [] },
+      settings: DEFAULT_SETTINGS,
+    });
+    const newFields: import('../src/lib/modules/flashcards/model').SchemaField[] =
+      [{ id: 'f2', key: 'b', label: 'B', type: 'image' }];
+    S.setLibraryEntryFields(id, newFields);
+    const entry = get(S.schemaLibrary)[0];
+    expect(entry.schema.fields).toEqual(newFields);
+    expect(entry.schema.fields).not.toBe(newFields); // cloned, not the same reference
+    newFields[0].label = 'mutated';
+    expect(get(S.schemaLibrary)[0].schema.fields[0].label).toBe('B'); // caller mutation does not leak in
+    const stored = JSON.parse(localStorage.getItem('tomoe.flashcards.schemaLibrary')!);
+    expect(stored[0].schema.fields[0].key).toBe('b');
+  });
+
+  it('updateLibraryEntryFromSchema overwrites schema + settings from the project schema, bumping the version', () => {
+    const id = S.addToLibrary({ name: 'Lib', schema: { name: 'Lib', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    const sid = S.addSchema('Verbs');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
+    S.setTemplateStyle(sid, { border: { width: 9 } });
+    S.setSettings({ paperSize: 'A6' });
+    S.updateLibraryEntryFromSchema(id, sid);
+    const entry = get(S.schemaLibrary).find((e) => e.id === id)!;
+    expect(entry.schema.name).toBe('Verbs');
+    expect(entry.schema.fields[0].key).toBe('w');
+    expect(entry.schema.cardTemplates[0].style?.border?.width).toBe(9);
+    expect(entry.settings.paperSize).toBe('A6');
+  });
+
+  it('updateLibraryEntryFromSchema is a no-op for a bad entry id or a bad schema id', () => {
+    const id = S.addToLibrary({ name: 'Lib', schema: { name: 'Lib', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    const sid = S.addSchema('Verbs');
+    S.updateLibraryEntryFromSchema('nope', sid);
+    expect(get(S.schemaLibrary).find((e) => e.id === id)!.schema.name).toBe('Lib');
+    S.updateLibraryEntryFromSchema(id, 'nope');
+    expect(get(S.schemaLibrary).find((e) => e.id === id)!.schema.name).toBe('Lib');
+  });
 });
 
 describe('insertSchema (pure)', () => {

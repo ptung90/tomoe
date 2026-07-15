@@ -108,6 +108,38 @@ export function insertLibrarySchema(id: string): void {
   commit(np);
   activeSchemaId.set(np.schemas[np.schemas.length - 1].id);
 }
+/** Rename a library entry: sets both the entry label AND the schema payload name. Persisted. */
+export function renameLibraryEntry(id: string, name: string): void {
+  const next = loadSchemaLibrary().map((e) =>
+    e.id === id ? { ...e, name, schema: { ...e.schema, name } } : e);
+  persistSchemaLibrary(next);
+  _schemaLibraryVersion.update((n) => n + 1);
+}
+/** Replace a library entry's fields (immutable, deep-cloned). cardTemplates are left as-is — a
+ *  later Insert + recordToCard tolerates cardTemplate field keys that no longer exist. Persisted. */
+export function setLibraryEntryFields(id: string, fields: SchemaField[]): void {
+  const next = loadSchemaLibrary().map((e) =>
+    e.id === id ? { ...e, schema: { ...e.schema, fields: structuredClone(fields) } } : e);
+  persistSchemaLibrary(next);
+  _schemaLibraryVersion.update((n) => n + 1);
+}
+/** Overwrite an existing entry's schema (name+fields+cardTemplates) + settings from a PROJECT
+ *  schema + the current project global settings (mirrors addSchemaToLibrary, but overwrites in
+ *  place). No-op if either id is missing. Persisted. */
+export function updateLibraryEntryFromSchema(entryId: string, schemaId: string): void {
+  const p = get(project);
+  const schema = p.schemas.find((s) => s.id === schemaId);
+  if (!schema) return;
+  const list = loadSchemaLibrary();
+  if (!list.some((e) => e.id === entryId)) return;
+  const next = list.map((e) => (e.id === entryId ? {
+    ...e,
+    schema: structuredClone({ name: schema.name, fields: schema.fields, cardTemplates: schema.cardTemplates }),
+    settings: structuredClone(p.settings),
+  } : e));
+  persistSchemaLibrary(next);
+  _schemaLibraryVersion.update((n) => n + 1);
+}
 
 export function initProject(): void {
   history.set(H.createHistory(newProject()));

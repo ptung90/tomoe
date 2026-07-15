@@ -150,4 +150,66 @@ describe('SchemaLibraryModal', () => {
     expect(get(S.schemaLibrary)).toHaveLength(0);
     expect(showToast).toHaveBeenCalledWith('Could not import: file not found', 'error');
   });
+
+  it('opening an entry shows its fields and a read-only views summary', async () => {
+    S.addToLibrary({
+      name: 'Verbs',
+      schema: {
+        name: 'Verbs',
+        fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }],
+        cardTemplates: [{ id: 't1', templateType: 'single', layout: 'fulltext', size: null, fields: ['w'], mapping: {} }],
+      },
+      settings: DEFAULT_SETTINGS,
+    });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    expect((screen.getByLabelText('field key') as HTMLInputElement).value).toBe('w');
+    expect((screen.getByLabelText('entry name') as HTMLInputElement).value).toBe('Verbs');
+    expect(screen.getByText(/fulltext · 1 field/)).toBeInTheDocument();
+  });
+
+  it('editing the entry name commits to the store', async () => {
+    const id = S.addToLibrary({ name: 'Verbs', schema: { name: 'Verbs', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    await fireEvent.input(screen.getByLabelText('entry name'), { target: { value: 'Nouns' } });
+    const entry = get(S.schemaLibrary).find((e) => e.id === id)!;
+    expect(entry.name).toBe('Nouns');
+    expect(entry.schema.name).toBe('Nouns');
+  });
+
+  it('adding then removing a field commits to the entry', async () => {
+    const id = S.addToLibrary({ name: 'Verbs', schema: { name: 'Verbs', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /add field/i }));
+    expect(get(S.schemaLibrary).find((e) => e.id === id)!.schema.fields).toHaveLength(1);
+    await fireEvent.click(screen.getByRole('button', { name: /remove field/i }));
+    expect(get(S.schemaLibrary).find((e) => e.id === id)!.schema.fields).toHaveLength(0);
+  });
+
+  it('Update from current schema overwrites the entry from the active project schema and toasts', async () => {
+    const id = S.addToLibrary({ name: 'Lib', schema: { name: 'Lib', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    const sid = S.addSchema('Verbs');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /update from current schema/i }));
+    const entry = get(S.schemaLibrary).find((e) => e.id === id)!;
+    expect(entry.schema.name).toBe('Verbs');
+    expect(entry.schema.fields[0].key).toBe('w');
+    expect(showToast).toHaveBeenCalledWith("Updated 'Lib' from the current schema");
+  });
+
+  it('Update from current schema is disabled when there is no active schema', async () => {
+    S.addToLibrary({ name: 'Lib', schema: { name: 'Lib', fields: [], cardTemplates: [] }, settings: DEFAULT_SETTINGS });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    expect(screen.getByRole('button', { name: /update from current schema/i })).toBeDisabled();
+  });
 });
