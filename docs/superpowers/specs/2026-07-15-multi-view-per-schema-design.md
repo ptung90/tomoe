@@ -33,9 +33,16 @@ templates, so single-template files are unchanged.
 ## Model changes (`model.ts`)
 
 Add to `CardTemplate`:
-- `name?: string` — the view's display name. New views default to `View {n}`.
+- `name?: string` — an **explicit** view name set by the user (via rename). Usually unset.
 - `fields?: string[]` — record field **keys** this view includes, in order. `undefined`/empty ⇒
   include all fields (today's behavior; back-compat).
+
+**View label is derived, not stored by default.** A pure helper
+`viewLabel(template, schema): string` returns `template.name` if set; else, if exactly one field
+is selected, that field's `label` (e.g. `image` field labelled "Image" → **"Image"**); else if
+several are selected, their labels joined (`"Label + Content"`, truncated); else `View {index+1}`.
+So a view named purely by its field needs no manual naming; `renameView` sets an explicit `name`
+that overrides the derived label. Everything that shows a view name calls `viewLabel`.
 
 `Schema.cardTemplates[]` is now the schema's ordered list of **views**. No migration needed:
 files with `cardTemplates.length <= 1` behave exactly as today. `parseProject` leaves extra
@@ -52,7 +59,8 @@ title/sections/images arrangement logic is otherwise identical. Examples:
 
 ## Store (`stores.ts` + `cardMapping.ts`)
 
-- New: `addView(schemaId)`, `renameView(schemaId, templateId, name)`,
+- New: `addView(schemaId)` (no explicit `name`; label derives from its fields via `viewLabel`),
+  `renameView(schemaId, templateId, name)` (sets explicit `name`),
   `deleteView(schemaId, templateId)` (**refuses to delete the last view**),
   `setViewFields(schemaId, templateId, keys)`.
 - Retarget existing per-template setters from `cardTemplates[0]` to a **`templateId`**:
@@ -108,7 +116,9 @@ title/sections/images arrangement logic is otherwise identical. Examples:
 ## Testing
 
 - `recordToCard`: field-selection subset + order; image-only; text-only; empty/undefined ⇒ all.
-- Store: `addView` appends with a default name; `renameView`; `deleteView` refuses the last;
+- `viewLabel`: derives from a single field's label, joins several, honors explicit `name`,
+  falls back to `View {n}`.
+- Store: `addView` appends a view; `renameView` sets explicit name; `deleteView` refuses the last;
   `setViewFields`; per-template setters hit the addressed `templateId` (not `[0]`).
 - Pack: `packAllForSchema` yields one card per (record × view); stale is per view.
 - `collectPrintSheets`: grouped by view; leftover partials of same-layout views merge into fewer
