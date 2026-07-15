@@ -53,14 +53,16 @@ describe('CardPreview', () => {
     expect(pct.className).toContain('auto');
   });
 
-  it('Fixed: changing Cards/page commits cardsPerPage via setTemplateLayout', async () => {
+  it('Fixed: changing Cols/Rows commits gridCols/gridRows via setTemplateLayout', async () => {
     const sid = get(S.project).schemas[0].id;
     render(CardPreview);
     await fireEvent.click(screen.getByRole('button', { name: 'style' }));
     await fireEvent.click(screen.getByRole('tab', { name: 'Page' }));
-    await fireEvent.change(screen.getByLabelText('Cards per page'), { target: { value: '6' } });
+    await fireEvent.change(screen.getByLabelText('Columns'), { target: { value: '2' } });
+    await fireEvent.change(screen.getByLabelText('Rows'), { target: { value: '5' } });
     const tpl = get(S.project).schemas.find((s) => s.id === sid)!.cardTemplates[0];
-    expect(tpl.cardsPerPage).toBe(6);
+    expect(tpl.gridCols).toBe(2);
+    expect(tpl.gridRows).toBe(5);
     expect(tpl.autoFit).toBeFalsy();
   });
 

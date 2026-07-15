@@ -25,7 +25,7 @@
     setTemplateStyle, setCardStyle, clearStyleOverride, resetScopeStyle, setViewFields,
   } from '../stores';
   import { deriveAutoTemplate, viewLabel } from '../cardMapping';
-  import { sheetLayout } from '../lib/card-render';
+  import { sheetLayout, sheetGrid } from '../lib/card-render';
   import { resolveStyle } from '../lib/style';
   import type { FontSpec, StyleOverrides } from '../model';
 
@@ -100,13 +100,18 @@
   // Cards/page (N-up tiling): Fixed grid (cardsPerPage) or Auto-fit (real-size cardSize).
   const orient = $derived(eff.orientation);
   const resolvedPerPage = $derived(template ? sheetLayout(template, eff.paperSize, orient).perPage : 0);
-  const CARDS_PER_PAGE = [1, 2, 3, 4, 6, 8, 9, 12];
   const CARD_SIZES = ['A5', 'A6', 'A7', 'A8'];
   function onAutoFitMode(autoFit: boolean) {
     if (schema && template) setTemplateLayout(schema.id, { autoFit }, template.id);
   }
-  function onCardsPerPage(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { cardsPerPage: Number((e.target as HTMLSelectElement).value), autoFit: false }, template.id);
+  // Derived defaults so a file that only has `cardsPerPage` shows sensible cols/rows (not blank).
+  const gridCols = $derived(template ? (template.gridCols ?? sheetGrid(template.cardsPerPage ?? 1, orient).cols) : 1);
+  const gridRows = $derived(template ? (template.gridRows ?? sheetGrid(template.cardsPerPage ?? 1, orient).rows) : 1);
+  function onGridCols(e: Event) {
+    if (schema && template) setTemplateLayout(schema.id, { gridCols: Math.max(1, Math.round(num(e))), gridRows, autoFit: false }, template.id);
+  }
+  function onGridRows(e: Event) {
+    if (schema && template) setTemplateLayout(schema.id, { gridCols, gridRows: Math.max(1, Math.round(num(e))), autoFit: false }, template.id);
   }
   function onCardSize(e: Event) {
     if (schema && template) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true }, template.id);
@@ -227,11 +232,13 @@
             disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
         </div>
         {#if !template?.autoFit}
-          <span class="tool" title="Cards per page"><LayoutGrid size={14} />
-            <select aria-label="Cards per page" value={template?.cardsPerPage ?? 1} disabled={!schema} onchange={onCardsPerPage}>
-              {#each CARDS_PER_PAGE as n (n)}<option value={n}>{n}</option>{/each}
-            </select>
+          <span class="tool" title="Columns"><LayoutGrid size={14} />
+            <input aria-label="Columns" type="number" min="1" value={gridCols} disabled={!schema} onchange={onGridCols} />
           </span>
+          <span class="tool" title="Rows"><LayoutGrid size={14} />
+            <input aria-label="Rows" type="number" min="1" value={gridRows} disabled={!schema} onchange={onGridRows} />
+          </span>
+          <span class="hint">≈ {resolvedPerPage}/page</span>
         {:else}
           <span class="tool" title="Card size"><LayoutGrid size={14} />
             <select aria-label="Card size" value={template?.cardSize ?? 'A7'} disabled={!schema} onchange={onCardSize}>

@@ -236,6 +236,36 @@ describe('sheetLayout — fixed grid', () => {
     expect(lay.cols).toBe(1);
     expect(lay.rows).toBe(1);
   });
+  it('explicit gridCols/gridRows overrides cardsPerPage — arbitrary 2x5 grid, no landscape swap', () => {
+    const lay = sheetLayout({ gridCols: 2, gridRows: 5, cardsPerPage: 6 }, 'A4', 'portrait');
+    expect(lay.cols).toBe(2);
+    expect(lay.rows).toBe(5);
+    expect(lay.perPage).toBe(10);
+    expect(lay.fillCell).toBe(true);
+    const sheet = getPaperPx('A4', 'portrait');
+    expect(lay.cellW).toBe(Math.floor(sheet.w / 2));
+    expect(lay.cellH).toBe(Math.floor(sheet.h / 5));
+  });
+  it('explicit gridCols/gridRows does NOT swap on landscape (explicit user choice)', () => {
+    const lay = sheetLayout({ gridCols: 2, gridRows: 5 }, 'A4', 'landscape');
+    expect(lay.cols).toBe(2);
+    expect(lay.rows).toBe(5);
+    const sheet = getPaperPx('A4', 'landscape');
+    expect(lay.cellW).toBe(Math.floor(sheet.w / 2));
+    expect(lay.cellH).toBe(Math.floor(sheet.h / 5));
+  });
+  it('falls back to sheetGrid(cardsPerPage) unchanged when gridCols/gridRows are absent (back-compat)', () => {
+    const lay = sheetLayout({ cardsPerPage: 6 }, 'A4', 'portrait');
+    expect(lay.cols).toBe(2);
+    expect(lay.rows).toBe(3);
+    expect(lay.perPage).toBe(6);
+  });
+  it('ignores gridCols/gridRows if either is missing or < 1 — falls back to cardsPerPage', () => {
+    const lay1 = sheetLayout({ gridCols: 2, cardsPerPage: 6 }, 'A4', 'portrait');
+    expect(lay1.cols).toBe(2); expect(lay1.rows).toBe(3); // gridRows missing → fallback
+    const lay2 = sheetLayout({ gridCols: 0, gridRows: 5, cardsPerPage: 6 }, 'A4', 'portrait');
+    expect(lay2.cols).toBe(2); expect(lay2.rows).toBe(3); // gridCols < 1 → fallback
+  });
 });
 
 describe('sheetLayout — auto-fit', () => {
