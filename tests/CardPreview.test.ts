@@ -66,4 +66,18 @@ describe('CardPreview', () => {
     expect(tpl.autoFit).toBe(true);
     expect(tpl.cardSize).toBe('A7');
   });
+
+  it('Card mode shows the real cell size — a 3-up card is shorter than a 1-up card', () => {
+    const sid = get(S.project).schemas[0].id;
+    const cardH = () => {
+      const el = render(CardPreview).container.querySelector('.fc-card') as HTMLElement | null;
+      return el ? parseInt(el.style.height, 10) : NaN;
+    };
+    S.setTemplateLayout(sid, { cardsPerPage: 1 });
+    const h1 = cardH();
+    S.setTemplateLayout(sid, { cardsPerPage: 3 });
+    const h3 = cardH();
+    expect(h3).toBeGreaterThan(0);
+    expect(h3).toBeLessThan(h1); // one cell of a 3-up sheet, not the full page
+  });
 });
