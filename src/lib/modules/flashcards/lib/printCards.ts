@@ -45,9 +45,24 @@ function sheetsByView(project: Project): Sheet[] {
   return out;
 }
 
-/** Layout "bucket" key — sheets only merge with others sharing the exact same paper + grid geometry. */
+/** Signature of every resolved-style field that per-cell rendering actually consumes (see
+ *  resolveStyle/buildSheetHTML→buildCardHTML) — border, image, fonts, margin/padding/imgPadding,
+ *  textVAlign, paraGap. paperSize/orientation are already part of the geometry key below, and the
+ *  PDF export-only fields (pdfImageFormat/pdfJpegQuality/pdfScale/customCss) don't affect the on-page
+ *  cell look, so they're deliberately excluded. Deterministic (plain JSON.stringify, fixed key order). */
+function styleSignature(s: Settings): string {
+  return JSON.stringify({
+    margin: s.margin, padding: s.padding, imgPadding: s.imgPadding, paraGap: s.paraGap,
+    textVAlign: s.textVAlign, border: s.border, image: s.image,
+    titleFont: s.titleFont, contentFont: s.contentFont,
+  });
+}
+
+/** Layout "bucket" key — sheets only merge with others sharing the exact same paper + grid geometry
+ *  AND the same resolved per-cell style (border/fonts/etc.) — two views can share geometry but look
+ *  different (e.g. different border width), and their leftover pages must not blend those looks. */
 function layoutKey(s: Sheet): string {
-  return `${s.settings.paperSize}|${s.lay.orient}|${s.lay.cols}|${s.lay.rows}|${s.lay.cellW}|${s.lay.cellH}`;
+  return `${s.settings.paperSize}|${s.lay.orient}|${s.lay.cols}|${s.lay.rows}|${s.lay.cellW}|${s.lay.cellH}|${styleSignature(s.settings)}`;
 }
 
 /** Re-tile trailing partial (not-full) sheets that share the same paper/grid layout into fewer,

@@ -27,6 +27,42 @@ describe('collectPrintCards', () => {
   it('empty project → []', () => {
     expect(collectPrintCards(newProject())).toEqual([]);
   });
+
+  it('virgin schema (cardTemplates: []): a packed + EDITED card is returned, not a re-derived unedited one', () => {
+    const p = newProject();
+    const schema: Schema = { id: 'sVirgin', name: 'Virgin', cardTemplates: [], fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+    ] };
+    p.schemas.push(schema);
+    p.records.push({ id: 'r0', schemaId: 'sVirgin', fieldsHash: '', fields: { title: { en: 'Original', vi: '' } } });
+
+    let packed = cardOps.packAllForSchema(p, 'sVirgin');
+    const cardId = packed.cards[0].id;
+    // Edit the packed card's title directly (title is the card's title field, not a section).
+    packed = { ...packed, cards: packed.cards.map((c) => (c.id === cardId ? { ...c, title: 'EDITED', edited: true } : c)) };
+
+    const cards = collectPrintCards(packed);
+    expect(cards).toHaveLength(1);
+    expect(cards[0].title).toBe('EDITED');
+    expect(cards[0].edited).toBe(true);
+  });
+
+  it('collectPrintSheets on a virgin schema also returns the packed+edited card (not a fresh auto one)', () => {
+    const p = newProject();
+    const schema: Schema = { id: 'sVirgin2', name: 'Virgin2', cardTemplates: [], fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+    ] };
+    p.schemas.push(schema);
+    p.records.push({ id: 'r0', schemaId: 'sVirgin2', fieldsHash: '', fields: { title: { en: 'Original', vi: '' } } });
+
+    let packed = cardOps.packAllForSchema(p, 'sVirgin2');
+    const cardId = packed.cards[0].id;
+    packed = { ...packed, cards: packed.cards.map((c) => (c.id === cardId ? { ...c, title: 'EDITED', edited: true } : c)) };
+
+    const sheets = collectPrintSheets(packed);
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0].cards[0].title).toBe('EDITED');
+  });
 });
 
 describe('collectPrintSheets', () => {
@@ -124,6 +160,26 @@ describe('collectPrintSheets — grouped by view', () => {
     expect(sheets).toHaveLength(2); // lone partials, different layout keys — kept separate
     expect(sheets.some((s) => s.cards.length === 3 && s.lay.perPage === 4)).toBe(true);
     expect(sheets.some((s) => s.cards.length === 3 && s.lay.perPage === 6)).toBe(true);
+  });
+
+  it('does not merge same-geometry partials whose views have DIFFERENT resolved style (e.g. border width)', () => {
+    const p = projViews([
+      { layout: 'fulltext', cardsPerPage: 4, style: { border: { width: 2 } } },
+      { layout: 'fulltext', cardsPerPage: 4, style: { border: { width: 9 } } },
+    ], 3); // each view: 3 records / 4 per page = 1 partial(3); same geometry, different border width
+    const sheets = collectPrintSheets(p);
+    expect(sheets).toHaveLength(2); // kept apart — merging would render one view's cards with the other's border
+    expect(sheets.every((s) => s.cards.length === 3)).toBe(true);
+  });
+
+  it('merges same-geometry partials whose views share the SAME resolved style', () => {
+    const p = projViews([
+      { layout: 'fulltext', cardsPerPage: 8, style: { border: { width: 5 } } },
+      { layout: 'fulltext', cardsPerPage: 8, style: { border: { width: 5 } } },
+    ], 3); // each view: 3 records / 8 per page = 1 partial(3); combined 6 still fits one page → merge
+    const sheets = collectPrintSheets(p);
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0].cards).toHaveLength(6);
   });
 });
 

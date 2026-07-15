@@ -9,7 +9,12 @@ export function deriveAutoTemplate(schema: Schema): CardTemplate {
   const hasImage = schema.fields.some((f) => f.type === 'image');
   const layout = hasImage ? '1top-1bot' : 'fulltext';
   return {
-    id: uid('tpl'),
+    // Deterministic (schema.id-derived), NOT uid('tpl') — every call for the same schema must agree
+    // on the same id, so a virgin schema's (cardTemplates: []) packed cards (Card.templateId stamped
+    // from a deriveAutoTemplate result) keep matching this same auto view on every later render/print/
+    // gallery lookup. A non-deterministic id here silently orphans packed cards (see cardOps.packRecords,
+    // printCards.collectPrintCards/sheetsByView, CardGallery.svelte).
+    id: `${schema.id}::auto`,
     templateType: 'single',
     layout,
     size: null,

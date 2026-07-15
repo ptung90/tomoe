@@ -20,6 +20,19 @@ describe('deriveAutoTemplate', () => {
     const s = schema(); s.fields = s.fields.filter(f => f.type !== 'image');
     expect(deriveAutoTemplate(s).layout).toBe('fulltext');
   });
+  it('is deterministic per schema — every call for the SAME schema agrees on the same id, so callers ' +
+     '(packRecords, collectPrintCards/Sheets, CardGallery) match a virgin schema\'s packed cards by templateId', () => {
+    const s = schema();
+    const a = deriveAutoTemplate(s);
+    const b = deriveAutoTemplate(s);
+    expect(a.id).toBe(b.id);
+    expect(a.id).toBe(`${s.id}::auto`);
+  });
+  it('different schemas derive different (non-colliding) auto-template ids', () => {
+    const s1 = schema();
+    const s2 = { ...schema(), id: 's2' };
+    expect(deriveAutoTemplate(s1).id).not.toBe(deriveAutoTemplate(s2).id);
+  });
 });
 
 describe('recordToCard', () => {
