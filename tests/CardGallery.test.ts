@@ -54,6 +54,18 @@ describe('CardGallery', () => {
     expect(container.querySelectorAll('.fc-sheet').length).toBe(2);
     expect(container.querySelector('.thumb')).not.toBeInTheDocument(); // no per-card thumbs in sheets view
   });
+
+  it('status bar zoom: 100% by default, changes on zoom in, resets on click', async () => {
+    seed('1top-1bot', 2);
+    const { getByRole } = render(CardGallery, { onOpen: vi.fn() });
+    const pct = getByRole('button', { name: 'Reset zoom' });
+    expect(pct.textContent).toContain('100%');
+    expect(pct.className).toContain('auto');
+    await fireEvent.click(getByRole('button', { name: 'Zoom in' }));
+    expect(pct.className).not.toContain('auto');
+    await fireEvent.click(pct);
+    expect(pct.textContent).toContain('100%');
+  });
 });
 
 describe('CardGallery — packed cards', () => {

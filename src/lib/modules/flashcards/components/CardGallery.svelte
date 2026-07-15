@@ -13,6 +13,7 @@
   import { isCardStale } from '../cardOps';
   import { buildCardHTML, buildSheetHTML, sheetLayout } from '../lib/card-render';
   import { collectPrintSheets } from '../lib/printCards';
+  import { zoomStep } from '../lib/zoom';
   import { resolveStyle } from '../lib/style';
   import type { RecordItem, Schema, CardTemplate, Card } from '../model';
   import EmptyState from './EmptyState.svelte';
@@ -25,6 +26,8 @@
   // Cards view has two modes: the per-card manager (gallery) and the assembled
   // print sheets (same N-up tiling as Print/PDF).
   let gview = $state<'gallery' | 'sheets'>('gallery');
+  // Thumbnail zoom (status bar); multiplies the base fit-to-column scale. null → 100% (base).
+  let zoom = $state(1);
 
   // Assembled print sheets, each tagged with its schema name + per-schema page number for captions.
   const sheetItems = $derived.by(() => {
@@ -36,7 +39,7 @@
       const sid = schema?.id ?? '?';
       const page = (pageBySchema.get(sid) ?? 0) + 1;
       pageBySchema.set(sid, page);
-      return { sheet, name: schema?.name ?? 'Cards', page, scale: Math.min(1, SHEET_THUMB_W / sheet.lay.sheetW) };
+      return { sheet, name: schema?.name ?? 'Cards', page, scale: Math.min(1, SHEET_THUMB_W / sheet.lay.sheetW) * zoom };
     });
   });
 
@@ -52,7 +55,7 @@
     const schemaEff = resolveStyle($project.settings, template.style);
     const lay = sheetLayout(template, schemaEff.paperSize, schemaEff.orientation);
     const cell = { w: lay.cellW, h: lay.cellH };
-    const scale = Math.min(1, THUMB_W / cell.w);
+    const scale = Math.min(1, THUMB_W / cell.w) * zoom;
     return { schema, template, recs, packed, autoRecs, cell, scale };
   }));
 
@@ -99,18 +102,8 @@
   <EmptyState icon={FilePlus} title="No records to show"
     hint="Add records in the Records view — they'll appear here as cards." />
 {:else}
+  <div class="cards-view">
   <div class="gallery">
-    <div class="gallery-bar">
-      <div class="seg" role="tablist" aria-label="Cards view mode">
-        <button type="button" role="tab" aria-selected={gview === 'gallery'} class:on={gview === 'gallery'}
-          onclick={() => (gview = 'gallery')}>Gallery</button>
-        <button type="button" role="tab" aria-selected={gview === 'sheets'} class:on={gview === 'sheets'}
-          onclick={() => (gview = 'sheets')}>Sheets</button>
-      </div>
-      {#if gview === 'sheets'}
-        <span class="bar-info">{sheetItems.length} sheet{sheetItems.length === 1 ? '' : 's'} · same layout as Print / PDF</span>
-      {/if}
-    </div>
 
     {#if gview === 'sheets'}
       <div class="sheets">
@@ -189,13 +182,31 @@
     {/each}
     {/if}
   </div>
+    <footer class="gallery-statusbar">
+      <div class="seg" role="tablist" aria-label="Cards view mode">
+        <button type="button" role="tab" aria-selected={gview === 'gallery'} class:on={gview === 'gallery'}
+          onclick={() => (gview = 'gallery')}>Gallery</button>
+        <button type="button" role="tab" aria-selected={gview === 'sheets'} class:on={gview === 'sheets'}
+          onclick={() => (gview = 'sheets')}>Sheets</button>
+      </div>
+      <span class="sb-info">
+        {#if gview === 'sheets'}{sheetItems.length} sheet{sheetItems.length === 1 ? '' : 's'} · same layout as Print / PDF
+        {:else}{totalRecords} card{totalRecords === 1 ? '' : 's'}{/if}
+      </span>
+      <div class="zoom-controls" role="group" aria-label="Zoom">
+        <button type="button" aria-label="Zoom out" onclick={() => (zoom = zoomStep(zoom, 1))}>−</button>
+        <button type="button" class="zoom-pct" class:auto={zoom === 1} title="Reset to 100%"
+          aria-label="Reset zoom" onclick={() => (zoom = 1)}>{Math.round(zoom * 100)}%</button>
+        <button type="button" aria-label="Zoom in" onclick={() => (zoom = zoomStep(zoom, -1))}>+</button>
+      </div>
+    </footer>
+  </div>
 {/if}
 
 <style>
-  .gallery { height:100%; min-height:0; overflow:auto; padding:16px; background:var(--sidebar);
+  .cards-view { height:100%; min-height:0; display:flex; flex-direction:column; background:var(--sidebar); }
+  .gallery { flex:1; min-height:0; overflow:auto; padding:16px;
     display:flex; flex-direction:column; gap:20px; }
-  .gallery-bar { display:flex; align-items:center; gap:10px; }
-  .bar-info { font-size:11px; color:var(--text-muted); }
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; background:var(--bg); }
   .seg button { border:none; background:transparent; color:var(--text-muted); padding:4px 12px; cursor:pointer;
     font:inherit; font-size:12px; transition:background .12s ease, color .12s ease; }
@@ -203,6 +214,20 @@
   .seg button:hover:not(.on) { background:var(--accent-weak); color:var(--accent); }
   .seg button.on { background:var(--accent); color:#fff; }
   .seg button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+
+  /* Status bar pinned below the scrolling gallery: view mode + count + thumbnail zoom. */
+  .gallery-statusbar { display:flex; align-items:center; gap:10px; flex:none; padding:4px 12px;
+    background:var(--surface); border-top:1px solid var(--border); font-size:11px; color:var(--text-muted); }
+  .gallery-statusbar .seg button { padding:2px 10px; font-size:11px; }
+  .sb-info { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .zoom-controls { display:inline-flex; align-items:center; gap:2px; flex:none; }
+  .zoom-controls button { border:1px solid var(--border); background:var(--bg); color:var(--text); font:inherit;
+    border-radius:6px; padding:2px 7px; cursor:pointer; transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .zoom-controls button:hover { background:var(--accent-weak); color:var(--accent); border-color:var(--accent); }
+  .zoom-controls button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .zoom-pct { min-width:46px; text-align:center; font-variant-numeric:tabular-nums; }
+  .zoom-pct.auto { color:var(--text-muted); }
+
   /* Assembled print sheets — bigger thumbnails than single cards (a whole page). */
   .sheets { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:18px; align-items:start; }
   .sheet-thumb { display:flex; flex-direction:column; align-items:center; gap:6px; }
