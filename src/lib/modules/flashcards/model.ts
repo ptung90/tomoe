@@ -61,9 +61,16 @@ const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number 
 };
 function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
   const m = COMPOUND_MIGRATION[t?.layout];
-  if (m) return { ...t, layout: m.layout, cardsPerPage: t.cardsPerPage ?? m.cardsPerPage, templateType: 'single' };
-  if (!LAYOUT_IDS.includes(t?.layout)) return { ...t, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
-  return t;
+  let out: any = t;
+  if (m) out = { ...out, layout: m.layout, cardsPerPage: out.cardsPerPage ?? m.cardsPerPage, templateType: 'single' };
+  else if (!LAYOUT_IDS.includes(out?.layout)) out = { ...out, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
+  // Fold legacy per-template orientation into style.orientation (cascade single source) and drop the top-level field.
+  if (out?.orientation !== undefined) {
+    const style = out.style?.orientation !== undefined ? out.style : { ...(out.style ?? {}), orientation: out.orientation };
+    const { orientation, ...rest } = out;
+    out = { ...rest, style };
+  }
+  return out;
 }
 
 export function parseProject(text: string): Project {

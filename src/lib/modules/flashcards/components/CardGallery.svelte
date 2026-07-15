@@ -10,8 +10,9 @@
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
   import { deriveAutoTemplate, recordToCard } from '../cardMapping';
-  import { isCardStale } from '../cardOps';
+  import { isCardStale, schemaForCard } from '../cardOps';
   import { buildCardHTML, getPaperPx } from '../lib/card-render';
+  import { resolveStyle } from '../lib/style';
   import type { RecordItem, Schema, CardTemplate, Card } from '../model';
   import EmptyState from './EmptyState.svelte';
 
@@ -47,11 +48,15 @@
     return (card.title as string)?.trim?.() || 'Card';
   }
   function autoHtml(rec: RecordItem, schema: Schema, template: CardTemplate): string {
+    const eff = resolveStyle($project.settings, template?.style);
     return buildCardHTML(recordToCard(rec, schema, template, $project.settings, $project.activeLocale),
-                         $project.settings, $project.activeLocale);
+                         eff, $project.activeLocale);
   }
   function packedHtml(card: Card): string {
-    return buildCardHTML(card, $project.settings, $project.activeLocale); // render the stored snapshot
+    const schema = schemaForCard($project, card);
+    const template = schema ? (schema.cardTemplates[0] ?? deriveAutoTemplate(schema)) : null;
+    const eff = resolveStyle($project.settings, template?.style, card.style);
+    return buildCardHTML(card, eff, $project.activeLocale); // render the stored snapshot, with resolved style
   }
   async function onApply(cardId: string) {
     if (await confirm("Apply this card's content back to its records? This overwrites the record fields.",

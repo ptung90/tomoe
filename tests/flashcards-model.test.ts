@@ -90,6 +90,20 @@ describe('flashcards model', () => {
     expect(p.cards.every((c) => !(c as any).packedRecordIds?.length)).toBe(true);
     expect(p.cards).toHaveLength(0); // the only card was a compound snapshot — dropped
   });
+  it('parseProject folds a legacy top-level template.orientation into style.orientation and drops the top-level field', () => {
+    const legacy = JSON.stringify({
+      projectName: 'Orient', schemas: [
+        { id: 'sch1', name: 'Words',
+          fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text' }],
+          cardTemplates: [{ id: 't1', templateType: 'single', layout: 'fulltext', size: null, orientation: 'landscape', mapping: {} }] },
+      ],
+      records: [], cards: [],
+    });
+    const p = parseProject(legacy);
+    const t = p.schemas[0].cardTemplates[0] as any;
+    expect(t.style.orientation).toBe('landscape');
+    expect(t.orientation).toBeUndefined();
+  });
 });
 
 describe('layout registry', () => {

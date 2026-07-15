@@ -30,7 +30,7 @@ export function chunkRecords<T>(items: T[], size: number): T[][] {
 export function recordToCard(
   record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
 ): Card {
-  const orientation = template.orientation ?? settings.orientation;
+  const orientation = template.style?.orientation ?? template.orientation ?? settings.orientation;
   const textFields = schema.fields.filter((f) => f.type !== 'image');
   const imageFields = schema.fields.filter((f) => f.type === 'image');
   const titleField = textFields[0] ?? null;
