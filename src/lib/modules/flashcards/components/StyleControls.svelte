@@ -14,9 +14,12 @@
   import MoveVertical from 'lucide-svelte/icons/move-vertical';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
   import X from 'lucide-svelte/icons/x';
+  import Globe from 'lucide-svelte/icons/globe';
+  import Layers from 'lucide-svelte/icons/layers';
+  import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
   import {
     project, selectedRecordId, setSettings, setTemplateLayout,
-    setTemplateStyle, setCardStyle, clearStyleOverride,
+    setTemplateStyle, setCardStyle, clearStyleOverride, resetScopeStyle,
   } from '../stores';
   import { deriveAutoTemplate } from '../cardMapping';
   import { sheetLayout } from '../lib/card-render';
@@ -61,6 +64,19 @@
     if (scope === 'schema' && schema) clearStyleOverride('schema', schema.id, key);
     else if (scope === 'card' && card) clearStyleOverride('card', card.id, key);
   }
+  // How many properties are overridden at the current scope, and a plain-language description of it.
+  const overrideCount = $derived(scopeStyle ? Object.keys(scopeStyle).length : 0);
+  const scopeHint = $derived(
+    scope === 'global'
+      ? 'Base style — applies to every card.'
+      : scope === 'schema'
+        ? `“${schema?.name ?? 'this type'}” · blank fields inherit Global`
+        : 'This card only · blank fields inherit its type',
+  );
+  function resetScope(): void {
+    if (scope === 'schema' && schema) resetScopeStyle('schema', schema.id);
+    else if (scope === 'card' && card) resetScopeStyle('card', card.id);
+  }
   function onImageHeight(e: Event) {
     if (!schema) return;
     const v = Math.round(Number((e.target as HTMLInputElement).value)) || 50;
@@ -95,13 +111,27 @@
 </script>
 
 <div class="style-controls">
-  <div class="scope-switch" role="tablist" aria-label="Style scope">
-    <button type="button" role="tab" aria-selected={scope === 'global'} class:on={scope === 'global'}
-      onclick={() => (scope = 'global')}>Global</button>
-    <button type="button" role="tab" aria-selected={scope === 'schema'} class:on={scope === 'schema'}
-      disabled={!schema} onclick={() => (scope = 'schema')}>This type</button>
-    <button type="button" role="tab" aria-selected={scope === 'card'} class:on={scope === 'card'}
-      disabled={!card} onclick={() => (scope = 'card')}>This card</button>
+  <div class="scope-row">
+    <span class="scope-label">Style for</span>
+    <div class="scope-switch" role="tablist" aria-label="Style scope">
+      <button type="button" role="tab" aria-selected={scope === 'global'} class:on={scope === 'global'}
+        onclick={() => (scope = 'global')}><Globe size={13} />Global</button>
+      <button type="button" role="tab" aria-selected={scope === 'schema'} class:on={scope === 'schema'}
+        disabled={!schema} onclick={() => (scope = 'schema')}><Layers size={13} />This type</button>
+      <button type="button" role="tab" aria-selected={scope === 'card'} class:on={scope === 'card'}
+        disabled={!card} onclick={() => (scope = 'card')}><Square size={13} />This card</button>
+    </div>
+  </div>
+  <div class="scope-hint">
+    <span class="scope-hint-text">{scopeHint}</span>
+    {#if scope !== 'global'}
+      <span class="scope-count" class:none={overrideCount === 0}>
+        {overrideCount ? `${overrideCount} set here` : 'all inherited'}
+      </span>
+      <button type="button" class="reset-all" disabled={overrideCount === 0}
+        aria-label={`Reset all ${scope === 'schema' ? 'This type' : 'This card'} overrides`}
+        onclick={resetScope}><RotateCcw size={12} />Reset</button>
+    {/if}
   </div>
   <div class="tabs" role="tablist" aria-label="Style sections">
     <button type="button" role="tab" aria-selected={tab === 'text'} class:on={tab === 'text'} onclick={() => (tab = 'text')}>Text</button>
@@ -257,7 +287,7 @@
 {/snippet}
 
 <style>
-  .style-controls { display:flex; flex-direction:column; height:150px;
+  .style-controls { display:flex; flex-direction:column; height:186px;
     background:var(--surface); border-bottom:1px solid var(--border); }
   .tabs { display:flex; gap:2px; padding:6px 10px 0; border-bottom:1px solid var(--border); flex:none; }
   .tabs button { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px; font-weight:600;
@@ -296,20 +326,37 @@
   .seg button.on { background:var(--accent); color:#fff; }
   .seg button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 
-  /* Scope switcher — Global / This type / This card. */
-  .scope-switch { display:flex; gap:4px; padding:6px 10px; flex:none; border-bottom:1px solid var(--border); }
-  .scope-switch button { flex:1; border:1px solid var(--border); background:var(--bg); color:var(--text-muted); font:inherit;
-    font-size:11px; font-weight:600; padding:4px 8px; border-radius:6px; cursor:pointer;
-    transition:background .12s ease, color .12s ease, border-color .12s ease; }
-  .scope-switch button:hover:not(.on):not(:disabled) { border-color:var(--accent); color:var(--accent); }
-  .scope-switch button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .scope-switch button:disabled { opacity:.4; cursor:not-allowed; }
-  .scope-switch button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  /* Scope switcher — the "level" selector: which of Global / This type / This card the edits below target. */
+  .scope-row { display:flex; align-items:center; gap:8px; padding:7px 10px 0; flex:none; }
+  .scope-label { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); flex:none; }
+  .scope-switch { display:flex; flex:1; border:1px solid var(--border); border-radius:7px; overflow:hidden; background:var(--bg); }
+  .scope-switch button { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:4px;
+    border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:11px; font-weight:600;
+    padding:5px 6px; cursor:pointer; transition:background .12s ease, color .12s ease; }
+  .scope-switch button:not(:last-child) { border-right:1px solid var(--border); }
+  .scope-switch button:hover:not(.on):not(:disabled) { background:var(--accent-weak); color:var(--accent); }
+  .scope-switch button.on { background:var(--accent); color:#fff; }
+  .scope-switch button:disabled { opacity:.38; cursor:not-allowed; }
+  .scope-switch button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 
-  /* Reset-to-inherited — shown next to a group's controls once this scope has its own override. */
-  .reset { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; flex:none;
-    border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text-muted); cursor:pointer;
+  /* Plain-language description of the active scope + its override count + a reset-all affordance. */
+  .scope-hint { display:flex; align-items:center; gap:8px; padding:5px 10px 7px; flex:none;
+    border-bottom:1px solid var(--border); font-size:11px; color:var(--text-muted); }
+  .scope-hint-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .scope-count { flex:none; font-weight:600; color:var(--accent); }
+  .scope-count.none { color:var(--text-muted); font-weight:400; }
+  .reset-all { flex:none; display:inline-flex; align-items:center; gap:3px; border:1px solid var(--border); border-radius:6px;
+    background:var(--bg); color:var(--text-muted); font:inherit; font-size:11px; font-weight:600; padding:2px 7px; cursor:pointer;
     transition:background .12s ease, color .12s ease, border-color .12s ease; }
-  .reset:hover { border-color:var(--accent); color:var(--accent); }
+  .reset-all:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+  .reset-all:disabled { opacity:.38; cursor:not-allowed; }
+  .reset-all:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
+  /* Reset-to-inherited — shown next to a group's controls once this scope has its own override.
+     Accent-tinted so "set here" groups are visually distinct from inherited ones. */
+  .reset { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; flex:none;
+    border:1px solid var(--accent); border-radius:6px; background:var(--accent-weak); color:var(--accent); cursor:pointer;
+    transition:background .12s ease, color .12s ease; }
+  .reset:hover { background:var(--accent); color:#fff; }
   .reset:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 </style>

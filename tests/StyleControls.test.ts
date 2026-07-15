@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import StyleControls from '../src/lib/modules/flashcards/components/StyleControls.svelte';
@@ -171,5 +172,37 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     render(StyleControls);
     await tab('Card');
     expect(screen.queryByLabelText('Reset border')).not.toBeInTheDocument();
+  });
+
+  it('the scope hint names the active type and Global describes the base', async () => {
+    const sid = seedSelected();
+    void sid;
+    render(StyleControls);
+    expect(screen.getByText(/applies to every card/i)).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    expect(screen.getByText(/Words/)).toBeInTheDocument();
+  });
+
+  it('reset-all is disabled with no overrides and clears every override for the scope when clicked', async () => {
+    const sid = seedSelected();
+    render(StyleControls);
+    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    const resetAll = screen.getByRole('button', { name: 'Reset all This type overrides' });
+    expect(resetAll).toBeDisabled();
+
+    S.setTemplateStyle(sid, { border: { width: 9 } });
+    S.setTemplateStyle(sid, { margin: 15 });
+    await tick();
+    expect(resetAll).toBeEnabled();
+    expect(screen.getByText('2 set here')).toBeInTheDocument();
+
+    await fireEvent.click(resetAll);
+    expect(get(S.project).schemas[0].cardTemplates[0].style).toBeUndefined();
+  });
+
+  it('Global scope shows no reset-all control', () => {
+    seedSelected();
+    render(StyleControls);
+    expect(screen.queryByRole('button', { name: /Reset all/ })).not.toBeInTheDocument();
   });
 });

@@ -114,4 +114,32 @@ describe('style setters (cascade)', () => {
     const card = get(S.project).cards.find((c) => c.id === cid)!;
     expect(card.style).toBeUndefined();
   });
+
+  it('resetScopeStyle drops ALL schema overrides in one undoable step', () => {
+    const sid = S.addSchema('Words');
+    S.setTemplateStyle(sid, { border: { width: 6 } });
+    S.setTemplateStyle(sid, { margin: 20 });
+    expect(get(S.project).schemas[0].cardTemplates[0].style).toBeDefined();
+
+    S.resetScopeStyle('schema', sid);
+    expect(get(S.project).schemas[0].cardTemplates[0].style).toBeUndefined();
+
+    // single history entry — one undo restores both overrides
+    S.undo();
+    const style = get(S.project).schemas[0].cardTemplates[0].style;
+    expect(style?.border?.width).toBe(6);
+    expect(style?.margin).toBe(20);
+  });
+
+  it('resetScopeStyle drops ALL card overrides in one step', () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'title', label: 'T', type: 'text', multilingual: true }] });
+    S.addRecord(sid);
+    S.packAllForSchema(sid);
+    const cid = get(S.project).cards[0].id;
+
+    S.setCardStyle(cid, { titleFont: { size: 22 }, margin: 8 });
+    S.resetScopeStyle('card', cid);
+    expect(get(S.project).cards.find((c) => c.id === cid)!.style).toBeUndefined();
+  });
 });

@@ -146,6 +146,18 @@ export function setCardStyle(cardId: string, patch: StyleOverrides): void {
   const p = get(project);
   commit({ ...p, cards: p.cards.map((c) => (c.id === cardId ? { ...c, style: mergeStyle(c.style, patch) } : c)) });
 }
+/** Drop ALL style overrides at the given scope in a single undo step (schema template.style / card.style → undefined). */
+export function resetScopeStyle(scope: 'schema' | 'card', id: string): void {
+  const p = get(project);
+  if (scope === 'schema') {
+    commit({ ...p, schemas: p.schemas.map((s) => {
+      if (s.id !== id || !s.cardTemplates[0]?.style) return s;
+      return { ...s, cardTemplates: [{ ...s.cardTemplates[0], style: undefined }, ...s.cardTemplates.slice(1)] };
+    }) });
+  } else {
+    commit({ ...p, cards: p.cards.map((c) => (c.id === id && c.style ? { ...c, style: undefined } : c)) });
+  }
+}
 /** Remove one override key at the given scope's style object; if the resulting style is empty, set it to undefined. */
 export function clearStyleOverride(scope: 'schema' | 'card', id: string, key: keyof StyleOverrides): void {
   const p = get(project);
