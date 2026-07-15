@@ -101,7 +101,7 @@ describe('StyleControls (tabbed)', () => {
   });
 });
 
-describe('StyleControls (scope switcher: Global / This type / This card)', () => {
+describe('StyleControls (scope switcher: Global / This view / This card)', () => {
   function seedSelected() {
     const sid = S.addSchema('Words');
     S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
@@ -109,9 +109,9 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     return sid;
   }
 
-  it('This type / This card are disabled until a schema / packed card exist', () => {
+  it('This view / This card are disabled until a schema / packed card exist', () => {
     render(StyleControls);
-    expect(screen.getByRole('tab', { name: 'This type' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'This view' })).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'This card' })).toBeDisabled();
   });
 
@@ -122,10 +122,10 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     expect(get(S.project).settings.border.width).toBe(6);
   });
 
-  it('This type — Border width writes to template.style, not settings', async () => {
+  it('This view — Border width writes to template.style, not settings', async () => {
     const sid = seedSelected();
     render(StyleControls);
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     await tab('Border');
     await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9' } });
     expect(get(S.project).schemas[0].cardTemplates[0].style?.border?.width).toBe(9);
@@ -154,11 +154,11 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     expect((screen.getByLabelText('Width') as HTMLInputElement).value).toBe('22');
   });
 
-  it('reset at This type scope clears the schema override, falling back to global', async () => {
+  it('reset at This view scope clears the schema override, falling back to global', async () => {
     const sid = seedSelected();
     S.setTemplateStyle(sid, { border: { width: 22 } });
     render(StyleControls);
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     await tab('Border');
     expect(screen.getByLabelText('Width')).toHaveValue(22);
     await fireEvent.click(screen.getByLabelText('Reset border'));
@@ -179,15 +179,15 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     void sid;
     render(StyleControls);
     expect(screen.getByText(/applies to every card/i)).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     expect(screen.getByText(/Words/)).toBeInTheDocument();
   });
 
   it('reset-all is disabled with no overrides and clears every override for the scope when clicked', async () => {
     const sid = seedSelected();
     render(StyleControls);
-    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
-    const resetAll = screen.getByRole('button', { name: 'Reset all This type overrides' });
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
+    const resetAll = screen.getByRole('button', { name: 'Reset all This view overrides' });
     expect(resetAll).toBeDisabled();
 
     S.setTemplateStyle(sid, { border: { width: 9 } });
@@ -204,5 +204,52 @@ describe('StyleControls (scope switcher: Global / This type / This card)', () =>
     seedSelected();
     render(StyleControls);
     expect(screen.queryByRole('button', { name: /Reset all/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('StyleControls — Fields checklist (per view)', () => {
+  it('a per-schema field checklist toggles the active view\'s template.fields', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    render(StyleControls);
+    await tab('Fields');
+    await fireEvent.click(screen.getByLabelText('Def'));
+    const tpl = get(S.project).schemas[0].cardTemplates[0];
+    expect(tpl.fields).toEqual(['title']); // unchecking Def from "all" leaves Title only
+  });
+
+  it('re-checking a field adds it back to the explicit selection', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    render(StyleControls);
+    await tab('Fields');
+    await fireEvent.click(screen.getByLabelText('Def'));   // -> ['title']
+    await fireEvent.click(screen.getByLabelText('Def'));   // re-check -> ['title', 'def']
+    expect(get(S.project).schemas[0].cardTemplates[0].fields).toEqual(['title', 'def']);
+  });
+
+  it('the field checklist targets the active view, leaving other views\' selection untouched', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    S.setTemplateLayout(sid, { layout: 'fulltext' }); // creates view 1
+    S.addView(sid);                                   // view 2, becomes active
+    render(StyleControls);
+    await tab('Fields');
+    await fireEvent.click(screen.getByLabelText('Def'));
+    const tpls = get(S.project).schemas[0].cardTemplates;
+    expect(tpls[1].fields).toEqual(['title']); // active (view 2) changed
+    expect(tpls[0].fields).toBeUndefined();    // view 1 untouched
   });
 });

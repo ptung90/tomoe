@@ -159,7 +159,12 @@ export function deleteView(p: Project, schemaId: string, templateId: string): Pr
 }
 
 export function setViewFields(p: Project, schemaId: string, templateId: string, keys: string[]): Project {
-  return { ...p, schemas: p.schemas.map((s) => (s.id !== schemaId ? s : {
-    ...s, cardTemplates: s.cardTemplates.map((t) => (t.id === templateId ? { ...t, fields: keys } : t)),
-  })) };
+  return { ...p, schemas: p.schemas.map((s) => {
+    if (s.id !== schemaId) return s;
+    const idx = templateIndex(s, templateId);
+    if (idx === -1) return { ...s, cardTemplates: [{ ...deriveAutoTemplate(s), fields: keys }, ...s.cardTemplates] };
+    const cardTemplates = s.cardTemplates.slice();
+    cardTemplates[idx] = { ...cardTemplates[idx], fields: keys };
+    return { ...s, cardTemplates };
+  }) };
 }
