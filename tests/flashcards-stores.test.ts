@@ -56,3 +56,62 @@ describe('flashcards store wrappers', () => {
     S.selectRecord(ids[0]); S.selectAdjacentRecord(-1); expect(get(S.selectedRecordId)).toBe(ids[0]); // clamped at start
   });
 });
+
+describe('style setters (cascade)', () => {
+  it('setTemplateStyle sets a schema-level override, merging (not replacing) on a second call', () => {
+    const sid = S.addSchema('Words');
+    S.setTemplateStyle(sid, { border: { width: 6 } });
+    let schema = get(S.project).schemas.find((s) => s.id === sid)!;
+    expect(schema.cardTemplates[0].style?.border?.width).toBe(6);
+
+    S.setTemplateStyle(sid, { border: { color: '#111' } });
+    schema = get(S.project).schemas.find((s) => s.id === sid)!;
+    expect(schema.cardTemplates[0].style?.border?.width).toBe(6);
+    expect(schema.cardTemplates[0].style?.border?.color).toBe('#111');
+  });
+
+  it('setCardStyle sets a card-level override, merging on a second call', () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'title', label: 'T', type: 'text', multilingual: true }] });
+    S.addRecord(sid);
+    S.packAllForSchema(sid);
+    const cid = get(S.project).cards[0].id;
+
+    S.setCardStyle(cid, { titleFont: { size: 22 } });
+    let card = get(S.project).cards.find((c) => c.id === cid)!;
+    expect(card.style?.titleFont?.size).toBe(22);
+
+    S.setCardStyle(cid, { titleFont: { weight: 700 } });
+    card = get(S.project).cards.find((c) => c.id === cid)!;
+    expect(card.style?.titleFont?.size).toBe(22);
+    expect(card.style?.titleFont?.weight).toBe(700);
+  });
+
+  it('clearStyleOverride removes a schema-level key, falling back to inherit; clearing the last key leaves style undefined', () => {
+    const sid = S.addSchema('Words');
+    S.setTemplateStyle(sid, { border: { width: 6 } });
+    S.setTemplateStyle(sid, { margin: 20 });
+
+    S.clearStyleOverride('schema', sid, 'border');
+    let schema = get(S.project).schemas.find((s) => s.id === sid)!;
+    expect(schema.cardTemplates[0].style?.border).toBeUndefined();
+    expect(schema.cardTemplates[0].style?.margin).toBe(20);
+
+    S.clearStyleOverride('schema', sid, 'margin');
+    schema = get(S.project).schemas.find((s) => s.id === sid)!;
+    expect(schema.cardTemplates[0].style).toBeUndefined();
+  });
+
+  it('clearStyleOverride removes a card-level key, falling back to inherit', () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'title', label: 'T', type: 'text', multilingual: true }] });
+    S.addRecord(sid);
+    S.packAllForSchema(sid);
+    const cid = get(S.project).cards[0].id;
+
+    S.setCardStyle(cid, { titleFont: { size: 22 } });
+    S.clearStyleOverride('card', cid, 'titleFont');
+    const card = get(S.project).cards.find((c) => c.id === cid)!;
+    expect(card.style).toBeUndefined();
+  });
+});

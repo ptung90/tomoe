@@ -1,10 +1,11 @@
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
 import * as H from '../../history';
-import { newProject, type Project, type SchemaField, type RecordItem, type Settings, type CardTemplate } from './model';
+import { newProject, type Project, type SchemaField, type RecordItem, type Settings, type CardTemplate, type StyleOverrides } from './model';
 import * as ops from './recordOps';
 import * as cardMapping from './cardMapping';
 import * as cardOps from './cardOps';
 import * as ai from './lib/ai';
+import { mergeStyle } from './lib/style';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -132,11 +133,39 @@ export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'o
 }
 
 // ── Card/settings actions ───────────────────────────────────────────────
-export function setSettings(patch: Partial<Settings>): void {
+export function setSettings(patch: Partial<Settings> | StyleOverrides): void {
   commit(cardMapping.applySettings(get(project), patch));
 }
 export function setTemplateLayout(schemaId: string, patch: Partial<CardTemplate>): void {
   commit(cardMapping.applyTemplatePatch(get(project), schemaId, patch));
+}
+export function setTemplateStyle(schemaId: string, patch: StyleOverrides): void {
+  commit(cardMapping.applyTemplateStyle(get(project), schemaId, patch));
+}
+export function setCardStyle(cardId: string, patch: StyleOverrides): void {
+  const p = get(project);
+  commit({ ...p, cards: p.cards.map((c) => (c.id === cardId ? { ...c, style: mergeStyle(c.style, patch) } : c)) });
+}
+/** Remove one override key at the given scope's style object; if the resulting style is empty, set it to undefined. */
+export function clearStyleOverride(scope: 'schema' | 'card', id: string, key: keyof StyleOverrides): void {
+  const p = get(project);
+  if (scope === 'schema') {
+    commit({ ...p, schemas: p.schemas.map((s) => {
+      if (s.id !== id) return s;
+      const existing = s.cardTemplates[0];
+      if (!existing?.style) return s;
+      const { [key]: _drop, ...rest } = existing.style;
+      const style = Object.keys(rest).length ? rest : undefined;
+      return { ...s, cardTemplates: [{ ...existing, style }, ...s.cardTemplates.slice(1)] };
+    }) });
+  } else {
+    commit({ ...p, cards: p.cards.map((c) => {
+      if (c.id !== id || !c.style) return c;
+      const { [key]: _drop, ...rest } = c.style;
+      const style = Object.keys(rest).length ? rest : undefined;
+      return { ...c, style };
+    }) });
+  }
 }
 
 // ── Card pack/regenerate/delete actions ─────────────────────────────────

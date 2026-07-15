@@ -49,4 +49,10 @@ describe('collectPrintSheets', () => {
   it('empty project → []', () => {
     expect(collectPrintSheets(newProject())).toEqual([]);
   });
+  it('template.style.orientation drives the sheet layout + resolved settings (single source of truth)', () => {
+    const p = proj('1top-1bot', 2, { style: { orientation: 'landscape' } });
+    const sheets = collectPrintSheets(p);
+    expect(sheets[0].lay.orient).toBe('landscape');
+    expect(sheets[0].settings.orientation).toBe('landscape');
+  });
 });

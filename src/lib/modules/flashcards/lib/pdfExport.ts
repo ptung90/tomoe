@@ -45,15 +45,15 @@ export async function exportCardsPdf(project: Project): Promise<Uint8Array | nul
   let pdf: jsPDF | null = null;
   try {
     for (const sheet of sheets) {
-      // The sheet's own paper size/orientation, from `lay` (single source of truth —
+      // The sheet's own paper size/orientation, from `lay`/`settings` (schema-effective —
       // matches the grid buildSheetHTML actually renders, not a re-derivation from card data).
-      const paperMm = PAPER_MM[s.paperSize] ?? PAPER_MM.A4;
+      const paperMm = PAPER_MM[sheet.settings.paperSize] ?? PAPER_MM.A4;
       const landscape = sheet.lay.orient === 'landscape';
       const pageW = landscape ? paperMm.h : paperMm.w;
       const pageH = landscape ? paperMm.w : paperMm.h;
       const px = { w: sheet.lay.sheetW, h: sheet.lay.sheetH };
 
-      host.innerHTML = buildSheetHTML(sheet.cards, sheet.lay, s, project.activeLocale, true, px);
+      host.innerHTML = buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, project.activeLocale, true, px);
       const page = host.firstElementChild as HTMLElement;
 
       await document.fonts?.ready;

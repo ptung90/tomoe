@@ -99,3 +99,77 @@ describe('StyleControls (tabbed)', () => {
     expect(tpl.hideTitle).toBe(true);
   });
 });
+
+describe('StyleControls (scope switcher: Global / This type / This card)', () => {
+  function seedSelected() {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }] });
+    S.addRecord(sid); // auto-selects the new record
+    return sid;
+  }
+
+  it('This type / This card are disabled until a schema / packed card exist', () => {
+    render(StyleControls);
+    expect(screen.getByRole('tab', { name: 'This type' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'This card' })).toBeDisabled();
+  });
+
+  it('defaults to Global — Border width writes to settings', async () => {
+    render(StyleControls);
+    await tab('Card');
+    await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '6' } });
+    expect(get(S.project).settings.border.width).toBe(6);
+  });
+
+  it('This type — Border width writes to template.style, not settings', async () => {
+    const sid = seedSelected();
+    render(StyleControls);
+    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await tab('Card');
+    await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9' } });
+    expect(get(S.project).schemas[0].cardTemplates[0].style?.border?.width).toBe(9);
+    expect(get(S.project).settings.border.width).not.toBe(9);
+    void sid;
+  });
+
+  it('This card — Border width writes to the packed card.style, not template.style', async () => {
+    const sid = seedSelected();
+    S.packAllForSchema(sid);
+    render(StyleControls);
+    await fireEvent.click(screen.getByRole('tab', { name: 'This card' }));
+    await tab('Card');
+    await fireEvent.change(screen.getByLabelText('Width'), { target: { value: '11' } });
+    const recId = get(S.selectedRecordId);
+    const card = get(S.project).cards.find((c) => c.recordId === recId);
+    expect(card?.style?.border?.width).toBe(11);
+    expect(get(S.project).schemas[0].cardTemplates[0]?.style?.border?.width).not.toBe(11);
+  });
+
+  it('controls display the resolved (cascaded) value from a schema override', async () => {
+    const sid = seedSelected();
+    S.setTemplateStyle(sid, { border: { width: 22 } });
+    render(StyleControls);
+    await tab('Card');
+    expect((screen.getByLabelText('Width') as HTMLInputElement).value).toBe('22');
+  });
+
+  it('reset at This type scope clears the schema override, falling back to global', async () => {
+    const sid = seedSelected();
+    S.setTemplateStyle(sid, { border: { width: 22 } });
+    render(StyleControls);
+    await fireEvent.click(screen.getByRole('tab', { name: 'This type' }));
+    await tab('Card');
+    expect(screen.getByLabelText('Width')).toHaveValue(22);
+    await fireEvent.click(screen.getByLabelText('Reset border'));
+    expect(get(S.project).schemas[0].cardTemplates[0].style?.border).toBeUndefined();
+    expect(screen.getByLabelText('Width')).toHaveValue(get(S.project).settings.border.width);
+  });
+
+  it('Global scope shows no reset control (nothing to reset at the base level)', async () => {
+    const sid = seedSelected();
+    S.setTemplateStyle(sid, { border: { width: 22 } });
+    render(StyleControls);
+    await tab('Card');
+    expect(screen.queryByLabelText('Reset border')).not.toBeInTheDocument();
+  });
+});

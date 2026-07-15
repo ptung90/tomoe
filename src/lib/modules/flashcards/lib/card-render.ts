@@ -1,6 +1,7 @@
 import { marked } from 'marked';
 import type { Card, Settings, CardSection, CardImage, FontSpec, LocalizedText } from '../model';
 import { LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS } from './layouts';
+import { resolveStyle } from './style';
 
 // Re-exported for existing importers (registry now lives in `./layouts`).
 export { LAYOUTS, LAYOUT_IDS, LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS, HIDE_TITLE_LAYOUTS } from './layouts';
@@ -176,8 +177,9 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     'px;';
   const gridStyle = getGridTemplateStyle(card.layout, split);
   const resolvedTitle = resolveLocale(card.title, locale);
-  const titleF = { ...s.titleFont, ...(card.titleFont || {}) };
-  const contentF = { ...s.contentFont, ...(card.contentFont || {}) };
+  // Font overrides are resolved into `settings` by the caller (global → schema.style → card.style cascade).
+  const titleF = { ...s.titleFont };
+  const contentF = { ...s.contentFont };
   const titleStyle = buildFontOverride(titleF);
   const contentStyle = buildFontOverride(contentF);
   const _cs = `.fc-card[data-id="${card.id}"]`;
@@ -304,7 +306,7 @@ export function buildSheetHTML(cards: Card[], lay: { cols: number; rows: number;
   const { cols, rows, cellW, cellH } = lay;
   const cells = Array.from({ length: cols * rows }, (_, i) => {
     const card = cards[i];
-    const inner = card ? buildCardHTML(card, settings, locale, forPrint, { w: cellW, h: cellH }) : '';
+    const inner = card ? buildCardHTML(card, resolveStyle(settings, card.style), locale, forPrint, { w: cellW, h: cellH }) : '';
     return `<div class="fc-sheet-cell" style="width:${cellW}px;height:${cellH}px;overflow:hidden;">${inner}</div>`;
   }).join('');
   // fixed grid fills the sheet (1fr tracks); auto-fit uses real-size px tracks packed from the top-left.

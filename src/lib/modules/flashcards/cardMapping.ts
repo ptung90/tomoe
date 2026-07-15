@@ -1,6 +1,7 @@
-import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings } from './model';
+import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides } from './model';
 import { resolveLocale } from './lib/card-render';
 import { LAYOUT_SLOTS } from './lib/layouts';
+import { mergeStyle } from './lib/style';
 
 const DEFAULT_IMAGE_HEIGHT = 50;
 
@@ -30,7 +31,7 @@ export function chunkRecords<T>(items: T[], size: number): T[][] {
 export function recordToCard(
   record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
 ): Card {
-  const orientation = template.orientation ?? settings.orientation;
+  const orientation = template.style?.orientation ?? template.orientation ?? settings.orientation;
   const textFields = schema.fields.filter((f) => f.type !== 'image');
   const imageFields = schema.fields.filter((f) => f.type === 'image');
   const titleField = textFields[0] ?? null;
@@ -59,7 +60,7 @@ export function recordToCard(
   };
 }
 
-export function applySettings(p: Project, patch: Partial<Settings>): Project {
+export function applySettings(p: Project, patch: Partial<Settings> | StyleOverrides): Project {
   const s = p.settings;
   return { ...p, settings: {
     ...s, ...patch,
@@ -75,5 +76,13 @@ export function applyTemplatePatch(p: Project, schemaId: string, patch: Partial<
     if (s.id !== schemaId) return s;
     const existing = s.cardTemplates[0] ?? deriveAutoTemplate(s);
     return { ...s, cardTemplates: [{ ...existing, ...patch }, ...s.cardTemplates.slice(1)] };
+  }) };
+}
+
+export function applyTemplateStyle(p: Project, schemaId: string, patch: StyleOverrides): Project {
+  return { ...p, schemas: p.schemas.map((s) => {
+    if (s.id !== schemaId) return s;
+    const existing = s.cardTemplates[0] ?? deriveAutoTemplate(s);
+    return { ...s, cardTemplates: [{ ...existing, style: mergeStyle(existing.style, patch) }, ...s.cardTemplates.slice(1)] };
   }) };
 }

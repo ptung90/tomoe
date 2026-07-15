@@ -13,12 +13,24 @@ export interface Settings {
   pdfImageFormat: 'jpeg'|'png'; pdfJpegQuality: number; pdfScale: number; customCss: string;
 }
 export interface SchemaField { id: string; key: string; label: string; type: 'text'|'text-long'|'image'; multilingual?: boolean }
-export interface CardTemplate { id: string; templateType: 'single'|'compound'; layout: string; locale?: string; size?: string|null; orientation?: string; imageHeightPercent?: number; hideTitle?: boolean; hideSectionLabels?: boolean; cardClass?: string|null; cardConfig?: Record<string, unknown>; cardsPerPage?: number; autoFit?: boolean; cardSize?: 'A4'|'A5'|'A6'|'A7'|'A8'|'Letter'; mapping: { titleSlot?: string; labelSlot?: string; textSlot?: string; imageSlot?: string; imageSlots?: string[]; sections?: string[] } }
+/** Partial style layer for the cascade (Global settings → per-schema template.style → per-card card.style).
+ *  Resolved per-property via `resolveStyle`; nested groups (border/image/fonts) merge field-by-field. */
+export interface StyleOverrides {
+  border?: Partial<Settings['border']>;
+  image?: Partial<Settings['image']>;
+  titleFont?: Partial<FontSpec>;
+  contentFont?: Partial<FontSpec>;
+  margin?: number; padding?: number; imgPadding?: number;
+  textVAlign?: 'top' | 'middle' | 'bottom';
+  paperSize?: Settings['paperSize'];
+  orientation?: Settings['orientation'];
+}
+export interface CardTemplate { id: string; templateType: 'single'|'compound'; layout: string; locale?: string; size?: string|null; orientation?: string; imageHeightPercent?: number; hideTitle?: boolean; hideSectionLabels?: boolean; cardClass?: string|null; cardConfig?: Record<string, unknown>; cardsPerPage?: number; autoFit?: boolean; cardSize?: 'A4'|'A5'|'A6'|'A7'|'A8'|'Letter'; style?: StyleOverrides; mapping: { titleSlot?: string; labelSlot?: string; textSlot?: string; imageSlot?: string; imageSlots?: string[]; sections?: string[] } }
 export interface Schema { id: string; name: string; fields: SchemaField[]; cardTemplates: CardTemplate[] }
 export interface RecordItem { id: string; schemaId: string; fieldsHash: string; fields: Record<string, LocalizedText> }
 export interface CardSection { id: string; label: LocalizedText; content: LocalizedText; recordId?: string; customClass?: string; fontSize?: number; textAlign?: string; labelSize?: number }
 export interface CardImage { slot: number; url: string; recordId?: string; size?: string|null; color?: string; attribution?: unknown; search_query?: string }
-export interface Card { id: string; layout: string; imageHeightPercent: number; imageGridSplit?: { row: number; col: number; inner: number; rowBorders?: boolean }; images: CardImage[]; title: LocalizedText; sections: CardSection[]; orientation?: string|null; hideTitle?: boolean; hideSectionLabels?: boolean; titleFont?: FontSpec|null; contentFont?: FontSpec|null; customCss?: string; cssClass?: string; recordId?: string; templateId?: string; /** legacy/read-only: only read by parseProject to drop old compound-card snapshots; never written */ packedRecordIds?: string[]; sourceHash?: string; edited?: boolean; [k: string]: unknown }
+export interface Card { id: string; layout: string; imageHeightPercent: number; imageGridSplit?: { row: number; col: number; inner: number; rowBorders?: boolean }; images: CardImage[]; title: LocalizedText; sections: CardSection[]; orientation?: string|null; hideTitle?: boolean; hideSectionLabels?: boolean; style?: StyleOverrides; /** legacy: only read by parseProject migration (folded into `style.titleFont`/`style.contentFont`); never written */ titleFont?: FontSpec|null; /** legacy: see titleFont */ contentFont?: FontSpec|null; customCss?: string; cssClass?: string; recordId?: string; templateId?: string; /** legacy/read-only: only read by parseProject to drop old compound-card snapshots; never written */ packedRecordIds?: string[]; sourceHash?: string; edited?: boolean; [k: string]: unknown }
 export interface Project { version: number; projectName: string; projectIcon: string; settings: Settings; schemas: Schema[]; records: RecordItem[]; cards: Card[]; locales: Locale[]; activeLocale: Locale }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -49,9 +61,16 @@ const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number 
 };
 function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
   const m = COMPOUND_MIGRATION[t?.layout];
-  if (m) return { ...t, layout: m.layout, cardsPerPage: t.cardsPerPage ?? m.cardsPerPage, templateType: 'single' };
-  if (!LAYOUT_IDS.includes(t?.layout)) return { ...t, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
-  return t;
+  let out: any = t;
+  if (m) out = { ...out, layout: m.layout, cardsPerPage: out.cardsPerPage ?? m.cardsPerPage, templateType: 'single' };
+  else if (!LAYOUT_IDS.includes(out?.layout)) out = { ...out, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
+  // Fold legacy per-template orientation into style.orientation (cascade single source) and drop the top-level field.
+  if (out?.orientation !== undefined) {
+    const style = out.style?.orientation !== undefined ? out.style : { ...(out.style ?? {}), orientation: out.orientation };
+    const { orientation, ...rest } = out;
+    out = { ...rest, style };
+  }
+  return out;
 }
 
 export function parseProject(text: string): Project {
@@ -88,9 +107,17 @@ export function parseProject(text: string): Project {
 
   // Drop persisted compound card snapshots (packedRecordIds) — one Card = one record now.
   // Remap any surviving card's layout that referenced a removed compound layout.
+  // Fold legacy per-card titleFont/contentFont into card.style (cascade) and drop the old top-level fields.
   const cards: Card[] = (Array.isArray(raw.cards) ? raw.cards : [])
     .filter((c: any) => !(c.packedRecordIds?.length))
-    .map((c: any) => (COMPOUND_MIGRATION[c.layout] ? { ...c, layout: COMPOUND_MIGRATION[c.layout].layout } : c));
+    .map((c: any) => (COMPOUND_MIGRATION[c.layout] ? { ...c, layout: COMPOUND_MIGRATION[c.layout].layout } : c))
+    .map((c: any) => {
+      const legacy = (c.titleFont || c.contentFont)
+        ? { ...(c.style ?? {}), ...(c.titleFont ? { titleFont: c.titleFont } : {}), ...(c.contentFont ? { contentFont: c.contentFont } : {}) }
+        : c.style;
+      const { titleFont, contentFont, ...rest } = c;
+      return legacy ? { ...rest, style: legacy } : rest;
+    });
 
   return { version: typeof raw.version==='number'?raw.version:1,
     projectName: raw.projectName ?? raw.project_name ?? base.projectName,
