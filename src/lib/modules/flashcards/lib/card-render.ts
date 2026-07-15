@@ -1,21 +1,13 @@
 import { marked } from 'marked';
 import type { Card, Settings, CardSection, CardImage, FontSpec, LocalizedText } from '../model';
+import { LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS } from './layouts';
+
+// Re-exported for existing importers (registry now lives in `./layouts`).
+export { LAYOUTS, LAYOUT_IDS, LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS, HIDE_TITLE_LAYOUTS } from './layouts';
+export type { LayoutDef } from './layouts';
 
 export const PAPER_MM: Record<string, { w: number; h: number }> = {
   A4: { w: 210, h: 297 }, A5: { w: 148, h: 210 }, A6: { w: 105, h: 148 }, Letter: { w: 216, h: 279 },
-};
-
-export const LAYOUTS = ['fulltext', 'fullimage', '2x2', '1top-1bot', '1top-2bot', '2top-1bot', '3card'] as const;
-
-export const LAYOUT_SLOTS: Record<string, number> = {
-  fulltext: 0, fullimage: 1, '2x2': 4, '1top-1bot': 2, '1top-2bot': 3, '2top-1bot': 3, '3card': 3,
-};
-
-export const LAYOUT_SPLIT_DEFAULTS: Record<string, { row: number; col: number; inner: number }> = {
-  fulltext: { row: 0, col: 50, inner: 50 }, fullimage: { row: 100, col: 100, inner: 50 },
-  '2x2': { row: 50, col: 50, inner: 50 }, '1top-1bot': { row: 50, col: 50, inner: 50 },
-  '1top-2bot': { row: 50, col: 50, inner: 50 }, '2top-1bot': { row: 50, col: 50, inner: 50 },
-  '3card': { row: 50, col: 33, inner: 33 },
 };
 
 export function getPaperPx(paperSize: string, orientation: string): { w: number; h: number } {
@@ -121,103 +113,6 @@ function _scopeCardCss(css: string, cardId: string): string {
   );
 }
 
-// ── Compound layouts ───────────────────────────────────────────────
-interface CompoundShellArgs {
-  cardStyleTag: string;
-  cls: string;
-  layout: string;
-  id: string;
-  wrapperStyle: string;
-  titleHtml?: string;
-  gridClass?: string;
-  gridStyle: string;
-  cellsHtml: string;
-  handlesHtml?: string;
-}
-
-// Shared skeleton for every compound layout: style tag + card wrapper +
-// optional title + grid container + cells (+ optional drag handles).
-function renderCompoundShell(args: CompoundShellArgs): string {
-  const { cardStyleTag, cls, layout, id, wrapperStyle, titleHtml = '', gridClass = '', gridStyle, cellsHtml, handlesHtml = '' } = args;
-  const clsAttr = gridClass ? ' class="' + gridClass + '"' : '';
-  return (
-    cardStyleTag +
-    '<div class="' + cls + '" data-layout="' + layout + '" data-id="' + id + '" style="' + wrapperStyle + '">' +
-    titleHtml +
-    '<div' + clsAttr + ' style="' + gridStyle + '">' +
-    cellsHtml + handlesHtml +
-    '</div></div>'
-  );
-}
-
-interface CompoundCtx {
-  s: Settings;
-  forPrint: boolean;
-  cls: string;
-  id: string;
-  cardStyleTag: string;
-  wrapperStyle: string;
-  titleStyle: string;
-  contentStyle: string;
-  gap: number;
-  imgStyle: string;
-  borderCss: string;
-  imgPaddingPx: number;
-  paddingPx: number;
-  locale: string;
-}
-
-function build_3card(card: Card, ctx: CompoundCtx): string {
-  const { s } = ctx;
-  const cols = 3;
-  const imgPct = card.imageHeightPercent || 45;
-  // fit mode (global setting): title pins top, content pins bottom, image fills the middle with imgPct as a min-height floor
-  const fit = !!ctx.s.threeCardFit;
-  const imgAreaStyle = fit ? 'flex:1 1 auto;min-height:' + imgPct + '%;' : 'flex:' + imgPct + ';min-height:0;';
-  const txtAreaStyle = fit ? 'flex:0 0 auto;' : 'flex:' + (100 - imgPct) + ';min-height:0;';
-  const cells = Array.from({ length: cols }, (_, i) => {
-    const sec = card.sections[i] || ({ label: '', content: '' } as CardSection);
-    const img = card.images.find((im) => im.slot === i);
-    const title = resolveLocale(sec.label, ctx.locale);
-    const content = resolveLocale(sec.content, ctx.locale);
-    const imgUrl = img && img.url ? img.url : '';
-    const hasContent = !!(title || imgUrl || (content || '').trim());
-    const cellBorderW = (ctx.forPrint && !hasContent) ? 0 : s.border.width;
-    const imgBg = imgUrl
-      ? '<div class="img-bg" style="background-image:url(\'' + esc(imgUrl) + '\');' + resolveImgStyle(img, ctx.imgStyle) + 'background-repeat:no-repeat;width:100%;height:100%;"></div>'
-      : ctx.forPrint ? '' : '<span class="empty-placeholder">📷</span>';
-    const cellStyle =
-      'box-sizing:border-box;background:white;overflow:hidden;display:flex;flex-direction:column;' +
-      'border:' + cellBorderW + 'px ' + ctx.borderCss + ';border-radius:' + s.border.radius + 'px;padding:' + ctx.paddingPx + 'px;';
-    return (
-      '<div class="fc-image-slot-' + i + '" style="' + cellStyle + '">' +
-      (title && !card.hideSectionLabels ? '<div class="fc-title" style="' + ctx.titleStyle + '">' + mdInline(title) + '</div>' : '') +
-      '<div style="' + imgAreaStyle + 'overflow:hidden;display:flex;align-items:center;justify-content:center;padding:' + ctx.imgPaddingPx + 'px;background:white;">' +
-      imgBg +
-      '</div>' +
-      '<div class="fc-sections" style="' + txtAreaStyle + 'overflow:hidden;text-align:justify;' + ctx.contentStyle + '">' +
-      mdBlock(content) +
-      '</div>' +
-      '</div>'
-    );
-  }).join('');
-  const gridStyle = 'flex:1;overflow:hidden;display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:' + ctx.gap + 'px;';
-  return renderCompoundShell({
-    cardStyleTag: ctx.cardStyleTag, cls: ctx.cls, layout: card.layout, id: ctx.id,
-    wrapperStyle: ctx.wrapperStyle,
-    titleHtml: '',
-    gridClass: '', gridStyle,
-    cellsHtml: cells, handlesHtml: '',
-  });
-}
-
-function buildCompound(card: Card, ctx: CompoundCtx): string | null {
-  switch (card.layout) {
-    case '3card': return build_3card(card, ctx);
-    default: return null;
-  }
-}
-
 export function buildCardHTML(card: Card, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
   const s = settings;
   const { w, h } = overridePx || getPaperPx(s.paperSize, card.orientation || s.orientation);
@@ -264,9 +159,6 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     ';border-radius:' +
     s.border.radius +
     'px;';
-  const borderCss = s.border.style + ' ' + s.border.color;
-  const compoundWrapperStyle =
-    'width:' + cardW + 'px;height:' + cardH + 'px;margin:' + marginPx + 'px auto;background:white;padding:0;border:none;';
   const sizeStyle =
     'width:' +
     cardW +
@@ -297,17 +189,6 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const _imgLabelFontRule = contentStyle ? `${_cs} .fc-img-label{${contentStyle}}` : '';
   const cardStyleTag = '<style>' + _h1Rule + _labelSizeRule + _contentSizeRule + _imgLabelFontRule + (card.customCss ? _scopeCardCss(card.customCss, card.id) : '') + '</style>';
   const showTitle = !!resolvedTitle && !card.hideTitle;
-
-  const compoundCtx: CompoundCtx = {
-    s, forPrint, cls, id: card.id, cardStyleTag,
-    wrapperStyle: compoundWrapperStyle,
-    titleStyle, contentStyle,
-    gap: marginPx,
-    imgStyle, borderCss, imgPaddingPx, paddingPx,
-    locale,
-  };
-  const compoundHtml = buildCompound(card, compoundCtx);
-  if (compoundHtml !== null) return compoundHtml;
 
   // fullimage: image-only card with inner padding wrapper
   if (card.layout === 'fullimage') {

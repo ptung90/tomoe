@@ -23,30 +23,9 @@ describe('CardPreview', () => {
     render(CardPreview);
     expect(screen.getByText(/no card to preview/i)).toBeInTheDocument();
   });
-  it('offers the in-scope layouts in the layout selector', () => {
+  it('offers the 11 single-card layouts in the layout selector', () => {
     render(CardPreview);
     const sel = screen.getByLabelText(/layout/i) as HTMLSelectElement;
-    expect(sel.querySelectorAll('option').length).toBe(7);
-  });
-  it('3card preview shows the whole 3-record page, not just the selected record', () => {
-    // seed: schema with 3card layout + 3 records
-    S.initProject();
-    const sid = S.addSchema('Words');
-    S.updateSchema(sid, { fields: [
-      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
-      { id: 'f2', key: 'def', label: 'Def', type: 'text', multilingual: true },
-    ] });
-    S.setTemplateLayout(sid, { layout: '3card' });
-    S.addRecord(sid); S.addRecord(sid); S.addRecord(sid);
-    const recs = get(S.project).records;
-    S.setField(recs[0].id, 'title', 'Cat', 'en');
-    S.setField(recs[1].id, 'title', 'Dog', 'en');
-    S.setField(recs[2].id, 'title', 'Cow', 'en');
-    S.selectRecord(recs[0].id);
-    const { container } = render(CardPreview);
-    const text = container.textContent ?? '';
-    expect(text).toContain('Cat');
-    expect(text).toContain('Dog'); // a neighbour in the same page — proves the chunk renders
-    expect(text).toContain('Cow');
+    expect(sel.querySelectorAll('option').length).toBe(11);
   });
 });

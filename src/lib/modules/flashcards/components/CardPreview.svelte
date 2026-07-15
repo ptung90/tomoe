@@ -3,22 +3,12 @@
   import Palette from 'lucide-svelte/icons/palette';
   import ImageIcon from 'lucide-svelte/icons/image';
   import { project, selectedRecordId, setSettings, setTemplateLayout } from '../stores';
-  import { deriveAutoTemplate, recordsToCard, cardsPerPage, chunkRecords } from '../cardMapping';
-  import { buildCardHTML, LAYOUTS, getPaperPx } from '../lib/card-render';
+  import { deriveAutoTemplate, recordToCard } from '../cardMapping';
+  import { buildCardHTML, getPaperPx } from '../lib/card-render';
+  import { LAYOUTS } from '../lib/layouts';
   import { zoomStep } from '../lib/zoom';
   import StyleControls from './StyleControls.svelte';
   import EmptyState from './EmptyState.svelte';
-
-  // Human-readable names for the layout dropdown (values stay the engine ids).
-  const LAYOUT_LABELS: Record<string, string> = {
-    fulltext: 'Text only',
-    fullimage: 'Image only',
-    '2x2': '2×2 grid',
-    '1top-1bot': 'Image top / text bottom',
-    '1top-2bot': '1 top / 2 bottom',
-    '2top-1bot': '2 top / 1 bottom',
-    '3card': '3 mini-cards',
-  };
 
   let paneW = $state(440);
   let showStyle = $state(false);
@@ -72,10 +62,7 @@
   }
   const cardHtml = $derived.by(() => {
     if (!record || !schema || !template) return '';
-    const schemaRecords = $project.records.filter((r) => r.schemaId === schema.id);
-    const chunks = chunkRecords(schemaRecords, cardsPerPage(template.layout));
-    const chunk = chunks.find((c) => c.some((r) => r.id === record.id)) ?? [record];
-    return buildCardHTML(recordsToCard(chunk, schema, template, $project.settings, $project.activeLocale),
+    return buildCardHTML(recordToCard(record, schema, template, $project.settings, $project.activeLocale),
                          $project.settings, $project.activeLocale);
   });
 
@@ -88,7 +75,7 @@
   <header class="preview-toolbar">
     <label>Layout
       <select value={template?.layout ?? 'fulltext'} onchange={onLayout} disabled={!schema}>
-        {#each LAYOUTS as l (l)}<option value={l}>{LAYOUT_LABELS[l] ?? l}</option>{/each}
+        {#each LAYOUTS as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
       </select>
     </label>
     <label>Paper

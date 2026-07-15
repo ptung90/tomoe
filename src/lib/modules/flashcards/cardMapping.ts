@@ -1,5 +1,6 @@
 import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings } from './model';
-import { resolveLocale, LAYOUT_SLOTS } from './lib/card-render';
+import { resolveLocale } from './lib/card-render';
+import { LAYOUT_SLOTS } from './lib/layouts';
 
 const DEFAULT_IMAGE_HEIGHT = 50;
 
@@ -18,12 +19,6 @@ export function deriveAutoTemplate(schema: Schema): CardTemplate {
   };
 }
 
-const COMPOUND_LAYOUTS = new Set(['3card']);
-
-export function cardsPerPage(layout: string): number {
-  return COMPOUND_LAYOUTS.has(layout) ? (LAYOUT_SLOTS[layout] ?? 1) : 1;
-}
-
 export function chunkRecords<T>(items: T[], size: number): T[][] {
   const n = Math.max(1, size);
   const out: T[][] = [];
@@ -31,87 +26,37 @@ export function chunkRecords<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-/** Build one Card from a chunk of records. Single layouts use records[0]
- *  (identical to the former recordToCard); compound (3card) maps each record
- *  to one cell (label=first text field, content=second, image=first image). */
-export function recordsToCard(
-  records: RecordItem[], schema: Schema, template: CardTemplate, settings: Settings, locale: string,
+/** Build one Card from a single record — one Card = one record. */
+export function recordToCard(
+  record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
 ): Card {
   const orientation = template.orientation ?? settings.orientation;
-  if (!COMPOUND_LAYOUTS.has(template.layout)) {
-    const record = records[0];
-    const textFields = schema.fields.filter((f) => f.type !== 'image');
-    const imageFields = schema.fields.filter((f) => f.type === 'image');
-    const titleField = textFields[0] ?? null;
-    const sectionFields = titleField ? textFields.slice(1) : textFields;
-    const slotCount = LAYOUT_SLOTS[template.layout] ?? 0;
-    const images: CardImage[] = [];
-    if (record) {
-      for (let i = 0; i < Math.min(slotCount, imageFields.length); i++) {
-        const url = resolveLocale(record.fields[imageFields[i].key], locale);
-        if (url) images.push({ slot: i, url });
-      }
-    }
-    const sections: CardSection[] = record
-      ? sectionFields.map((f) => ({ id: uid('sec'), label: f.label, content: resolveLocale(record.fields[f.key], locale) }))
-      : [];
-    return {
-      id: 'preview_' + (record?.id ?? 'empty'),
-      layout: template.layout,
-      imageHeightPercent: template.imageHeightPercent ?? DEFAULT_IMAGE_HEIGHT,
-      images,
-      title: record && titleField ? resolveLocale(record.fields[titleField.key], locale) : '',
-      sections,
-      orientation,
-      hideTitle: template.hideTitle,
-      hideSectionLabels: template.hideSectionLabels,
-      ...(record ? { recordId: record.id } : {}),
-      templateId: template.id,
-    };
-  }
-
-  // Compound (3card): each record → one cell.
   const textFields = schema.fields.filter((f) => f.type !== 'image');
   const imageFields = schema.fields.filter((f) => f.type === 'image');
-  const labelField = textFields[0] ?? null;
-  const contentField = textFields[1] ?? null;
-  const imageField = imageFields[0] ?? null;
-  const slots = LAYOUT_SLOTS[template.layout] ?? 3;
-  const cells = records.slice(0, slots);
-
-  const sections: CardSection[] = cells.map((rec) => ({
-    id: uid('sec'),
-    label: labelField ? resolveLocale(rec.fields[labelField.key], locale) : '',
-    content: contentField ? resolveLocale(rec.fields[contentField.key], locale) : '',
-  }));
-  while (sections.length < slots) sections.push({ id: uid('sec'), label: '', content: '' });
-
+  const titleField = textFields[0] ?? null;
+  const sectionFields = titleField ? textFields.slice(1) : textFields;
+  const slotCount = LAYOUT_SLOTS[template.layout] ?? 0;
   const images: CardImage[] = [];
-  cells.forEach((rec, i) => {
-    if (!imageField) return;
-    const url = resolveLocale(rec.fields[imageField.key], locale);
+  for (let i = 0; i < Math.min(slotCount, imageFields.length); i++) {
+    const url = resolveLocale(record.fields[imageFields[i].key], locale);
     if (url) images.push({ slot: i, url });
-  });
-
+  }
+  const sections: CardSection[] = sectionFields.map((f) => (
+    { id: uid('sec'), label: f.label, content: resolveLocale(record.fields[f.key], locale) }
+  ));
   return {
-    id: 'preview_' + (cells[0]?.id ?? 'empty'),
+    id: 'preview_' + record.id,
     layout: template.layout,
     imageHeightPercent: template.imageHeightPercent ?? DEFAULT_IMAGE_HEIGHT,
     images,
-    title: '',
+    title: titleField ? resolveLocale(record.fields[titleField.key], locale) : '',
     sections,
     orientation,
     hideTitle: template.hideTitle,
     hideSectionLabels: template.hideSectionLabels,
+    recordId: record.id,
     templateId: template.id,
-    packedRecordIds: cells.map((r) => r.id),
   };
-}
-
-export function recordToCard(
-  record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
-): Card {
-  return recordsToCard([record], schema, template, settings, locale);
 }
 
 export function applySettings(p: Project, patch: Partial<Settings>): Project {

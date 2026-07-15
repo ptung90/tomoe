@@ -9,8 +9,8 @@
   import Upload from 'lucide-svelte/icons/upload';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
-  import { deriveAutoTemplate, recordsToCard, cardsPerPage, chunkRecords } from '../cardMapping';
-  import { isCardStale, schemaForCard } from '../cardOps';
+  import { deriveAutoTemplate, recordToCard } from '../cardMapping';
+  import { isCardStale } from '../cardOps';
   import { buildCardHTML, getPaperPx } from '../lib/card-render';
   import type { RecordItem, Schema, CardTemplate, Card } from '../model';
   import EmptyState from './EmptyState.svelte';
@@ -19,19 +19,16 @@
 
   const THUMB_W = 190;
 
+  // One thumbnail per record: the persisted (packed) card if one exists, else auto-derived.
   const groups = $derived($project.schemas.map((schema) => {
     const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
-    const compound = cardsPerPage(template.layout) > 1;
     const recs = $project.records.filter((r) => r.schemaId === schema.id);
-    const packed = compound
-      ? $project.cards.filter((c) => c.packedRecordIds?.length && schemaForCard($project, c)?.id === schema.id)
-      : [];
-    const packedIds = new Set(packed.flatMap((c) => c.packedRecordIds ?? []));
+    const packed = $project.cards.filter((c) => c.recordId && recs.some((r) => r.id === c.recordId));
+    const packedIds = new Set(packed.map((c) => c.recordId));
     const autoRecs = recs.filter((r) => !packedIds.has(r.id));
-    const autoChunks = chunkRecords(autoRecs, cardsPerPage(template.layout));
     const paper = getPaperPx(template.size || $project.settings.paperSize, template.orientation || $project.settings.orientation);
     const scale = Math.min(1, THUMB_W / paper.w);
-    return { schema, template, compound, recs, packed, autoChunks, paper, scale };
+    return { schema, template, recs, packed, autoRecs, paper, scale };
   }));
 
   const totalRecords = $derived($project.records.length);
@@ -43,18 +40,14 @@
     const s = v && typeof v === 'object' ? (v[$project.activeLocale] ?? '') : (typeof v === 'string' ? v : '');
     return s.trim() || '(untitled)';
   }
-  function caption(chunk: RecordItem[], schema: Schema): string {
-    const first = recLabel(chunk[0], schema);
-    return chunk.length > 1 ? `${first} +${chunk.length - 1}` : first;
+  function caption(rec: RecordItem, schema: Schema): string {
+    return recLabel(rec, schema);
   }
   function packedCaption(card: Card): string {
-    const n = card.packedRecordIds?.length ?? 0;
-    // Compound-card section labels come from recordsToCard as plain (already-resolved) strings.
-    const first = (card.sections?.[0]?.label as string) ?? '';
-    return (first.trim() || 'Card') + (n > 1 ? ` +${n - 1}` : '');
+    return (card.title as string)?.trim?.() || 'Card';
   }
-  function autoHtml(chunk: RecordItem[], schema: Schema, template: CardTemplate): string {
-    return buildCardHTML(recordsToCard(chunk, schema, template, $project.settings, $project.activeLocale),
+  function autoHtml(rec: RecordItem, schema: Schema, template: CardTemplate): string {
+    return buildCardHTML(recordToCard(rec, schema, template, $project.settings, $project.activeLocale),
                          $project.settings, $project.activeLocale);
   }
   function packedHtml(card: Card): string {
@@ -84,15 +77,15 @@
       <section class="group">
         <header class="group-head">
           <span class="group-name">{g.schema.name}</span>
-          <span class="count">{g.packed.length + g.autoChunks.length} card{g.packed.length + g.autoChunks.length === 1 ? '' : 's'}</span>
-          {#if g.compound && g.recs.length > 0}
+          <span class="count">{g.packed.length + g.autoRecs.length} card{g.packed.length + g.autoRecs.length === 1 ? '' : 's'}</span>
+          {#if g.recs.length > 0}
             <button type="button" class="pack-all" onclick={() => packAllForSchema(g.schema.id)}>
               <Package size={13} /> Pack all
             </button>
           {/if}
         </header>
 
-        {#if g.packed.length === 0 && g.autoChunks.length === 0}
+        {#if g.packed.length === 0 && g.autoRecs.length === 0}
           <p class="hint">No records in this schema yet.</p>
         {:else}
           <div class="grid">
@@ -102,7 +95,7 @@
               {@const edited = !!card.edited}
               <div class="thumb packed">
                 <button type="button" class="thumb-open" title={packedCaption(card)}
-                  onclick={() => card.packedRecordIds?.[0] && onOpen(card.packedRecordIds[0])}>
+                  onclick={() => card.recordId && onOpen(card.recordId)}>
                   <div class="thumb-frame" style={`width:${Math.round(g.paper.w * g.scale)}px;height:${Math.round(g.paper.h * g.scale)}px;`}>
                     <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.paper.w}px;height:${g.paper.h}px;`}>
                       {@html packedHtml(card)}
@@ -126,15 +119,15 @@
                 </div>
               </div>
             {/each}
-            <!-- Auto-derived cards for records not in any packed card -->
-            {#each g.autoChunks as chunk (chunk[0].id)}
-              <button type="button" class="thumb auto" title={caption(chunk, g.schema)} onclick={() => onOpen(chunk[0].id)}>
+            <!-- Auto-derived cards for records not yet packed -->
+            {#each g.autoRecs as rec (rec.id)}
+              <button type="button" class="thumb auto" title={caption(rec, g.schema)} onclick={() => onOpen(rec.id)}>
                 <div class="thumb-frame" style={`width:${Math.round(g.paper.w * g.scale)}px;height:${Math.round(g.paper.h * g.scale)}px;`}>
                   <div class="thumb-scaler" style={`transform:scale(${g.scale});width:${g.paper.w}px;height:${g.paper.h}px;`}>
-                    {@html autoHtml(chunk, g.schema, g.template)}
+                    {@html autoHtml(rec, g.schema, g.template)}
                   </div>
                 </div>
-                <span class="thumb-cap">{caption(chunk, g.schema)}</span>
+                <span class="thumb-cap">{caption(rec, g.schema)}</span>
               </button>
             {/each}
           </div>

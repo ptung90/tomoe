@@ -1,3 +1,5 @@
+import { LAYOUT_IDS } from './lib/layouts';
+
 export type Locale = string;
 export type LocalizedText = string | Record<Locale, string>;
 export interface FontSpec { family: string; size: number; weight?: number; color: string; lineHeight: number; textAlign?: string }
@@ -34,6 +36,24 @@ export function newProject(): Project {
   return { version: 1, projectName: 'Untitled', projectIcon: '🗂️', settings: structuredClone(DEFAULT_SETTINGS), schemas: [], records: [], cards: [], locales: ['en','vi'], activeLocale: 'en' };
 }
 export function serializeProject(p: Project): string { return JSON.stringify(p, null, 2) + '\n'; }
+
+// ── Migration: removed compound/3card layouts → single-card + cardsPerPage ──
+const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number }> = {
+  '3card':     { layout: '1top-1bot', cardsPerPage: 3 },
+  '2img-2txt': { layout: '1top-1bot', cardsPerPage: 2 },
+  '3img-3txt': { layout: '1top-1bot', cardsPerPage: 3 },
+  'img3-txt3': { layout: '1top-1bot', cardsPerPage: 3 },
+  '6cell':     { layout: '1top-1bot', cardsPerPage: 6 },
+  '8img-8txt': { layout: '1top-1bot', cardsPerPage: 8 },
+  'txtgrid':   { layout: 'fulltext',  cardsPerPage: 12 },
+};
+function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
+  const m = COMPOUND_MIGRATION[t?.layout];
+  if (m) return { ...t, layout: m.layout, cardsPerPage: t.cardsPerPage ?? m.cardsPerPage };
+  if (!LAYOUT_IDS.includes(t?.layout)) return { ...t, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
+  return t;
+}
+
 export function parseProject(text: string): Project {
   const raw = JSON.parse(text) as any; const base = newProject();
   const s = raw.settings || {};
@@ -43,11 +63,13 @@ export function parseProject(text: string): Project {
     titleFont: { ...base.settings.titleFont, ...(s.titleFont||{}) },
     contentFont: { ...base.settings.contentFont, ...(s.contentFont||{}) } };
 
-  const normSchema = (sc: any): Schema => ({
-    ...sc, id: sc.id || uid('sch'), name: sc.name || 'Records',
-    fields: Array.isArray(sc.fields) ? sc.fields : [],
-    cardTemplates: Array.isArray(sc.cardTemplates) ? sc.cardTemplates : [],
-  });
+  const normSchema = (sc: any): Schema => {
+    const fields = Array.isArray(sc.fields) ? sc.fields : [];
+    const schemaHasImage = fields.some((f: SchemaField) => f.type === 'image');
+    const cardTemplates = (Array.isArray(sc.cardTemplates) ? sc.cardTemplates : [])
+      .map((t: any) => migrateTemplate(t, schemaHasImage));
+    return { ...sc, id: sc.id || uid('sch'), name: sc.name || 'Records', fields, cardTemplates };
+  };
   // Legacy flashcard-creator single-schema files use `schema` (object) instead of `schemas`.
   let schemas: Schema[];
   const rawRecords: any[] = Array.isArray(raw.records) ? raw.records : [];
@@ -64,10 +86,16 @@ export function parseProject(text: string): Project {
     fields: r.fields ?? {},
   }));
 
+  // Drop persisted compound card snapshots (packedRecordIds) — one Card = one record now.
+  // Remap any surviving card's layout that referenced a removed compound layout.
+  const cards: Card[] = (Array.isArray(raw.cards) ? raw.cards : [])
+    .filter((c: any) => !(c.packedRecordIds?.length))
+    .map((c: any) => (COMPOUND_MIGRATION[c.layout] ? { ...c, layout: COMPOUND_MIGRATION[c.layout].layout } : c));
+
   return { version: typeof raw.version==='number'?raw.version:1,
     projectName: raw.projectName ?? raw.project_name ?? base.projectName,
     projectIcon: raw.projectIcon ?? raw.project_icon ?? base.projectIcon,
-    settings, schemas, records, cards: Array.isArray(raw.cards) ? raw.cards : [],
+    settings, schemas, records, cards,
     locales: raw.locales ?? base.locales, activeLocale: raw.activeLocale ?? base.activeLocale };
 }
 export function looksLikeFlashcards(text: string): boolean {

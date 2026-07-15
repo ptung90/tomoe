@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getPaperPx, mmToPx, esc, resolveLocale, LAYOUTS, LAYOUT_SLOTS } from '../src/lib/modules/flashcards/lib/card-render';
+import { getPaperPx, mmToPx, esc, resolveLocale } from '../src/lib/modules/flashcards/lib/card-render';
 import { buildCardHTML } from '../src/lib/modules/flashcards/lib/card-render';
+import { LAYOUT_SLOTS } from '../src/lib/modules/flashcards/lib/layouts';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
 
 describe('card-render helpers', () => {
@@ -21,8 +22,7 @@ describe('card-render helpers', () => {
     expect(resolveLocale('plain', 'en')).toBe('plain');
     expect(resolveLocale(undefined, 'en')).toBe('');
   });
-  it('registries expose the 7 in-scope layouts', () => {
-    expect(LAYOUTS).toEqual(['fulltext','fullimage','2x2','1top-1bot','1top-2bot','2top-1bot','3card']);
+  it('registries expose slot counts for the single-card layouts', () => {
     expect(LAYOUT_SLOTS['2x2']).toBe(4);
     expect(LAYOUT_SLOTS['fulltext']).toBe(0);
   });
@@ -73,30 +73,5 @@ describe('buildCardHTML grid/fulltext/fullimage', () => {
   it('forPrint renders empty image slots without the placeholder glyph', () => {
     const html = buildCardHTML(card({ layout: '2x2' }), DEFAULT_SETTINGS, 'en', true);
     expect(html).not.toContain('📷');
-  });
-});
-
-describe('buildCardHTML 3card', () => {
-  it('renders a 3-column card with per-column titles, content, and images', () => {
-    const html = buildCardHTML(card({
-      layout: '3card',
-      images: [{ slot: 0, url: 'http://x/0.png' }, { slot: 1, url: 'http://x/1.png' }],
-      sections: [
-        { id: 's0', label: 'One', content: 'first' },
-        { id: 's1', label: 'Two', content: 'second' },
-        { id: 's2', label: 'Three', content: 'third' },
-      ],
-    }), DEFAULT_SETTINGS, 'en');
-    expect(html).toContain('data-layout="3card"');
-    expect(html).toContain('fc-image-slot-0');
-    expect(html).toContain('fc-image-slot-2');
-    expect(html).toContain('http://x/0.png');
-    expect(html).toContain('first');
-    expect(html).toContain('third');
-    // Guard the compound path: the default grid/fulltext/fullimage branches
-    // always emit a `<div class="fc-text-area">`; build_3card (via
-    // renderCompoundShell) does NOT, and lays out a 3-column grid.
-    expect(html).not.toContain('fc-text-area');
-    expect(html).toContain('repeat(3');
   });
 });

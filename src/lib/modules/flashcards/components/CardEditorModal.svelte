@@ -6,11 +6,8 @@
   import ImageField from './ImageField.svelte';
 
   const card = $derived($project.cards.find((c) => c.id === $cardEditorOpen) ?? null);
-  // Only cells backed by a real record are editable. For packed (compound) cards this is
-  // packedRecordIds.length; sections may be padded to the layout's full slot count (e.g. a
-  // 3card built from 1 record still has 3 sections), so falling back to sections.length would
-  // expose ghost cells that applyCardToRecords silently skips (no record to write back to).
-  const cellCount = $derived(card ? (card.packedRecordIds?.length ?? card.sections.length) : 0);
+  // One Card = one record: every card's cells are backed by its source record's fields.
+  const cellCount = $derived(card ? card.sections.length : 0);
 
   const debounced = keyedDebounce(
     (cardId: string, i: number, patch: { label?: string; content?: string }) => setCardCell(cardId, i, patch),
