@@ -17,6 +17,8 @@
   import MoveVertical from 'lucide-svelte/icons/move-vertical';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
   import X from 'lucide-svelte/icons/x';
+  import Eye from 'lucide-svelte/icons/eye';
+  import EyeOff from 'lucide-svelte/icons/eye-off';
   import Globe from 'lucide-svelte/icons/globe';
   import Layers from 'lucide-svelte/icons/layers';
   import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
@@ -117,11 +119,12 @@
     if (schema && template) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true }, template.id);
   }
   // Fields: show/hide the card title (first text field) and the "• label:" prefix on each field.
-  function onShowTitle(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { hideTitle: !(e.target as HTMLInputElement).checked }, template.id);
+  // These are visibility toggles for the whole card — distinct from the per-view field checklist below.
+  function toggleTitle() {
+    if (schema && template) setTemplateLayout(schema.id, { hideTitle: !template.hideTitle }, template.id);
   }
-  function onShowLabels(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { hideSectionLabels: !(e.target as HTMLInputElement).checked }, template.id);
+  function toggleLabels() {
+    if (schema && template) setTemplateLayout(schema.id, { hideSectionLabels: !template.hideSectionLabels }, template.id);
   }
   // Field checklist (per view): empty template.fields == "all fields" (matches recordToCard);
   // toggling starts from that implicit full set, then adds/removes explicitly.
@@ -249,17 +252,24 @@
         {/if}
       </div>
     {:else}
-      <div class="toolbar">
-        <label class="tool" title="Show the card title (the record's first text field)">
-          <input type="checkbox" aria-label="Show title" checked={!template?.hideTitle} disabled={!schema} onchange={onShowTitle} /> Title
-        </label>
-        <label class="tool" title="Show the “• label:” prefix before each field's value">
-          <input type="checkbox" aria-label="Show field labels" checked={!template?.hideSectionLabels} disabled={!schema} onchange={onShowLabels} /> Labels
-        </label>
+      <div class="display-group" role="group" aria-label="Show on card">
+        <span class="group-label">Show on card</span>
+        <div class="toolbar">
+          <button type="button" class="eye-toggle" class:off={template?.hideTitle} aria-label="Show title"
+            aria-pressed={!template?.hideTitle} disabled={!schema}
+            title="Show the card title (the record's first text field)" onclick={toggleTitle}>
+            {#if template?.hideTitle}<EyeOff size={13} />{:else}<Eye size={13} />{/if} Title
+          </button>
+          <button type="button" class="eye-toggle" class:off={template?.hideSectionLabels} aria-label="Show field labels"
+            aria-pressed={!template?.hideSectionLabels} disabled={!schema}
+            title="Show the “• label:” prefix before each field's value" onclick={toggleLabels}>
+            {#if template?.hideSectionLabels}<EyeOff size={13} />{:else}<Eye size={13} />{/if} Labels
+          </button>
+        </div>
       </div>
       {#if schema}
         <div class="field-checklist" role="group" aria-label="Fields in this view">
-          <span class="field-checklist-label">Fields in this view</span>
+          <span class="group-label">Fields in this view</span>
           <div class="toolbar">
             {#each schema.fields as f (f.key)}
               <label class="tool">
@@ -380,9 +390,21 @@
   .reset-all:disabled { opacity:.38; cursor:not-allowed; }
   .reset-all:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 
-  .field-checklist { padding:8px 10px 0; border-top:1px solid var(--border); margin-top:8px; }
-  .field-checklist-label { display:block; font-size:10px; font-weight:700; letter-spacing:.06em;
+  /* Shared small section heading (Show on card / Fields in this view). */
+  .group-label { display:block; font-size:10px; font-weight:700; letter-spacing:.06em;
     text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  /* "Show on card" — visibility toggles (eye chips): a different shape/affordance from the
+     field-selection checkboxes below, so the two groups aren't confused. */
+  .display-group { padding-bottom:2px; }
+  .eye-toggle { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--accent); border-radius:999px;
+    background:var(--accent-weak); color:var(--accent); font:inherit; font-size:12px; padding:3px 11px; cursor:pointer;
+    transition:background .12s ease, color .12s ease, border-color .12s ease, opacity .12s ease; }
+  .eye-toggle:hover:not(:disabled) { background:var(--accent); color:#fff; }
+  .eye-toggle.off { border-color:var(--border); background:var(--bg); color:var(--text-muted); }
+  .eye-toggle.off:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:var(--accent-weak); }
+  .eye-toggle:disabled { opacity:.38; cursor:not-allowed; }
+  .eye-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .field-checklist { padding:8px 10px 0; border-top:1px solid var(--border); margin-top:8px; }
 
   /* Reset-to-inherited — shown next to a group's controls once this scope has its own override.
      Accent-tinted so "set here" groups are visually distinct from inherited ones. */

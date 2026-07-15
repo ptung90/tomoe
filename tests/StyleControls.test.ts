@@ -93,8 +93,9 @@ describe('StyleControls (tabbed)', () => {
     S.addRecord(sid); // selects it → the schema's template exists
     render(StyleControls);
     await tab('Fields');
-    await fireEvent.change(screen.getByLabelText('Show field labels'), { target: { checked: false } });
-    await fireEvent.change(screen.getByLabelText('Show title'), { target: { checked: false } });
+    // "Show on card" toggles are eye chips (buttons), visually distinct from the field checklist.
+    await fireEvent.click(screen.getByRole('button', { name: 'Show field labels' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Show title' }));
     const tpl = get(S.project).schemas[0].cardTemplates[0];
     expect(tpl.hideSectionLabels).toBe(true);
     expect(tpl.hideTitle).toBe(true);
