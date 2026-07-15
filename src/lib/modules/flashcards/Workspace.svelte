@@ -10,11 +10,18 @@
   import PrintView from './components/PrintView.svelte';
   import { collectPrintCards } from './lib/printCards';
   import Printer from 'lucide-svelte/icons/printer';
+  import PanelLeft from 'lucide-svelte/icons/panel-left';
+  import PanelRight from 'lucide-svelte/icons/panel-right';
 
   let leftWidth = $state(300);
   let rightWidth = $state(440);
+  let leftHidden = $state(false);
+  let rightHidden = $state(false);
   let view = $state<'records' | 'cards'>('records');
   const printCount = $derived(collectPrintCards($project).length);
+  const cols = $derived(
+    `${leftHidden ? 0 : leftWidth}px ${leftHidden ? 0 : 6}px 1fr ${rightHidden ? 0 : 6}px ${rightHidden ? 0 : rightWidth}px`,
+  );
 </script>
 
 <div class="workspace mod-flashcards">
@@ -35,16 +42,29 @@
       <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
         onclick={() => (view = 'cards')}>Cards</button>
     </div>
+    {#if view === 'records'}
+      <div class="panel-toggles" aria-label="panels">
+        <button type="button" class="panel-btn" class:off={leftHidden} aria-pressed={!leftHidden}
+          title={leftHidden ? 'Show left panel' : 'Hide left panel'} onclick={() => (leftHidden = !leftHidden)}>
+          <PanelLeft size={15} />
+        </button>
+        <button type="button" class="panel-btn" class:off={rightHidden} aria-pressed={!rightHidden}
+          title={rightHidden ? 'Show right panel' : 'Hide right panel'} onclick={() => (rightHidden = !rightHidden)}>
+          <PanelRight size={15} />
+        </button>
+      </div>
+    {/if}
     <button type="button" class="print-btn" disabled={printCount === 0}
       onclick={() => window.print()} title="Print / Export PDF">
       <Printer size={14} /> Print
     </button>
   </header>
   {#if view === 'records'}
-    <div class="body" style={`grid-template-columns:${leftWidth}px 6px 1fr 6px ${rightWidth}px`}>
-      <div class="left"><SchemaRecordList /></div>
+    <div class="body" style={`grid-template-columns:${cols}`}>
+      <div class="left">{#if !leftHidden}<SchemaRecordList />{/if}</div>
       <div
         class="divider divider-x"
+        class:hidden={leftHidden}
         role="separator"
         aria-orientation="vertical"
         aria-label="resize sidebar"
@@ -53,12 +73,13 @@
       <div class="right"><RecordDetail /></div>
       <div
         class="divider divider-x"
+        class:hidden={rightHidden}
         role="separator"
         aria-orientation="vertical"
         aria-label="resize preview"
         use:dragX={(dx) => (rightWidth = Math.max(240, Math.min(720, rightWidth - dx)))}
       ></div>
-      <div class="preview-pane"><CardPreview /></div>
+      <div class="preview-pane">{#if !rightHidden}<CardPreview />{/if}</div>
     </div>
   {:else}
     <div class="cards-body"><CardGallery onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
@@ -83,6 +104,12 @@
   .view-toggle button:hover:not(.on) { color:var(--accent); }
   .view-toggle button.on { background:var(--accent); color:#fff; font-weight:600; }
   .view-toggle button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .panel-toggles { display:inline-flex; gap:2px; }
+  .panel-btn { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
+    color:var(--text); border-radius:6px; padding:4px 7px; cursor:pointer; transition:background .12s ease, color .12s ease; }
+  .panel-btn:hover { background:var(--accent-weak); color:var(--accent); }
+  .panel-btn.off { color:var(--text-muted); }
+  .panel-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .print-btn { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
     background:transparent; color:var(--text); border-radius:6px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer;
     transition:background .12s ease, color .12s ease; }
@@ -104,4 +131,6 @@
     background:var(--border); transition:background .12s ease, width .12s ease;
   }
   .divider:hover::after, .divider:active::after { background:var(--accent); width:3px; }
+  .divider.hidden { pointer-events:none; }
+  .divider.hidden::before, .divider.hidden::after { display:none; }
 </style>

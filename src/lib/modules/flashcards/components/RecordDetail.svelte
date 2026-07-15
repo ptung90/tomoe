@@ -2,14 +2,19 @@
   import Copy from 'lucide-svelte/icons/copy';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import SquarePen from 'lucide-svelte/icons/square-pen';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import { confirm } from '@tauri-apps/plugin-dialog';
-  import { project, selectedRecordId, setField, deleteRecord, duplicateRecord } from '../stores';
+  import { project, selectedRecordId, setField, deleteRecord, duplicateRecord, selectAdjacentRecord } from '../stores';
   import { keyedDebounce } from '../../../debounce';
   import RecordField from './RecordField.svelte';
   import EmptyState from './EmptyState.svelte';
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
+  // Sibling records (same schema, list order) for Prev/Next navigation.
+  const siblings = $derived(record ? $project.records.filter((r) => r.schemaId === record.schemaId) : []);
+  const idx = $derived(record ? siblings.findIndex((r) => r.id === record.id) : -1);
 
   const debounced = keyedDebounce(
     (rid: string, key: string, val: string, locale?: string) => setField(rid, key, val, locale),
@@ -39,11 +44,23 @@
     debounced.flushAll();
     duplicateRecord(record.id);
   }
+
+  function goto(delta: number) {
+    debounced.flushAll();
+    selectAdjacentRecord(delta);
+  }
 </script>
 
 {#if record && schema}
   <div class="detail">
     <header class="detail-header">
+      <div class="nav">
+        <button type="button" class="icon" aria-label="previous record" title="Previous record"
+          disabled={idx <= 0} onclick={() => goto(-1)}><ChevronLeft size={16} /></button>
+        <span class="pos">{idx + 1}/{siblings.length}</span>
+        <button type="button" class="icon" aria-label="next record" title="Next record"
+          disabled={idx < 0 || idx >= siblings.length - 1} onclick={() => goto(1)}><ChevronRight size={16} /></button>
+      </div>
       <span class="detail-title">Edit record</span>
       <div class="actions">
         <button type="button" onclick={onDuplicate} title="Duplicate record">
@@ -79,6 +96,13 @@
   .detail-header { display:flex; align-items:center; justify-content:space-between;
     padding:10px 14px; border-bottom:1px solid var(--border); background:var(--surface); }
   .detail-title { font-weight:600; }
+  .nav { display:flex; align-items:center; gap:4px; }
+  .nav .icon { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
+    color:var(--text); border-radius:6px; padding:4px; cursor:pointer; transition:background .12s ease, color .12s ease; }
+  .nav .icon:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
+  .nav .icon:disabled { opacity:.4; cursor:default; }
+  .nav .icon:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .pos { font-size:11px; color:var(--text-muted); min-width:34px; text-align:center; }
   .actions { display:flex; gap:6px; }
   .actions button { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
     background:transparent; color:var(--text); border-radius:6px; padding:4px 9px; font:inherit;
