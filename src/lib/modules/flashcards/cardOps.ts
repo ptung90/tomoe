@@ -102,7 +102,7 @@ export function applyCardToRecords(project: Project, cardId: string): Project {
   // The card only captures images up to its template's layout slot count (see recordToCard).
   // Image fields beyond that were never shown/edited on the card — don't wipe them on apply.
   const template = schema.cardTemplates[0] ?? deriveAutoTemplate(schema);
-  const capturedImageSlots = LAYOUT_SLOTS[template.layout] ?? 0;
+  const capturedImageSlots = LAYOUT_SLOTS[card.layout] ?? LAYOUT_SLOTS[template.layout] ?? imageFields.length;
 
   const write = (fields: Record<string, unknown>, key: string | undefined, value: string) => {
     if (!key) return;
