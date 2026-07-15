@@ -1,6 +1,6 @@
 import { uid, type Project, type Card, type Schema, type CardTemplate, type CardSection, type CardImage } from './model';
 import { deriveAutoTemplate, recordToCard, activeFieldsFor } from './cardMapping';
-import { hashFields } from './lib/hash';
+import { hashCardSource } from './lib/hash';
 import { LAYOUT_SLOTS } from './lib/layouts';
 
 /** A schema's views, in order — its real cardTemplates, or a single derived one if it has none yet. */
@@ -42,7 +42,7 @@ export function packRecords(project: Project, schemaId: string, recordIds: strin
     for (const id of idOrder) {
       const rec = project.records.find((r) => r.id === id)!;
       const built = recordToCard(rec, schema, template, project.settings, project.activeLocale);
-      newCards.push({ ...built, id: uid('card'), recordId: id, templateId: template.id, sourceHash: hashFields(project, [id]) });
+      newCards.push({ ...built, id: uid('card'), recordId: id, templateId: template.id, sourceHash: hashCardSource(project, id, template) });
     }
   }
 
@@ -64,7 +64,7 @@ export function regenerateCard(project: Project, cardId: string): Project {
   const rec = project.records.find((r) => r.id === card.recordId);
   if (!rec) return project;
   const rebuilt = recordToCard(rec, schema, template, project.settings, project.activeLocale);
-  const next: Card = { ...rebuilt, id: card.id, templateId: template.id, sourceHash: hashFields(project, [card.recordId]), edited: false };
+  const next: Card = { ...rebuilt, id: card.id, templateId: template.id, sourceHash: hashCardSource(project, card.recordId, template), edited: false };
   return { ...project, cards: project.cards.map((c) => (c.id === cardId ? next : c)) };
 }
 
@@ -74,7 +74,9 @@ export function deleteCard(project: Project, cardId: string): Project {
 
 export function isCardStale(card: Card, project: Project): boolean {
   if (!card.recordId) return false;
-  return hashFields(project, [card.recordId]) !== card.sourceHash;
+  const schema = schemaForCard(project, card);
+  const template = templateForCard(project, card) ?? (schema ? deriveAutoTemplate(schema) : null);
+  return hashCardSource(project, card.recordId, template) !== card.sourceHash;
 }
 
 function asStr(v: unknown): string { return typeof v === 'string' ? v : ''; }
@@ -144,6 +146,6 @@ export function applyCardToRecords(project: Project, cardId: string): Project {
   });
 
   const updated = { ...project, records };
-  const restamped: Card = { ...card, sourceHash: hashFields(updated, [recordId]), edited: false };
+  const restamped: Card = { ...card, sourceHash: hashCardSource(updated, recordId, template), edited: false };
   return { ...updated, cards: project.cards.map((c) => (c.id === cardId ? restamped : c)) };
 }

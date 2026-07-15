@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, serializeProject, parseProject, type Project, type Schema } from '../src/lib/modules/flashcards/model';
 import * as ops from '../src/lib/modules/flashcards/cardOps';
+import * as cardMapping from '../src/lib/modules/flashcards/cardMapping';
 
 function proj(layout = '1top-1bot', n = 3): Project {
   const p = newProject();
@@ -140,6 +141,42 @@ describe('isCardStale / regenerateCard', () => {
     const card0 = p.cards.find((c) => c.recordId === 'r0')!;
     p = { ...p, records: p.records.filter((r) => r.id !== 'r0') };
     expect(ops.isCardStale(p.cards.find((c) => c.id === card0.id)!, p)).toBe(true);
+  });
+});
+
+describe('isCardStale — depends on the packing view too (fields/layout), not just record fields', () => {
+  it('a freshly packed card is not stale', () => {
+    const p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
+    const card = p.cards.find((c) => c.recordId === 'r0')!;
+    expect(ops.isCardStale(card, p)).toBe(false);
+  });
+  it('changing the view\'s field selection (setViewFields) marks its packed cards stale', () => {
+    let p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
+    const card = p.cards.find((c) => c.recordId === 'r0')!;
+    p = cardMapping.setViewFields(p, 's1', 't1', ['def']); // was all fields -> now just "def"
+    expect(ops.isCardStale(p.cards.find((c) => c.id === card.id)!, p)).toBe(true);
+  });
+  it('changing the view\'s layout marks its packed cards stale', () => {
+    let p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
+    const card = p.cards.find((c) => c.recordId === 'r0')!;
+    p = { ...p, schemas: p.schemas.map((s) => s.id === 's1'
+      ? { ...s, cardTemplates: s.cardTemplates.map((t) => t.id === 't1' ? { ...t, layout: 'fulltext' } : t) }
+      : s) };
+    expect(ops.isCardStale(p.cards.find((c) => c.id === card.id)!, p)).toBe(true);
+  });
+  it('a record-field edit still marks the card stale (existing behavior preserved)', () => {
+    let p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
+    const card = p.cards.find((c) => c.recordId === 'r0')!;
+    p = { ...p, records: p.records.map((r) => r.id === 'r0' ? { ...r, fields: { ...r.fields, title: { en: 'CHANGED', vi: '' } } } : r) };
+    expect(ops.isCardStale(p.cards.find((c) => c.id === card.id)!, p)).toBe(true);
+  });
+  it('regenerating after a view-fields change re-syncs the card', () => {
+    let p = ops.packAllForSchema(proj('1top-1bot', 3), 's1');
+    const card = p.cards.find((c) => c.recordId === 'r0')!;
+    p = cardMapping.setViewFields(p, 's1', 't1', ['def']);
+    expect(ops.isCardStale(p.cards.find((c) => c.id === card.id)!, p)).toBe(true);
+    p = ops.regenerateCard(p, card.id);
+    expect(ops.isCardStale(p.cards.find((c) => c.id === card.id)!, p)).toBe(false);
   });
 });
 
