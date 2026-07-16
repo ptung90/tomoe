@@ -2,6 +2,8 @@ import { marked } from 'marked';
 import type { Card, Settings, CardSection, CardImage, FontSpec, LocalizedText } from '../model';
 import { LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS } from './layouts';
 import { resolveStyle } from './style';
+import { isFlowLayout, getFlowLayout } from './flow-layouts';
+import { buildFlowCardHTML } from './flow-render';
 
 // Re-exported for existing importers (registry now lives in `./layouts`).
 export { LAYOUTS, LAYOUT_IDS, LAYOUT_SLOTS, LAYOUT_SPLIT_DEFAULTS, HIDE_TITLE_LAYOUTS } from './layouts';
@@ -158,6 +160,9 @@ function _scopeCardCss(css: string, cardId: string): string {
 }
 
 export function buildCardHTML(card: Card, settings: Settings, locale: string, forPrint = false, overridePx: { w: number; h: number } | null = null): string {
+  if (isFlowLayout(card.layout)) {
+    return buildFlowCardHTML(card, settings, locale, getFlowLayout(card.layout)!, forPrint, overridePx);
+  }
   const s = settings;
   const { w, h } = overridePx || getPaperPx(s.paperSize, card.orientation || s.orientation);
   const marginPx = mmToPx(s.margin);

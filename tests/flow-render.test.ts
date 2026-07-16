@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildFlowCardHTML, fitFlowScale } from '../src/lib/modules/flashcards/lib/flow-render';
 import { getFlowLayout } from '../src/lib/modules/flashcards/lib/flow-layouts';
+import { buildCardHTML } from '../src/lib/modules/flashcards/lib/card-render';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
 
 const page: Card = { id: 'c1', layout: 'country-page', imageHeightPercent: 50,
@@ -48,4 +49,17 @@ describe('fitFlowScale', () => {
   it('returns 1 when content fits', () => { expect(fitFlowScale(500, 800)).toBe(1); });
   it('shrinks proportionally when content overflows', () => { expect(fitFlowScale(1600, 800)).toBeCloseTo(0.5); });
   it('never shrinks below 0.5', () => { expect(fitFlowScale(4000, 800)).toBe(0.5); });
+});
+describe('buildCardHTML dispatch', () => {
+  it('routes a flow layout to the flow renderer', () => {
+    const html = buildCardHTML(cover, DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('fc-flow-collage');
+  });
+  it('still renders a grid layout the old way', () => {
+    const grid: Card = { id: 'g', layout: 'fulltext', imageHeightPercent: 50, images: [], title: 'T',
+      sections: [{ id: 's', label: 'L', content: 'body' }] };
+    const html = buildCardHTML(grid, DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('fc-card');
+    expect(html).not.toContain('fc-flow');
+  });
 });
