@@ -19,6 +19,14 @@ export interface RgbaImage {
   height: number;
 }
 
+/** An axis-aligned rectangle in pixel coordinates. */
+export interface Bounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /**
  * Straight-line (Euclidean) distance between two RGB colours: `sqrt(dr^2 + dg^2 + db^2)`.
  * Range is `0` (identical) to `sqrt(3 * 255^2) ~= 441.67` (opposite cube corners). The eraser's
@@ -74,4 +82,28 @@ export function removeSolidBackground(img: RgbaImage, target: Rgb, tolerance: nu
     if (d <= tolerance) out[i + 3] = 0;
   }
   return { data: out, width: img.width, height: img.height };
+}
+
+/**
+ * The tight bounding box of every pixel whose alpha is STRICTLY greater than `alphaThreshold`
+ * (default 0 — any non-fully-transparent pixel counts as content). Returns `null` when no such
+ * pixel exists (a fully transparent / empty image). This drives the "Trim" tool, which crops the
+ * transparent border left after background removal down to the visible subject. Pure — does not
+ * mutate `img`.
+ */
+export function contentBounds(img: RgbaImage, alphaThreshold = 0): Bounds | null {
+  const { data, width, height } = img;
+  let minX = width, minY = height, maxX = -1, maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] > alphaThreshold) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null; // no content pixel found
+  return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }

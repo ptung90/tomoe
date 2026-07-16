@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { colorDistance, pickCornerColor, removeSolidBackground, type RgbaImage } from '../src/lib/modules/flashcards/lib/imageEdit';
+import { colorDistance, pickCornerColor, removeSolidBackground, contentBounds, type RgbaImage } from '../src/lib/modules/flashcards/lib/imageEdit';
 
 function makeImage(width: number, height: number, fill: [number, number, number, number]): RgbaImage {
   const data = new Uint8ClampedArray(width * height * 4);
@@ -70,5 +70,37 @@ describe('removeSolidBackground', () => {
     expect(out.data).not.toBe(img.data);   // new buffer
     expect(alphaAt(img, 0, 0)).toBe(255);  // input alpha unchanged
     expect(alphaAt(out, 0, 0)).toBe(0);    // output alpha zeroed
+  });
+});
+
+describe('contentBounds', () => {
+  it('returns the full rect for a fully opaque image', () => {
+    const img = makeImage(4, 3, [10, 20, 30, 255]);
+    expect(contentBounds(img)).toEqual({ x: 0, y: 0, width: 4, height: 3 });
+  });
+  it('returns null for a fully transparent image', () => {
+    const img = makeImage(4, 3, [0, 0, 0, 0]);
+    expect(contentBounds(img)).toBeNull();
+  });
+  it('tightly bounds a lone opaque region inside a transparent field', () => {
+    // 5x5 transparent; opaque 2x2 block at (1,2)..(2,3).
+    const img = makeImage(5, 5, [0, 0, 0, 0]);
+    setPixel(img, 1, 2, [255, 0, 0, 255]);
+    setPixel(img, 2, 2, [255, 0, 0, 255]);
+    setPixel(img, 1, 3, [255, 0, 0, 255]);
+    setPixel(img, 2, 3, [255, 0, 0, 255]);
+    expect(contentBounds(img)).toEqual({ x: 1, y: 2, width: 2, height: 2 });
+  });
+  it('bounds a single opaque pixel to a 1x1 rect', () => {
+    const img = makeImage(3, 3, [0, 0, 0, 0]);
+    setPixel(img, 2, 0, [9, 9, 9, 255]);
+    expect(contentBounds(img)).toEqual({ x: 2, y: 0, width: 1, height: 1 });
+  });
+  it('treats alpha exactly at the threshold as NOT content (strictly greater)', () => {
+    // one pixel at alpha 10; threshold 10 excludes it -> null, threshold 9 includes it.
+    const img = makeImage(2, 2, [0, 0, 0, 0]);
+    setPixel(img, 0, 0, [1, 2, 3, 10]);
+    expect(contentBounds(img, 10)).toBeNull();
+    expect(contentBounds(img, 9)).toEqual({ x: 0, y: 0, width: 1, height: 1 });
   });
 });

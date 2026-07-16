@@ -10,9 +10,10 @@
   import WandSparkles from 'lucide-svelte/icons/wand-sparkles';
   import Undo2 from 'lucide-svelte/icons/undo-2';
   import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
+  import Scissors from 'lucide-svelte/icons/scissors';
   import ZoomIn from 'lucide-svelte/icons/zoom-in';
   import ZoomOut from 'lucide-svelte/icons/zoom-out';
-  import { pickCornerColor, removeSolidBackground } from '../lib/imageEdit';
+  import { pickCornerColor, removeSolidBackground, contentBounds } from '../lib/imageEdit';
   import { clampZoom } from '../lib/zoom';
   import { showToast } from '../../../shell';
 
@@ -58,7 +59,13 @@
   let eyedropper = $state(false);
   let brushSize = $state(40);
   let zoom = $state(1);
-  let undoStack = $state<ImageData[]>([]);
+  // Each undo entry snapshots the pixels AND the canvas's origin within the pristine image, so
+  // Undo restores size + restore-brush alignment after a Trim (which shrinks the canvas). See trim().
+  type Snapshot = { img: ImageData; ox: number; oy: number };
+  let undoStack = $state<Snapshot[]>([]);
+  // Top-left of the current (possibly trimmed) canvas within the pristine `original`/`origCanvas`.
+  // The restore brush draws `origCanvas` shifted by -offset so it stays aligned after trimming.
+  let offsetX = 0, offsetY = 0;
   let drawing = false;
 
   const rgbCss = $derived(`rgb(${target[0]},${target[1]},${target[2]})`);
@@ -93,6 +100,7 @@
     origCanvas.getContext('2d')!.drawImage(cc, 0, 0);
     target = pickCornerColor(original); // auto default chroma target
     undoStack = [];
+    offsetX = 0; offsetY = 0;
     hasErased = false;
     eraseReady = true;
     pendingSeed = null;
@@ -112,7 +120,7 @@
 
   function pushUndo(): void {
     if (!work) return;
-    undoStack.push(ctx2d().getImageData(0, 0, work.width, work.height));
+    undoStack.push({ img: ctx2d().getImageData(0, 0, work.width, work.height), ox: offsetX, oy: offsetY });
     if (undoStack.length > UNDO_CAP) undoStack.shift(); // cap memory
   }
 
@@ -146,7 +154,9 @@
       c.save();
       c.globalCompositeOperation = 'source-over';
       c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.clip();
-      c.drawImage(origCanvas, 0, 0);
+      // origCanvas holds the full pristine image; shift by -offset so restored pixels line up
+      // with the current (possibly trimmed) canvas.
+      c.drawImage(origCanvas, -offsetX, -offsetY);
       c.restore();
     }
     hasErased = true;
@@ -178,16 +188,47 @@
     try { work?.releasePointerCapture(e.pointerId); } catch { /* already released */ }
   }
 
+  // Resize `work` to (w,h) if it differs, keeping natW/natH (the displayed size) in sync. Resizing
+  // a canvas clears it, so callers putImageData immediately after.
+  function resizeWork(w: number, h: number): void {
+    if (!work) return;
+    if (work.width !== w || work.height !== h) {
+      work.width = w; work.height = h; natW = w; natH = h;
+    }
+  }
+
   function undo(): void {
     if (!work || !undoStack.length) return;
     const prev = undoStack.pop()!;
-    ctx2d().putImageData(prev, 0, 0);
+    resizeWork(prev.img.width, prev.img.height);
+    ctx2d().putImageData(prev.img, 0, 0);
+    offsetX = prev.ox; offsetY = prev.oy;
   }
   function reset(): void {
     if (!work || !original) return;
+    resizeWork(original.width, original.height);
     ctx2d().putImageData(original, 0, 0);
     undoStack = [];
+    offsetX = 0; offsetY = 0;
     hasErased = false;
+  }
+
+  // Trim: crop the transparent border left after background removal down to the visible subject.
+  function trim(): void {
+    if (!work) return;
+    const c = ctx2d();
+    const cur = c.getImageData(0, 0, work.width, work.height);
+    const b = contentBounds(cur, 0);
+    if (!b || (b.x === 0 && b.y === 0 && b.width === work.width && b.height === work.height)) {
+      showToast('Nothing to trim'); // fully opaque (no border) or fully transparent (no content)
+      return;
+    }
+    pushUndo();
+    const sub = c.getImageData(b.x, b.y, b.width, b.height); // grab before the resize clears the canvas
+    resizeWork(b.width, b.height);
+    ctx2d().putImageData(sub, 0, 0);
+    offsetX += b.x; offsetY += b.y;
+    hasErased = true; // trim changes the image -> Apply outputs PNG, re-crop confirms
   }
 
   const zoomBy = (f: number) => { zoom = clampZoom(zoom * f); };
@@ -243,6 +284,7 @@
         {/if}
         <div class="toolgroup right">
           <button type="button" onclick={undo} title="Undo" disabled={!undoStack.length}><Undo2 size={14} /></button>
+          <button type="button" onclick={trim} title="Trim transparent border"><Scissors size={14} /></button>
           <button type="button" onclick={reset} title="Reset"><RotateCcw size={14} /></button>
           <button type="button" onclick={() => zoomBy(1 / 1.25)} title="Zoom out"><ZoomOut size={14} /></button>
           <button type="button" onclick={() => zoomBy(1.25)} title="Zoom in"><ZoomIn size={14} /></button>
