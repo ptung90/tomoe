@@ -139,10 +139,10 @@ function recordToFlowCard(
       images.push(img);
     } else if (f.type === 'text-long') {
       seenSection = true;
-      sections.push({ id: uid('sec'), label: f.label, content: resolveLocale(record.fields[f.key], locale) });
+      sections.push({ id: uid('sec'), label: resolveLabel(f.label, locale, f.key), content: resolveLocale(record.fields[f.key], locale) });
     } else {
       // short text before any section = meta line; short text after sections is ignored for flow
-      if (!seenSection) meta.push({ label: f.label, value: resolveLocale(record.fields[f.key], locale) });
+      if (!seenSection) meta.push({ label: resolveLabel(f.label, locale, f.key), value: resolveLocale(record.fields[f.key], locale) });
     }
   }
   return { id: 'preview_' + record.id, layout: template.layout, imageHeightPercent: 50,

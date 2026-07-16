@@ -310,6 +310,19 @@ describe('recordToCard — flow layout', () => {
     expect(card.sections[0].image?.url).toBe('halong.png');
     expect(card.sections[1].image?.url).toBe('pho.png');
   });
+  it('page mode: multi-locale field labels resolve to a plain string (meta + section), not the raw {en,vi} object', () => {
+    const schema = countrySchema();
+    schema.fields = schema.fields.map((f) => {
+      if (f.key === 'capital') return { ...f, label: { en: 'Capital', vi: 'Thủ đô' } };
+      if (f.key === 'contentLandscape') return { ...f, label: { en: 'Landscape', vi: 'Phong cảnh' } };
+      return f;
+    });
+    const tpl: CardTemplate = { id: 't1', templateType: 'single', layout: 'country-page', mapping: {},
+      fields: ['name', 'capital', 'language', 'imageFlag', 'contentLandscape', 'imageLandscape', 'contentFood', 'imageFood'] };
+    const card = recordToCard(countryRecord(), schema, tpl, S, 'en');
+    expect(card.meta?.[0].label).toBe('Capital');
+    expect(card.sections[0].label).toBe('Landscape');
+  });
   it('collage mode: no long-text fields → all images become tiles, title kept', () => {
     const schema = countrySchema();
     const tpl: CardTemplate = { id: 't0', templateType: 'single', layout: 'country-cover', mapping: {},
