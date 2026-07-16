@@ -4,11 +4,13 @@
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import WandSparkles from 'lucide-svelte/icons/wand-sparkles';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, selectedRecordId, setField, deleteRecord, duplicateRecord, selectAdjacentRecord } from '../stores';
   import { keyedDebounce } from '../../../debounce';
   import RecordField from './RecordField.svelte';
   import EmptyState from './EmptyState.svelte';
+  import AutofillImagesModal from './AutofillImagesModal.svelte';
 
   const record = $derived($project.records.find((r) => r.id === $selectedRecordId) ?? null);
   const schema = $derived(record ? ($project.schemas.find((s) => s.id === record.schemaId) ?? null) : null);
@@ -30,6 +32,10 @@
     const id = $selectedRecordId;
     if (id !== lastId) { debounced.flushAll(); lastId = id; }
   });
+  let showAutofill = $state(false);
+  const canAutofill = $derived(!!schema
+    && schema.fields.some((f) => f.type === 'image')
+    && schema.fields.some((f) => f.type !== 'image'));
 
   async function onDelete() {
     if (!record) return;
@@ -63,6 +69,10 @@
       </div>
       <span class="detail-title">Edit record</span>
       <div class="actions">
+        {#if canAutofill}
+          <button type="button" aria-label="auto-fill image" title="Auto-fill image"
+            onclick={() => (showAutofill = true)}><WandSparkles size={15} /></button>
+        {/if}
         <button type="button" onclick={onDuplicate} title="Duplicate record">
           <Copy size={15} /> Duplicate
         </button>
@@ -86,6 +96,9 @@
       {/key}
     </div>
   </div>
+  {#if showAutofill && schema}
+    <AutofillImagesModal schema={schema} records={[record]} onClose={() => (showAutofill = false)} />
+  {/if}
 {:else}
   <EmptyState icon={SquarePen} title="No record selected"
     hint="Select a record on the left to edit it, or add a new one." />

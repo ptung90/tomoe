@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import RecordDetail from '../src/lib/modules/flashcards/components/RecordDetail.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 
@@ -42,5 +42,10 @@ describe('RecordDetail', () => {
     expect(getByRole('button', { name: /previous record/i })).toBeDisabled();
     await getByRole('button', { name: /next record/i }).click();
     expect(get(S.selectedRecordId)).toBe(ids[1]);
+  });
+  it('shows an auto-fill button when the schema has an image field, and opens the modal', async () => {
+    render(RecordDetail);
+    await fireEvent.click(screen.getByRole('button', { name: /auto-fill image/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

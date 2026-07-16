@@ -35,4 +35,19 @@ describe('SchemaRecordList', () => {
     expect(get(S.project).records.length).toBe(before + 1);
     expect(get(S.project).records.at(-1)!.schemaId).toBe(sid);
   });
+  it('shows the auto-fill trigger for a schema with an image field, and opens the modal', async () => {
+    const sid = get(S.project).schemas[0].id;
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+    ] });
+    render(SchemaRecordList);
+    const btn = screen.getByRole('button', { name: /auto-fill images/i });
+    await fireEvent.click(btn);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+  it('hides the auto-fill trigger for a schema with no image field', () => {
+    render(SchemaRecordList);
+    expect(screen.queryByRole('button', { name: /auto-fill images/i })).toBeNull();
+  });
 });

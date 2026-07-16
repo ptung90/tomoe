@@ -5,6 +5,7 @@
   import ClipboardPaste from 'lucide-svelte/icons/clipboard-paste';
   import Layers from 'lucide-svelte/icons/layers';
   import Sparkles from 'lucide-svelte/icons/sparkles';
+  import WandSparkles from 'lucide-svelte/icons/wand-sparkles';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import {
     project, selectedRecordId, selectRecord, addRecord,
@@ -16,8 +17,10 @@
   import LocaleBar from './LocaleBar.svelte';
   import EmptyState from './EmptyState.svelte';
   import AiGenerateModal from './AiGenerateModal.svelte';
+  import AutofillImagesModal from './AutofillImagesModal.svelte';
 
   let aiSchemaId = $state<string | null>(null);
+  let autofillSchemaId = $state<string | null>(null);
 
   function rowLabel(rec: RecordItem, schema: Schema): string {
     const f = schema.fields.find((x) => x.type !== 'image');
@@ -27,6 +30,8 @@
     return s.trim() || '(untitled)';
   }
   const recordsBySchema = $derived((id: string) => $project.records.filter((r) => r.schemaId === id));
+  const canAutofill = $derived((schema: Schema) =>
+    schema.fields.some((f) => f.type === 'image') && schema.fields.some((f) => f.type !== 'image'));
 
   async function copyJson(schemaId: string) {
     const schema = $project.schemas.find((s) => s.id === schemaId);
@@ -82,6 +87,10 @@
               onclick={() => copyJson(schema.id)}><Clipboard size={13} /></button>
             <button type="button" aria-label="paste json" title="Paste records JSON"
               onclick={() => pasteJson(schema.id)}><ClipboardPaste size={13} /></button>
+            {#if canAutofill(schema)}
+              <button type="button" aria-label="auto-fill images" title="Auto-fill images"
+                onclick={() => autofillSchemaId = schema.id}><WandSparkles size={13} /></button>
+            {/if}
             <button type="button" aria-label="ai generate" title="Generate records with AI"
               onclick={() => aiSchemaId = schema.id}><Sparkles size={13} /></button>
           </div>
@@ -103,6 +112,16 @@
 
   {#if aiSchemaId}
     <AiGenerateModal schemaId={aiSchemaId} onClose={() => aiSchemaId = null} />
+  {/if}
+
+  {#if autofillSchemaId}
+    {@const s = $project.schemas.find((x) => x.id === autofillSchemaId)}
+    {#if s}
+      <AutofillImagesModal
+        schema={s}
+        records={$project.records.filter((r) => r.schemaId === autofillSchemaId)}
+        onClose={() => (autofillSchemaId = null)} />
+    {/if}
   {/if}
 </div>
 
