@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "projectName": "Country profile",
+  "projectIcon": "🌏",
+  "settings": {
+    "paperSize": "A4",
+    "orientation": "portrait",
+    "margin": 9,
+    "padding": 2,
+    "imgPadding": 0,
+    "paraGap": 2,
+    "textVAlign": "middle",
+    "border": { "width": 0, "style": "double", "color": "#6B21A8", "radius": 0 },
+    "image": { "backgroundSize": "cover", "backgroundPosition": "center" },
+    "titleFont": { "family": "Lexend", "size": 14, "weight": 700, "color": "#1a1a1a", "lineHeight": 1.0 },
+    "contentFont": { "family": "Lexend", "size": 12, "weight": 400, "color": "#1a1a1a", "lineHeight": 1.1 },
+    "pdfImageFormat": "jpeg",
+    "pdfJpegQuality": 0.85,
+    "pdfScale": 2,
+    "customCss": ""
+  },
+  "schemas": [
+    {
+      "id": "sch_country",
+      "name": "Country profile",
+      "fields": [
+        { "id": "fld_name", "key": "name", "label": "Name", "type": "text", "multilingual": true },
+        { "id": "fld_capital", "key": "capital", "label": "Capital", "type": "text", "multilingual": true },
+        { "id": "fld_language", "key": "language", "label": "Language", "type": "text", "multilingual": true },
+        { "id": "fld_imageFlag", "key": "imageFlag", "label": "Flag", "type": "image" },
+        { "id": "fld_contentLandscape", "key": "contentLandscape", "label": "Landscape", "type": "text-long", "multilingual": true },
+        { "id": "fld_imageLandscape", "key": "imageLandscape", "label": "Landscape image", "type": "image" },
+        { "id": "fld_contentPlantsAndAnimals", "key": "contentPlantsAndAnimals", "label": "Plants and Animals", "type": "text-long", "multilingual": true },
+        { "id": "fld_imagePlantsAndAnimals", "key": "imagePlantsAndAnimals", "label": "Plants and Animals image", "type": "image" },
+        { "id": "fld_contentLandmarksAndCulture", "key": "contentLandmarksAndCulture", "label": "Landmarks and Culture", "type": "text-long", "multilingual": true },
+        { "id": "fld_imageLandmarksAndCulture", "key": "imageLandmarksAndCulture", "label": "Landmarks and Culture image", "type": "image" },
+        { "id": "fld_contentFood", "key": "contentFood", "label": "Food", "type": "text-long", "multilingual": true },
+        { "id": "fld_imageFood", "key": "imageFood", "label": "Food image", "type": "image" }
+      ],
+      "cardTemplates": [
+        {
+          "id": "tpl_cover",
+          "templateType": "single",
+          "layout": "country-cover",
+          "mapping": {},
+          "cardsPerPage": 1,
+          "name": "Cover",
+          "fields": ["name", "imageFlag", "imageLandscape", "imagePlantsAndAnimals", "imageLandmarksAndCulture", "imageFood"]
+        },
+        {
+          "id": "tpl_page1",
+          "templateType": "single",
+          "layout": "country-page",
+          "mapping": {},
+          "cardsPerPage": 1,
+          "name": "Page 1",
+          "fields": ["name", "capital", "language", "imageFlag", "contentLandscape", "imageLandscape", "contentPlantsAndAnimals", "imagePlantsAndAnimals"]
+        },
+        {
+          "id": "tpl_page2",
+          "templateType": "single",
+          "layout": "country-page",
+          "mapping": {},
+          "cardsPerPage": 1,
+          "name": "Page 2",
+          "fields": ["contentLandmarksAndCulture", "imageLandmarksAndCulture", "contentFood", "imageFood"]
+        }
+      ]
+    }
+  ],
+  "records": [
+    {
+      "id": "rec_1u7fqw8c",
+      "schemaId": "sch_country",
+      "fieldsHash": "",
+      "fields": {
+        "name": { "en": "<h1>Vietnam</h1>", "vi": "<h1>Việt Nam</h1>" },
+        "imageFlag": "Vietnam flag",
+        "imageLandscape": "Ha Long Bay Vietnam",
+        "imagePlantsAndAnimals": "water buffalo rice field Vietnam",
+        "imageLandmarksAndCulture": "Son Doong cave Vietnam",
+        "imageFood": "pho Vietnamese noodle soup",
+        "capital": { "en": "Hanoi", "vi": "Hà Nội" },
+        "language": { "en": "Vietnamese", "vi": "Tiếng Việt" },
+        "contentLandscape": {
+          "en": "- Vietnam has a coastline that stretches over 3,000 km (1,860 mi), offering many beautiful beaches.\n- Ha Long Bay features thousands of limestone karsts and islands, creating a stunning seascape.\n- The Mekong Delta is a vast area of rivers, swamps, and islands. It's known for its biodiversity and floating markets.\n- The north is home to the rugged Tonkinese Alps, including the highest peak, Fansipan, which stands at 3,147 m (10,326 ft).",
+          "vi": "- Việt Nam có đường bờ biển dài hơn 3.000 km (1.860 dặm), với nhiều bãi biển đẹp.\n- Vịnh Hạ Long có hàng nghìn núi đá vôi và đảo, tạo nên cảnh biển tuyệt đẹp.\n- Đồng bằng sông Cửu Long là vùng rộng lớn gồm sông ngòi, đầm lầy và cù lao. Nơi đây nổi tiếng với sự đa dạng sinh học và chợ nổi.\n- Miền bắc là nơi có dãy Hoàng Liên Sơn hiểm trở, bao gồm đỉnh cao nhất Fansipan cao 3.147 m (10.326 ft)."
+        },
+        "contentPlantsAndAnimals": {
+          "en": "- The red-shanked douc is a striking primate known for its vibrant red legs.\n- The water buffalo, often seen working in rice fields, symbolizes both strength and hard work.\n- The lotus flower is admired for its ability to bloom even in muddy waters.\n- Rice is a major crop in Vietnam, and the country is known for its green, stepped rice terraces.",
+          "vi": "- Voọc chà vá chân đỏ là loài linh trưởng nổi bật với đôi chân đỏ rực rỡ.\n- Trâu nước, thường thấy làm việc trên ruộng lúa, tượng trưng cho sức mạnh và sự cần cù.\n- Hoa sen được ngưỡng mộ vì khả năng nở đẹp ngay cả trong bùn lầy.\n- Lúa gạo là cây trồng chủ lực ở Việt Nam, và đất nước nổi tiếng với những thửa ruộng bậc thang xanh mướt."
+        },
+        "contentLandmarksAndCulture": {
+          "en": "- Hanoi's Old Quarter is a historic part of Vietnam's capital city that has narrow streets full of small shops, food stalls, and old buildings.\n- Son Doong is the largest cave in the world by volume. It's located within Vietnam's Phong Nha-Ke Bang National Park.\n- Cu Chi Tunnels are underground tunnels used by Vietnamese soldiers. You can see how they lived and worked.\n- Ao Dai is a traditional Vietnamese outfit. It's a long, flowing dress usually worn over pants.\n- Tet is one of the most important holidays in Vietnam. It's a time for family gatherings, special foods, and fireworks.\n- Vietnamese boat baskets are round, woven boats traditionally used by fishermen.",
+          "vi": "- Phố cổ Hà Nội là khu vực lịch sử của thủ đô Việt Nam, với những con phố nhỏ hẹp đầy cửa hàng, quán ăn và những tòa nhà cổ.\n- Sơn Đoòng là hang động lớn nhất thế giới về thể tích. Hang nằm trong Vườn quốc gia Phong Nha - Kẻ Bàng của Việt Nam.\n- Địa đạo Củ Chi là hệ thống đường hầm ngầm được bộ đội Việt Nam sử dụng. Bạn có thể thấy cách họ sinh sống và chiến đấu.\n- Áo dài là trang phục truyền thống của Việt Nam. Đó là chiếc áo dài thướt tha thường mặc bên ngoài quần.\n- Tết là một trong những ngày lễ quan trọng nhất ở Việt Nam. Đây là dịp gia đình sum họp, thưởng thức món ăn đặc biệt và đốt pháo hoa.\n- Thuyền thúng Việt Nam là những chiếc thuyền tròn, đan bằng tre, được ngư dân sử dụng theo truyền thống."
+        },
+        "contentFood": {
+          "en": "- Pho is a noodle soup with a flavorful broth, usually made with beef or chicken, and topped with fresh herbs.\n- Banh Mi is a sandwich made with a baguette filled with meats, pickled vegetables, and herbs.\n- Vietnam is known for its strong coffee, often served with sweetened condensed milk.\n- Che Thai is a dessert made with a sweet mixture of fruits, jellies, and coconut milk.",
+          "vi": "- Phở là món súp mì với nước dùng đậm đà, thường nấu từ thịt bò hoặc gà, và rắc thêm rau thơm tươi.\n- Bánh mì là món sandwich làm từ ổ bánh mì baguette kẹp thịt, rau củ muối chua và rau thơm.\n- Việt Nam nổi tiếng với cà phê đậm đặc, thường dùng kèm sữa đặc có đường.\n- Chè Thái là món tráng miệng làm từ hỗn hợp ngọt của trái cây, thạch và nước cốt dừa."
+        }
+      }
+    }
+  ],
+  "cards": [],
+  "locales": ["en", "vi"],
+  "activeLocale": "en"
+}
