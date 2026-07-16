@@ -11,6 +11,7 @@
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
   import { resolveStyle } from '../lib/style';
   import { LAYOUTS } from '../lib/layouts';
+  import { FLOW_LAYOUTS } from '../lib/flow-layouts';
   import { zoomStep } from '../lib/zoom';
   import StyleControls from './StyleControls.svelte';
   import EmptyState from './EmptyState.svelte';
@@ -177,7 +178,12 @@
   <header class="preview-toolbar">
     <label>Layout
       <select value={template?.layout ?? 'fulltext'} onchange={onLayout} disabled={!schema}>
-        {#each LAYOUTS as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
+        <optgroup label="Cards">
+          {#each LAYOUTS as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
+        </optgroup>
+        <optgroup label="Document">
+          {#each FLOW_LAYOUTS as l (l.id)}<option value={l.id}>{l.label}</option>{/each}
+        </optgroup>
       </select>
     </label>
     <label>Paper

@@ -26,7 +26,17 @@ describe('CardPreview', () => {
   it('offers the 12 single-card layouts in the layout selector', () => {
     render(CardPreview);
     const sel = screen.getByLabelText(/layout/i) as HTMLSelectElement;
-    expect(sel.querySelectorAll('option').length).toBe(12);
+    const cardsGroup = sel.querySelector('optgroup[label="Cards"]') as HTMLOptGroupElement;
+    expect(cardsGroup.querySelectorAll('option')).toHaveLength(12);
+  });
+
+  it('lists grid layouts and a Document optgroup with flow presets', () => {
+    render(CardPreview);
+    const groups = document.querySelectorAll('optgroup');
+    const labels = Array.from(groups).map((g) => g.getAttribute('label'));
+    expect(labels).toContain('Cards');
+    expect(labels).toContain('Document');
+    expect(document.querySelector('option[value="country-cover"]')).not.toBeNull();
   });
 
   it('Sheet toggle renders a .fc-sheet', async () => {
