@@ -17,6 +17,7 @@
   } from '../stores';
   import { serializeSchemaExport, type SchemaLibraryEntry } from '../io/schemaIO';
   import { viewLabel } from '../cardMapping';
+  import { labelLocaleValue, setLabelLocale } from '../lib/card-render';
   import { uid, type SchemaField, type Schema } from '../model';
   import { showToast } from '../../../shell';
 
@@ -180,7 +181,9 @@
                   {#each fieldsDraft as f, i (f.id)}
                     <div class="field-row">
                       <input aria-label="field key" placeholder="key" bind:value={f.key} oninput={commitFields} />
-                      <input aria-label="field label" placeholder="label" bind:value={f.label} oninput={commitFields} />
+                      <input aria-label="field label" placeholder="label"
+                        value={labelLocaleValue(f.label, $project.locales[0], $project.locales[0])}
+                        oninput={(e) => patchField(i, { label: setLabelLocale(f.label, $project.locales[0], (e.target as HTMLInputElement).value, $project.locales[0]) })} />
                       <select aria-label="field type" value={f.type}
                         onchange={(e) => patchField(i, { type: (e.target as HTMLSelectElement).value as SchemaField['type'] })}>
                         <option value="text">text</option>
@@ -200,7 +203,7 @@
                   {#if expandedEntry && expandedEntry.schema.cardTemplates.length}
                     {#each expandedEntry.schema.cardTemplates as t, i (t.id)}
                       <div class="view-row">
-                        <span class="view-name">{viewLabel(t, asSchema(expandedEntry), i)}</span>
+                        <span class="view-name">{viewLabel(t, asSchema(expandedEntry), i, $project.activeLocale)}</span>
                         <span class="view-meta">{t.layout} · {t.fields?.length ?? 'all'} field{t.fields?.length === 1 ? '' : 's'}</span>
                       </div>
                     {/each}

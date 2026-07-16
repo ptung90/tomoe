@@ -14,7 +14,7 @@ export interface Settings {
   titleFont: FontSpec; contentFont: FontSpec;
   pdfImageFormat: 'jpeg'|'png'; pdfJpegQuality: number; pdfScale: number; customCss: string;
 }
-export interface SchemaField { id: string; key: string; label: string; type: 'text'|'text-long'|'image'; multilingual?: boolean }
+export interface SchemaField { id: string; key: string; label: LocalizedText; type: 'text'|'text-long'|'image'; multilingual?: boolean }
 /** Partial style layer for the cascade (Global settings → per-schema template.style → per-card card.style).
  *  Resolved per-property via `resolveStyle`; nested groups (border/image/fonts) merge field-by-field. */
 export interface StyleOverrides {

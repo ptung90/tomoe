@@ -20,6 +20,20 @@ describe('buildRecordsPrompt', () => {
     expect(user).toContain('common verbs');
     expect(user).toContain('5');
   });
+  it('resolves a multilingual field label to the first locale for the prompt', () => {
+    const s: Schema = { id: 's1', name: 'Verbs', cardTemplates: [], fields: [
+      { id: 'f1', key: 'word', label: { en: 'Word', vi: 'Từ' }, type: 'text', multilingual: true },
+    ] };
+    const { system } = buildRecordsPrompt(s, 'x', 1, ['en', 'vi']);
+    expect(system).toContain('(Word)');
+  });
+  it('falls back to the key when every locale of a multilingual label is blank', () => {
+    const s: Schema = { id: 's1', name: 'Verbs', cardTemplates: [], fields: [
+      { id: 'f1', key: 'word', label: { en: '', vi: '' }, type: 'text', multilingual: true },
+    ] };
+    const { system } = buildRecordsPrompt(s, 'x', 1, ['en', 'vi']);
+    expect(system).toContain('(word)');
+  });
 });
 
 describe('parseGeneratedRecords', () => {

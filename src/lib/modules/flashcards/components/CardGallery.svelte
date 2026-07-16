@@ -58,7 +58,7 @@
       const lay = sheetLayout(template, schemaEff.paperSize, schemaEff.orientation);
       const cell = { w: lay.cellW, h: lay.cellH };
       const scale = Math.min(1, THUMB_W / cell.w) * zoom;
-      return { template, viewName: viewLabel(template, schema, i), packed, autoRecs, cell, scale };
+      return { template, viewName: viewLabel(template, schema, i, $project.activeLocale), packed, autoRecs, cell, scale };
     });
     const totalCards = viewGroups.reduce((n, v) => n + v.packed.length + v.autoRecs.length, 0);
     return { schema, recs, views: viewGroups, totalCards };

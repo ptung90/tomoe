@@ -1,12 +1,14 @@
 <script lang="ts">
   import type { SchemaField, LocalizedText } from '../model';
+  import { resolveLabel } from '../lib/card-render';
   import RichText from './RichText.svelte';
   import ImageField from './ImageField.svelte';
 
-  let { field, value, locales, onChange }: {
+  let { field, value, locales, activeLocale = 'en', onChange }: {
     field: SchemaField;
     value: LocalizedText;
     locales: string[];
+    activeLocale?: string;
     onChange: (val: string, locale?: string) => void;
   } = $props();
 
@@ -18,7 +20,7 @@
 </script>
 
 <div class="field">
-  <span class="field-label">{field.label}</span>
+  <span class="field-label">{resolveLabel(field.label, activeLocale, field.key)}</span>
 
   {#if field.type === 'image'}
     <ImageField value={str()} onChange={(u) => onChange(u)} />

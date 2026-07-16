@@ -1,5 +1,5 @@
 import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides, type SchemaField } from './model';
-import { resolveLocale } from './lib/card-render';
+import { resolveLocale, resolveLabel } from './lib/card-render';
 import { LAYOUT_SLOTS } from './lib/layouts';
 import { mergeStyle } from './lib/style';
 import { mergeSettingsOverDefaults, type SchemaLibraryEntry } from './io/schemaIO';
@@ -75,7 +75,7 @@ export function recordToCard(
     if (url) images.push({ slot: i, url });
   }
   const sections: CardSection[] = sectionFields.map((f) => (
-    { id: uid('sec'), label: f.label, content: resolveLocale(record.fields[f.key], locale) }
+    { id: uid('sec'), label: resolveLabel(f.label, locale, f.key), content: resolveLocale(record.fields[f.key], locale) }
   ));
   return {
     id: 'preview_' + record.id,
@@ -95,15 +95,20 @@ export function recordToCard(
 const MAX_VIEW_LABEL = 24;
 /** The display name for a view (a CardTemplate): the explicit `name` if set; else the label of
  *  its one selected field; else its selected fields' labels joined (truncated); else "View {n}"
- *  (1-based `index` — the caller passes the template's position in `schema.cardTemplates`). Pure. */
-export function viewLabel(template: CardTemplate, schema: Schema, index: number): string {
+ *  (1-based `index` — the caller passes the template's position in `schema.cardTemplates`).
+ *  Field labels are resolved to `locale` via `resolveLabel`; `CardTemplate.name` itself stays a
+ *  plain string (view names are out of scope for multi-language labels). Pure. */
+export function viewLabel(template: CardTemplate, schema: Schema, index: number, locale: string): string {
   if (template.name) return template.name;
   const keys = template.fields ?? [];
   if (keys.length === 1) {
     const f = schema.fields.find((x) => x.key === keys[0]);
-    if (f) return f.label;
+    if (f) return resolveLabel(f.label, locale, f.key);
   } else if (keys.length > 1) {
-    const labels = keys.map((k) => schema.fields.find((x) => x.key === k)?.label ?? k);
+    const labels = keys.map((k) => {
+      const f = schema.fields.find((x) => x.key === k);
+      return f ? resolveLabel(f.label, locale, f.key) : k;
+    });
     const joined = labels.join(' + ');
     return joined.length > MAX_VIEW_LABEL ? joined.slice(0, MAX_VIEW_LABEL - 1) + '…' : joined;
   }

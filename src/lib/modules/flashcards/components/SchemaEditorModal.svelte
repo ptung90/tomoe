@@ -4,6 +4,7 @@
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, schemaEditorOpen, addSchema, updateSchema, deleteSchema } from '../stores';
+  import { labelLocaleValue, setLabelLocale, resolveLabel } from '../lib/card-render';
   import { uid, type SchemaField } from '../model';
 
   let name = $state('');
@@ -39,12 +40,14 @@
 
   function close() { schemaEditorOpen.set(null); }
   function save() {
-    // Fill blank keys/labels defensively so records can address fields.
-    const clean = fields.map((f, i) => ({
-      ...f,
-      key: f.key.trim() || `field${i + 1}`,
-      label: f.label.trim() || f.key.trim() || `Field ${i + 1}`,
-    }));
+    // Fill blank keys/labels defensively so records can address fields. `resolveLabel` collapses
+    // a LocalizedText (or string) to display text, falling back to the key — so a blank label
+    // backfills to the (possibly just-defaulted) key, exactly as before the type change.
+    const clean = fields.map((f, i) => {
+      const key = f.key.trim() || `field${i + 1}`;
+      const resolved = resolveLabel(f.label, $project.locales[0], key).trim();
+      return { ...f, key, label: resolved || `Field ${i + 1}`, type: f.type, multilingual: f.multilingual };
+    });
     if (target === '__new__') {
       const id = addSchema(name.trim() || 'Untitled');
       updateSchema(id, { fields: clean });
@@ -86,8 +89,9 @@
           <div class="field-row">
             <input aria-label="field key" placeholder="key" bind:value={f.key}
               oninput={(e) => patchField(i, { key: (e.target as HTMLInputElement).value })} />
-            <input aria-label="field label" placeholder="label" bind:value={f.label}
-              oninput={(e) => patchField(i, { label: (e.target as HTMLInputElement).value })} />
+            <input aria-label="field label" placeholder="label"
+              value={labelLocaleValue(f.label, $project.locales[0], $project.locales[0])}
+              oninput={(e) => patchField(i, { label: setLabelLocale(f.label, $project.locales[0], (e.target as HTMLInputElement).value, $project.locales[0]) })} />
             <select aria-label="field type" value={f.type}
               onchange={(e) => patchField(i, { type: (e.target as HTMLSelectElement).value as SchemaField['type'] })}>
               <option value="text">text</option>

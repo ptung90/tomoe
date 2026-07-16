@@ -31,4 +31,9 @@ describe('RecordField', () => {
     render(RecordField, { field, value: 'http://x/a.png', locales: ['en'], onChange: vi.fn() });
     expect(screen.getByPlaceholderText(/image url/i)).toBeInTheDocument();
   });
+  it('resolves an {en,vi} field label to the active locale', () => {
+    const field: SchemaField = { id: 'f1', key: 'def', label: { en: 'Definition', vi: 'Nghĩa' }, type: 'text', multilingual: true };
+    render(RecordField, { field, value: { en: 'a bird', vi: 'con chim' }, locales: ['en', 'vi'], activeLocale: 'vi', onChange: vi.fn() });
+    expect(screen.getByText('Nghĩa')).toBeInTheDocument();
+  });
 });

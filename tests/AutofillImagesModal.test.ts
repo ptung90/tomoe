@@ -49,4 +49,18 @@ describe('AutofillImagesModal', () => {
     expect(opts).toContain('Title');
     expect(opts).not.toContain('Pic');
   });
+
+  it('resolves a multilingual field label in the query-field dropdown to the active locale', () => {
+    const project = newProject();
+    project.activeLocale = 'vi';
+    const schema: Schema = { id: 's2', name: 'ML', cardTemplates: [], fields: [
+      { id: 'f1', key: 'title', label: { en: 'Title', vi: 'Tiêu đề' }, type: 'text', multilingual: true },
+      { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+    ] };
+    project.schemas.push(schema);
+    stores.loadProject(project, null);
+    render(AutofillImagesModal, { records: [], schema, onClose: vi.fn(), search: vi.fn(async () => []) });
+    const opts = Array.from(screen.getByLabelText(/query field/i).querySelectorAll('option')).map((o) => o.textContent);
+    expect(opts).toContain('Tiêu đề');
+  });
 });

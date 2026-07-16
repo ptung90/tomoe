@@ -277,4 +277,16 @@ describe('StyleControls — Fields checklist (per view)', () => {
     expect(tpls[1].fields).toEqual(['title']); // active (view 2) changed
     expect(tpls[0].fields).toBeUndefined();    // view 1 untouched
   });
+
+  it('resolves a multilingual field label in the checklist to the active locale', async () => {
+    const sid = S.addSchema('Words');
+    S.updateSchema(sid, { fields: [
+      { id: 'f1', key: 'def', label: { en: 'Definition', vi: 'Nghĩa' }, type: 'text', multilingual: true },
+    ] });
+    S.addRecord(sid);
+    S.setActiveLocale('vi');
+    render(StyleControls);
+    await tab('Fields');
+    expect(screen.getByLabelText('Nghĩa')).toBeInTheDocument();
+  });
 });

@@ -88,6 +88,7 @@
             field={f}
             value={record.fields[f.key] ?? ''}
             locales={$project.locales}
+            activeLocale={$project.activeLocale}
             onChange={(val, locale) => onFieldChange(f.key, val, locale)} />
         {/each}
         {#if schema.fields.length === 0}
