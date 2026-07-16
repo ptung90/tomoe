@@ -223,7 +223,7 @@
                 <button type="button" class="view-menu-btn" aria-label={`${vc.label} options`}
                   aria-haspopup="menu" aria-expanded={menuOpenId === vc.id}
                   onclick={(e) => { e.stopPropagation(); toggleMenu(vc.id); }}>
-                  <MoreHorizontal size={13} />
+                  <MoreHorizontal size={17} />
                 </button>
                 {#if menuOpenId === vc.id}
                   <div class="view-menu" role="menu">
@@ -323,23 +323,24 @@
   .view-col:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
 
   /* Per-view card header: name (rename-in-place) + a ⋯ menu (Rename / Delete). */
-  .view-col-header { display:flex; align-items:center; gap:4px; min-height:22px; }
+  .view-col-header { display:flex; align-items:center; gap:6px; min-height:28px; padding:0 2px; }
   .view-col-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    font-size:11px; font-weight:600; color:var(--text-muted); transition:color .12s ease; }
+    font-size:12px; font-weight:600; color:var(--text); transition:color .12s ease; }
   .view-col.active .view-col-label { color:var(--accent); }
-  .view-col-rename { flex:1; min-width:0; font:inherit; font-size:11px; font-weight:600; color:var(--text);
-    background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:1px 4px; }
+  .view-col-rename { flex:1; min-width:0; font:inherit; font-size:12px; font-weight:600; color:var(--text);
+    background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:2px 5px; }
   .view-col-menu { position:relative; flex:none; }
-  .view-menu-btn { border:none; background:transparent; color:var(--text-muted); cursor:pointer;
-    display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:5px;
-    transition:background .12s ease, color .12s ease; }
-  .view-menu-btn:hover { background:var(--accent-weak); color:var(--accent); }
+  /* Visible ⋯ button — bordered chip, high-contrast, so it reads as an actionable control. */
+  .view-menu-btn { border:1px solid var(--border); background:var(--bg); color:var(--text); cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; width:28px; height:24px; border-radius:6px;
+    transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .view-menu-btn:hover, .view-menu-btn[aria-expanded="true"] { background:var(--accent-weak); color:var(--accent); border-color:var(--accent); }
   .view-menu-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .view-menu { position:absolute; top:100%; right:0; z-index:10; margin-top:2px; min-width:110px;
-    background:var(--surface); border:1px solid var(--border); border-radius:6px;
-    box-shadow:0 4px 14px rgba(0,0,0,.14); padding:4px; display:flex; flex-direction:column; gap:1px; }
-  .view-menu button { display:flex; align-items:center; gap:6px; border:none; background:transparent;
-    color:var(--text); font:inherit; font-size:12px; padding:5px 7px; border-radius:4px; cursor:pointer;
+  .view-menu { position:absolute; top:100%; right:0; z-index:10; margin-top:3px; min-width:132px;
+    background:var(--surface); border:1px solid var(--border); border-radius:7px;
+    box-shadow:0 6px 18px rgba(0,0,0,.16); padding:5px; display:flex; flex-direction:column; gap:2px; }
+  .view-menu button { display:flex; align-items:center; gap:7px; border:none; background:transparent;
+    color:var(--text); font:inherit; font-size:13px; padding:7px 9px; border-radius:5px; cursor:pointer;
     text-align:left; transition:background .12s ease, color .12s ease; }
   .view-menu button:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
   .view-menu button:focus-visible { outline:2px solid var(--accent); outline-offset:-1px; }
