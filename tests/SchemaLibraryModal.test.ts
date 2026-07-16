@@ -212,4 +212,31 @@ describe('SchemaLibraryModal', () => {
     await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
     expect(screen.getByRole('button', { name: /update from current schema/i })).toBeDisabled();
   });
+
+  it('seeds a per-locale label input from the entry\'s fields, showing a legacy string label under the first locale only', async () => {
+    S.addToLibrary({
+      name: 'Verbs',
+      schema: { name: 'Verbs', fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }], cardTemplates: [] },
+      settings: DEFAULT_SETTINGS,
+    });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    expect((screen.getByLabelText('field label en') as HTMLInputElement).value).toBe('Word');
+    expect((screen.getByLabelText('field label vi') as HTMLInputElement).value).toBe('');
+  });
+
+  it('editing a locale label commits a LocalizedText object without clobbering the other locale', async () => {
+    const id = S.addToLibrary({
+      name: 'Verbs',
+      schema: { name: 'Verbs', fields: [{ id: 'f1', key: 'w', label: 'Word', type: 'text', multilingual: true }], cardTemplates: [] },
+      settings: DEFAULT_SETTINGS,
+    });
+    S.schemaLibraryOpen.set(true);
+    render(SchemaLibraryModal);
+    await fireEvent.click(screen.getByRole('button', { name: /toggle details/i }));
+    await fireEvent.input(screen.getByLabelText('field label vi'), { target: { value: 'Từ' } });
+    const entry = get(S.schemaLibrary).find((e) => e.id === id)!;
+    expect(entry.schema.fields[0].label).toEqual({ en: 'Word', vi: 'Từ' });
+  });
 });
