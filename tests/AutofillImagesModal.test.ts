@@ -40,14 +40,30 @@ describe('AutofillImagesModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('lets the user pick the query field', async () => {
+  it('lets the user pick the query field, including image fields (self-query)', async () => {
     const schema = get(stores.project).schemas[0];
     const records = get(stores.project).records;
     render(AutofillImagesModal, { records, schema, onClose: vi.fn(), search: vi.fn(async () => []) });
-    // only non-image fields are options
+    // both text and image fields are options — an image field can be its own query source
     const opts = Array.from(screen.getByLabelText(/query field/i).querySelectorAll('option')).map((o) => o.textContent);
     expect(opts).toContain('Title');
-    expect(opts).not.toContain('Pic');
+    expect(opts).toContain('Pic');
+  });
+
+  it('auto-selects the matching target when an image field is chosen as the query source', async () => {
+    const project = newProject();
+    const schema: Schema = { id: 's3', name: 'C', cardTemplates: [], fields: [
+      { id: 'f1', key: 'name', label: 'Name', type: 'text', multilingual: true },
+      { id: 'f2', key: 'imageFlag', label: 'Flag', type: 'image' },
+      { id: 'f3', key: 'imageFood', label: 'Food', type: 'image' },
+    ] };
+    project.schemas.push(schema);
+    stores.loadProject(project, null);
+    render(AutofillImagesModal, { records: [], schema, onClose: vi.fn(), search: vi.fn(async () => []) });
+    const querySelect = screen.getByLabelText('query field') as HTMLSelectElement;
+    await fireEvent.change(querySelect, { target: { value: 'imageFood' } });
+    const targetSelect = screen.getByLabelText('target image field') as HTMLSelectElement;
+    expect(targetSelect.value).toBe('imageFood');
   });
 
   it('resolves a multilingual field label in the query-field dropdown to the active locale', () => {

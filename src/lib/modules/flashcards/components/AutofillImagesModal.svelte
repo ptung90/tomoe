@@ -14,6 +14,15 @@
 
   const textFields = $derived(schema.fields.filter((f) => f.type !== 'image'));
   const imageFields = $derived(schema.fields.filter((f) => f.type === 'image'));
+  // Query source can be ANY field — text fields, or an image field whose value is a search
+  // query string ("self-query": the field's own text drives the search that then fills it).
+  const queryFields = $derived([...textFields, ...imageFields]);
+  // When an image field is picked as the query source, default the target to that same field
+  // (self-query) so the user needn't set both. Fires only on an explicit query-field change,
+  // so a manually chosen target is never clobbered afterwards.
+  function onQueryChange() {
+    if (imageFields.some((f) => f.key === queryKey)) imageKey = queryKey;
+  }
 
   // Modal mounts fresh per open, so seeding defaults from the initial schema is intentional.
   // svelte-ignore state_referenced_locally
@@ -56,8 +65,8 @@
     <div class="body">
       <label class="row">
         <span>Query field</span>
-        <select aria-label="query field" bind:value={queryKey} disabled={running}>
-          {#each textFields as f (f.id)}<option value={f.key}>{resolveLabel(f.label, $project.activeLocale, f.key)}</option>{/each}
+        <select aria-label="query field" bind:value={queryKey} onchange={onQueryChange} disabled={running}>
+          {#each queryFields as f (f.id)}<option value={f.key}>{resolveLabel(f.label, $project.activeLocale, f.key)}</option>{/each}
         </select>
       </label>
       {#if imageFields.length > 1}
