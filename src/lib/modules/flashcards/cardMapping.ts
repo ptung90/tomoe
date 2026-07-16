@@ -1,6 +1,7 @@
-import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides, type SchemaField } from './model';
+import { uid, type Project, type Schema, type CardTemplate, type RecordItem, type Card, type CardSection, type CardImage, type Settings, type StyleOverrides, type SchemaField, type LocalizedText } from './model';
 import { resolveLocale, resolveLabel } from './lib/card-render';
 import { LAYOUT_SLOTS } from './lib/layouts';
+import { isFlowLayout, getFlowLayout } from './lib/flow-layouts';
 import { mergeStyle } from './lib/style';
 import { mergeSettingsOverDefaults, type SchemaLibraryEntry } from './io/schemaIO';
 
@@ -66,6 +67,9 @@ export function recordToCard(
 ): Card {
   const orientation = template.style?.orientation ?? template.orientation ?? settings.orientation;
   const activeFields = activeFieldsFor(schema, template);
+  if (isFlowLayout(template.layout)) {
+    return recordToFlowCard(record, schema, template, settings, locale, orientation, activeFields);
+  }
   const imageFields = activeFields.filter((f) => f.type === 'image');
   const { titleField, sectionFields } = splitTitleSections(schema, activeFields);
   const slotCount = LAYOUT_SLOTS[template.layout] ?? 0;
@@ -90,6 +94,59 @@ export function recordToCard(
     recordId: record.id,
     templateId: template.id,
   };
+}
+
+/** Flow (document) layouts branch off `recordToCard` here — a separate, pure mapping that
+ *  classifies a view's active fields (by `SchemaField.type` + field order) into title / meta
+ *  lines / sections-with-paired-images / header image, instead of the grid path's fixed image
+ *  slots. The grid engine (LAYOUT_SLOTS, sectionFields, etc.) never sees flow templates. */
+function recordToFlowCard(
+  record: RecordItem, schema: Schema, template: CardTemplate, settings: Settings, locale: string,
+  orientation: string, activeFields: SchemaField[],
+): Card {
+  const def = getFlowLayout(template.layout)!;
+  const tkey = schemaTitleKey(schema);
+  const titleField = tkey ? activeFields.find((f) => f.key === tkey && f.type !== 'image') ?? null : null;
+  const title = titleField ? resolveLocale(record.fields[titleField.key], locale) : '';
+
+  if (def.mode === 'collage') {
+    const images: CardImage[] = [];
+    let slot = 0;
+    for (const f of activeFields) {
+      if (f.type !== 'image') continue;
+      const url = resolveLocale(record.fields[f.key], locale);
+      if (url) images.push({ slot: slot++, url });
+    }
+    return { id: 'preview_' + record.id, layout: template.layout, imageHeightPercent: 50,
+      images, title, sections: [], meta: [], orientation, recordId: record.id, templateId: template.id };
+  }
+
+  // page mode — walk active fields in order, classifying by position relative to the first section.
+  const meta: { label: LocalizedText; value: LocalizedText }[] = [];
+  const sections: CardSection[] = [];
+  const images: CardImage[] = [];
+  let headerImage: CardImage | undefined;
+  let seenSection = false;
+  let slot = 0;
+  for (const f of activeFields) {
+    if (f === titleField) continue;
+    if (f.type === 'image') {
+      const url = resolveLocale(record.fields[f.key], locale);
+      if (!url) continue;
+      const img: CardImage = { slot: slot++, url };
+      if (!seenSection) headerImage = headerImage ?? img;       // leading image = header (flag)
+      else sections[sections.length - 1].image = sections[sections.length - 1].image ?? img; // pair to current section
+      images.push(img);
+    } else if (f.type === 'text-long') {
+      seenSection = true;
+      sections.push({ id: uid('sec'), label: f.label, content: resolveLocale(record.fields[f.key], locale) });
+    } else {
+      // short text before any section = meta line; short text after sections is ignored for flow
+      if (!seenSection) meta.push({ label: f.label, value: resolveLocale(record.fields[f.key], locale) });
+    }
+  }
+  return { id: 'preview_' + record.id, layout: template.layout, imageHeightPercent: 50,
+    images, title, sections, meta, headerImage, orientation, recordId: record.id, templateId: template.id };
 }
 
 const MAX_VIEW_LABEL = 24;

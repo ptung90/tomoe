@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem } from '../src/lib/modules/flashcards/model';
+import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem, type CardTemplate, type Settings } from '../src/lib/modules/flashcards/model';
 import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, applyTemplateStyle, chunkRecords, viewLabel, addView, renameView, deleteView, setViewFields } from '../src/lib/modules/flashcards/cardMapping';
 import * as ops from '../src/lib/modules/flashcards/cardOps';
 
@@ -269,6 +269,55 @@ describe('recordToCard — field selection (views)', () => {
     expect(c.title).toBe('Owl');
     expect(c.sections).toHaveLength(1);
     expect(c.images).toHaveLength(1);
+  });
+});
+
+function countrySchema(): Schema {
+  return {
+    id: 'sch_c', name: 'Country',
+    fields: [
+      { id: 'f1', key: 'name', label: 'Name', type: 'text' },
+      { id: 'f2', key: 'capital', label: 'Capital', type: 'text' },
+      { id: 'f3', key: 'language', label: 'Language', type: 'text' },
+      { id: 'f4', key: 'imageFlag', label: 'Flag', type: 'image' },
+      { id: 'f5', key: 'contentLandscape', label: 'Landscape', type: 'text-long' },
+      { id: 'f6', key: 'imageLandscape', label: 'Landscape image', type: 'image' },
+      { id: 'f7', key: 'contentFood', label: 'Food', type: 'text-long' },
+      { id: 'f8', key: 'imageFood', label: 'Food image', type: 'image' },
+    ],
+    cardTemplates: [],
+  };
+}
+function countryRecord(): RecordItem {
+  return { id: 'rec_c', schemaId: 'sch_c', fieldsHash: '', fields: {
+    name: 'Vietnam', capital: 'Hanoi', language: 'Vietnamese',
+    imageFlag: 'flag.png', contentLandscape: '- Coastline\n- Ha Long Bay', imageLandscape: 'halong.png',
+    contentFood: '- Pho\n- Banh Mi', imageFood: 'pho.png',
+  } };
+}
+const S: Settings = DEFAULT_SETTINGS;
+
+describe('recordToCard — flow layout', () => {
+  it('page mode: title + meta lines + sections with paired images + header image', () => {
+    const schema = countrySchema();
+    const tpl: CardTemplate = { id: 't1', templateType: 'single', layout: 'country-page', mapping: {},
+      fields: ['name', 'capital', 'language', 'imageFlag', 'contentLandscape', 'imageLandscape', 'contentFood', 'imageFood'] };
+    const card = recordToCard(countryRecord(), schema, tpl, S, 'en');
+    expect(card.title).toContain('Vietnam');
+    expect(card.meta?.map((m) => m.value)).toEqual(['Hanoi', 'Vietnamese']);
+    expect(card.headerImage?.url).toBe('flag.png');
+    expect(card.sections.map((s) => s.label)).toEqual(['Landscape', 'Food']);
+    expect(card.sections[0].image?.url).toBe('halong.png');
+    expect(card.sections[1].image?.url).toBe('pho.png');
+  });
+  it('collage mode: no long-text fields → all images become tiles, title kept', () => {
+    const schema = countrySchema();
+    const tpl: CardTemplate = { id: 't0', templateType: 'single', layout: 'country-cover', mapping: {},
+      fields: ['name', 'imageFlag', 'imageLandscape', 'imageFood'] };
+    const card = recordToCard(countryRecord(), schema, tpl, S, 'en');
+    expect(card.title).toContain('Vietnam');
+    expect(card.images.map((i) => i.url)).toEqual(['flag.png', 'halong.png', 'pho.png']);
+    expect(card.sections).toHaveLength(0);
   });
 });
 
