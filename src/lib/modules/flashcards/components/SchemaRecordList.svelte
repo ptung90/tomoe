@@ -12,6 +12,7 @@
   } from '../stores';
   import { showToast } from '../../../shell';
   import type { RecordItem, Schema } from '../model';
+  import { stripImagesForCopy } from '../lib/copyStrip';
   import LocaleBar from './LocaleBar.svelte';
   import EmptyState from './EmptyState.svelte';
   import AiGenerateModal from './AiGenerateModal.svelte';
@@ -28,7 +29,9 @@
   const recordsBySchema = $derived((id: string) => $project.records.filter((r) => r.schemaId === id));
 
   async function copyJson(schemaId: string) {
-    const recs = $project.records.filter((r) => r.schemaId === schemaId);
+    const schema = $project.schemas.find((s) => s.id === schemaId);
+    const imageKeys = new Set((schema?.fields ?? []).filter((f) => f.type === 'image').map((f) => f.key));
+    const recs = stripImagesForCopy($project.records.filter((r) => r.schemaId === schemaId), imageKeys);
     try {
       await navigator.clipboard.writeText(JSON.stringify(recs, null, 2));
       showToast('Records copied as JSON');
