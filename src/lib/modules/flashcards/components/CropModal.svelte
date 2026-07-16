@@ -13,7 +13,7 @@
   import ZoomIn from 'lucide-svelte/icons/zoom-in';
   import ZoomOut from 'lucide-svelte/icons/zoom-out';
   import { pickCornerColor, removeSolidBackground } from '../lib/imageEdit';
-  import { clampZoom, ZOOM_MIN, ZOOM_MAX } from '../lib/zoom';
+  import { clampZoom } from '../lib/zoom';
   import { showToast } from '../../../shell';
 
   let { src, onApply, onClose }: { src: string; onApply: (dataUrl: string) => void; onClose: () => void } = $props();
