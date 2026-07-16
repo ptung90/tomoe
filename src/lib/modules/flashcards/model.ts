@@ -1,4 +1,5 @@
 import { LAYOUT_IDS } from './lib/layouts';
+import { isFlowLayout } from './lib/flow-layouts';
 
 export type Locale = string;
 export type LocalizedText = string | Record<Locale, string>;
@@ -66,7 +67,7 @@ function migrateTemplate(t: any, schemaHasImage: boolean): CardTemplate {
   const m = COMPOUND_MIGRATION[t?.layout];
   let out: any = t;
   if (m) out = { ...out, layout: m.layout, cardsPerPage: out.cardsPerPage ?? m.cardsPerPage, templateType: 'single' };
-  else if (!LAYOUT_IDS.includes(out?.layout)) out = { ...out, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
+  else if (!LAYOUT_IDS.includes(out?.layout) && !isFlowLayout(out?.layout)) out = { ...out, layout: schemaHasImage ? '1top-1bot' : 'fulltext' };
   // Fold legacy per-template orientation into style.orientation (cascade single source) and drop the top-level field.
   if (out?.orientation !== undefined) {
     const style = out.style?.orientation !== undefined ? out.style : { ...(out.style ?? {}), orientation: out.orientation };
