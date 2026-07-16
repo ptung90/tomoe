@@ -45,6 +45,10 @@ describe('resolveLabel', () => {
     expect(resolveLabel('', 'en', 'def')).toBe('def');
     expect(resolveLabel('   ', 'en', 'def')).toBe('def');
   });
+  it('is null-safe (legacy/hand-edited field with no label) — falls back to key', () => {
+    expect(resolveLabel(null as never, 'en', 'def')).toBe('def');
+    expect(resolveLabel(undefined as never, 'en', 'def')).toBe('def');
+  });
 });
 
 describe('labelLocaleValue / setLabelLocale', () => {
@@ -55,6 +59,9 @@ describe('labelLocaleValue / setLabelLocale', () => {
   it('labelLocaleValue shows a legacy string label only under the first locale', () => {
     expect(labelLocaleValue('Definition', 'en', 'en')).toBe('Definition');
     expect(labelLocaleValue('Definition', 'vi', 'en')).toBe('');
+  });
+  it('labelLocaleValue is null-safe (missing label) → empty string', () => {
+    expect(labelLocaleValue(null as never, 'en', 'en')).toBe('');
   });
   it('setLabelLocale writes into an object label, preserving the other locales', () => {
     expect(setLabelLocale({ en: 'Definition', vi: '' }, 'vi', 'Nghĩa', 'en')).toEqual({ en: 'Definition', vi: 'Nghĩa' });

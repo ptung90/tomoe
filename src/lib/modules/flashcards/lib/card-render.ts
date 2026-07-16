@@ -35,6 +35,7 @@ export function resolveLocale(val: LocalizedText | undefined | null, locale: str
  *  `locale`'s text → else the first non-empty value across locales → else the field `key`.
  *  Never returns an empty string. Pure. */
 export function resolveLabel(label: LocalizedText, locale: string, key: string): string {
+  if (label === null || label === undefined) return key;  // null-safe like resolveLocale (legacy/hand-edited fields)
   if (typeof label === 'object') {
     const cur = (label[locale] ?? '').trim();
     if (cur) return cur;
@@ -53,6 +54,7 @@ export function resolveLabel(label: LocalizedText, locale: string, key: string):
  *  it appears once, not duplicated under every locale) and blank everywhere else. Pure —
  *  companion to `setLabelLocale` for the label editor UI (SchemaEditorModal / SchemaLibraryModal). */
 export function labelLocaleValue(label: LocalizedText, locale: string, firstLocale: string): string {
+  if (label === null || label === undefined) return '';
   if (typeof label === 'object') return label[locale] ?? '';
   return locale === firstLocale ? label : '';
 }
