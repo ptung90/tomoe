@@ -35,6 +35,17 @@ describe('flashcards model', () => {
     p.records.push({ id: 'rec_1', schemaId: 's1', fieldsHash: '', fields: { name: { en: 'Owl', vi: 'Cú' } } });
     expect(parseProject(serializeProject(p))).toEqual(p);
   });
+  it('serialize -> parse round-trips a schema with multilingual and legacy string field labels', () => {
+    const p = newProject();
+    p.schemas.push({
+      id: 's1', name: 'Words', cardTemplates: [],
+      fields: [
+        { id: 'f1', key: 'def', label: { en: 'Definition', vi: 'Nghĩa' }, type: 'text', multilingual: true },
+        { id: 'f2', key: 'note', label: 'Note', type: 'text', multilingual: false },
+      ],
+    });
+    expect(parseProject(serializeProject(p))).toEqual(p);
+  });
   it('serialize ends with newline', () => { expect(serializeProject(newProject()).endsWith('\n')).toBe(true); });
   it('parseProject accepts legacy flashcard-creator JSON', () => {
     const legacy = JSON.stringify({ project_name:'Old', project_icon:'🐦',

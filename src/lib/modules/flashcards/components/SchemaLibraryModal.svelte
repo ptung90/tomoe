@@ -17,6 +17,7 @@
   } from '../stores';
   import { serializeSchemaExport, type SchemaLibraryEntry } from '../io/schemaIO';
   import { viewLabel } from '../cardMapping';
+  import { labelLocaleValue, setLabelLocale } from '../lib/card-render';
   import { uid, type SchemaField, type Schema } from '../model';
   import { showToast } from '../../../shell';
 
@@ -180,7 +181,16 @@
                   {#each fieldsDraft as f, i (f.id)}
                     <div class="field-row">
                       <input aria-label="field key" placeholder="key" bind:value={f.key} oninput={commitFields} />
-                      <input aria-label="field label" placeholder="label" bind:value={f.label} oninput={commitFields} />
+                      <div class="label-locales">
+                        {#each $project.locales as loc (loc)}
+                          <div class="loc-row">
+                            <span class="loc-tag">{loc.toUpperCase()}</span>
+                            <input class="txt" aria-label={`field label ${loc}`} placeholder="label"
+                              value={labelLocaleValue(f.label, loc, $project.locales[0])}
+                              oninput={(e) => patchField(i, { label: setLabelLocale(f.label, loc, (e.target as HTMLInputElement).value, $project.locales[0]) })} />
+                          </div>
+                        {/each}
+                      </div>
                       <select aria-label="field type" value={f.type}
                         onchange={(e) => patchField(i, { type: (e.target as HTMLSelectElement).value as SchemaField['type'] })}>
                         <option value="text">text</option>
@@ -200,7 +210,7 @@
                   {#if expandedEntry && expandedEntry.schema.cardTemplates.length}
                     {#each expandedEntry.schema.cardTemplates as t, i (t.id)}
                       <div class="view-row">
-                        <span class="view-name">{viewLabel(t, asSchema(expandedEntry), i)}</span>
+                        <span class="view-name">{viewLabel(t, asSchema(expandedEntry), i, $project.activeLocale)}</span>
                         <span class="view-meta">{t.layout} · {t.fields?.length ?? 'all'} field{t.fields?.length === 1 ? '' : 's'}</span>
                       </div>
                     {/each}
@@ -262,14 +272,17 @@
   .add { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); background:transparent;
     color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px; }
   .add:hover { background:var(--accent-weak); color:var(--accent); }
-  .field-row { display:flex; align-items:center; gap:6px; }
+  .field-row { display:flex; align-items:flex-start; gap:6px; }
   .field-row input:not([type]), .field-row select { padding:5px 7px;
     border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font:inherit; font-size:13px; }
   .field-row > input { flex:1; min-width:0; }
   .field-row > button { border:1px solid var(--border); background:transparent; color:var(--text-muted);
-    border-radius:6px; padding:4px 7px; font:inherit; }
+    border-radius:6px; padding:4px 7px; font:inherit; margin-top:2px; }
   .field-row > button:hover { color:var(--danger); border-color:var(--danger-border); background:var(--danger-weak); }
-  .ml { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-muted); }
+  .label-locales { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .loc-row { display:flex; align-items:center; gap:6px; }
+  .loc-tag { font-size:10px; font-weight:600; color:var(--accent); min-width:20px; flex:none; }
+  .ml { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-muted); margin-top:5px; }
   .views-lbl { margin-top:2px; }
   .view-row { display:flex; align-items:center; justify-content:space-between; gap:10px;
     border:1px solid var(--border); border-radius:6px; padding:5px 9px; font-size:12px; }

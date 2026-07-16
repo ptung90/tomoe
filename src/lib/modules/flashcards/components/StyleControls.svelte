@@ -27,7 +27,7 @@
     setTemplateStyle, setCardStyle, clearStyleOverride, resetScopeStyle, setViewFields,
   } from '../stores';
   import { deriveAutoTemplate, viewLabel } from '../cardMapping';
-  import { sheetLayout, sheetGrid } from '../lib/card-render';
+  import { sheetLayout, sheetGrid, resolveLabel } from '../lib/card-render';
   import { resolveStyle } from '../lib/style';
   import type { FontSpec, StyleOverrides } from '../model';
 
@@ -48,7 +48,7 @@
   // so both stay in sync via the shared activeViewId store.
   const views = $derived(schema ? (schema.cardTemplates.length ? schema.cardTemplates : [deriveAutoTemplate(schema)]) : []);
   const template = $derived(views.find((v) => v.id === $activeViewId) ?? views[0] ?? null);
-  const activeViewName = $derived(schema && template ? viewLabel(template, schema, Math.max(0, views.findIndex((v) => v.id === template!.id))) : '');
+  const activeViewName = $derived(schema && template ? viewLabel(template, schema, Math.max(0, views.findIndex((v) => v.id === template!.id)), $project.activeLocale) : '');
   // The selected record's packed card FOR THE ACTIVE VIEW — style overrides can only be written
   // onto a real card, so "This card" scope is only available once one exists for this view.
   // deriveAutoTemplate now mints a DETERMINISTIC id per schema (see cardMapping.ts), so this
@@ -265,9 +265,9 @@
           <div class="toolbar">
             {#each schema.fields as f (f.key)}
               <label class="tool">
-                <input type="checkbox" aria-label={f.label}
+                <input type="checkbox" aria-label={resolveLabel(f.label, $project.activeLocale, f.key)}
                   checked={(template?.fields?.length ?? 0) === 0 ? true : template!.fields!.includes(f.key)}
-                  onchange={() => onToggleField(f.key)} /> {f.label}
+                  onchange={() => onToggleField(f.key)} /> {resolveLabel(f.label, $project.activeLocale, f.key)}
               </label>
             {/each}
           </div>

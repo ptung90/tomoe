@@ -4,6 +4,7 @@
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, schemaEditorOpen, addSchema, updateSchema, deleteSchema } from '../stores';
+  import { labelLocaleValue, setLabelLocale } from '../lib/card-render';
   import { uid, type SchemaField } from '../model';
 
   let name = $state('');
@@ -38,13 +39,21 @@
   }
 
   function close() { schemaEditorOpen.set(null); }
+  /** True when every locale of a label (or a plain string label) is blank. Local to this
+   *  modal's save-time defensiveness — a field must always have SOME label. */
+  function isLabelBlank(label: SchemaField['label']): boolean {
+    if (typeof label === 'object') return Object.values(label).every((v) => !v || !v.trim());
+    return !label || !label.trim();
+  }
   function save() {
-    // Fill blank keys/labels defensively so records can address fields.
-    const clean = fields.map((f, i) => ({
-      ...f,
-      key: f.key.trim() || `field${i + 1}`,
-      label: f.label.trim() || f.key.trim() || `Field ${i + 1}`,
-    }));
+    // Fill blank keys/labels defensively so records can address fields. A blank label backfills
+    // to the key/`Field N`; otherwise the full LocalizedText label is persisted as-is so every
+    // locale the user typed survives (no collapse to a single primary-locale string).
+    const clean = fields.map((f, i) => {
+      const key = f.key.trim() || `field${i + 1}`;
+      const label = isLabelBlank(f.label) ? (f.key.trim() || `Field ${i + 1}`) : f.label;
+      return { ...f, key, label };
+    });
     if (target === '__new__') {
       const id = addSchema(name.trim() || 'Untitled');
       updateSchema(id, { fields: clean });
@@ -86,8 +95,16 @@
           <div class="field-row">
             <input aria-label="field key" placeholder="key" bind:value={f.key}
               oninput={(e) => patchField(i, { key: (e.target as HTMLInputElement).value })} />
-            <input aria-label="field label" placeholder="label" bind:value={f.label}
-              oninput={(e) => patchField(i, { label: (e.target as HTMLInputElement).value })} />
+            <div class="label-locales">
+              {#each $project.locales as loc (loc)}
+                <div class="loc-row">
+                  <span class="loc-tag">{loc.toUpperCase()}</span>
+                  <input class="txt" aria-label={`field label ${loc}`} placeholder="label"
+                    value={labelLocaleValue(f.label, loc, $project.locales[0])}
+                    oninput={(e) => patchField(i, { label: setLabelLocale(f.label, loc, (e.target as HTMLInputElement).value, $project.locales[0]) })} />
+                </div>
+              {/each}
+            </div>
             <select aria-label="field type" value={f.type}
               onchange={(e) => patchField(i, { type: (e.target as HTMLSelectElement).value as SchemaField['type'] })}>
               <option value="text">text</option>
@@ -134,13 +151,16 @@
   .add { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); background:transparent;
     color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px; }
   .add:hover { background:var(--accent-weak); color:var(--accent); }
-  .field-row { display:flex; align-items:center; gap:6px; }
+  .field-row { display:flex; align-items:flex-start; gap:6px; }
   .field-row input:not([type]), .field-row select { padding:5px 7px;
     border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font:inherit; font-size:13px; }
   .field-row > input { flex:1; min-width:0; }
   .field-row > button { border:1px solid var(--border); background:transparent; color:var(--text-muted);
-    border-radius:6px; padding:4px 7px; font:inherit; }
-  .ml { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-muted); }
+    border-radius:6px; padding:4px 7px; font:inherit; margin-top:2px; }
+  .label-locales { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .loc-row { display:flex; align-items:center; gap:6px; }
+  .loc-tag { font-size:10px; font-weight:600; color:var(--accent); min-width:20px; flex:none; }
+  .ml { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-muted); margin-top:5px; }
   .modal-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
   .spacer { flex:1; }
   .modal-foot button { border:1px solid var(--border); background:transparent; color:var(--text);

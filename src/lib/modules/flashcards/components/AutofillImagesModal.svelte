@@ -3,6 +3,7 @@
   import WandSparkles from 'lucide-svelte/icons/wand-sparkles';
   import { autofill } from '../lib/imageAutofill';
   import { searchWikimedia } from '../lib/imageSearch';
+  import { resolveLabel } from '../lib/card-render';
   import { project, applyImageAutofill } from '../stores';
   import { showToast } from '../../../shell';
   import type { Schema, RecordItem } from '../model';
@@ -56,14 +57,14 @@
       <label class="row">
         <span>Query field</span>
         <select aria-label="query field" bind:value={queryKey} disabled={running}>
-          {#each textFields as f (f.id)}<option value={f.key}>{f.label}</option>{/each}
+          {#each textFields as f (f.id)}<option value={f.key}>{resolveLabel(f.label, $project.activeLocale, f.key)}</option>{/each}
         </select>
       </label>
       {#if imageFields.length > 1}
         <label class="row">
           <span>Target image field</span>
           <select aria-label="target image field" bind:value={imageKey} disabled={running}>
-            {#each imageFields as f (f.id)}<option value={f.key}>{f.label}</option>{/each}
+            {#each imageFields as f (f.id)}<option value={f.key}>{resolveLabel(f.label, $project.activeLocale, f.key)}</option>{/each}
           </select>
         </label>
       {/if}

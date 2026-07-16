@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPaperPx, mmToPx, esc, resolveLocale } from '../src/lib/modules/flashcards/lib/card-render';
+import { getPaperPx, mmToPx, esc, resolveLocale, resolveLabel, labelLocaleValue, setLabelLocale } from '../src/lib/modules/flashcards/lib/card-render';
 import { buildCardHTML, sheetGrid, sheetLayout, buildSheetHTML } from '../src/lib/modules/flashcards/lib/card-render';
 import { LAYOUT_SLOTS } from '../src/lib/modules/flashcards/lib/layouts';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
@@ -25,6 +25,52 @@ describe('card-render helpers', () => {
   it('registries expose slot counts for the single-card layouts', () => {
     expect(LAYOUT_SLOTS['2x2']).toBe(4);
     expect(LAYOUT_SLOTS['fulltext']).toBe(0);
+  });
+});
+
+describe('resolveLabel', () => {
+  it('returns the active locale\'s text when present', () => {
+    expect(resolveLabel({ en: 'Definition', vi: 'Nghĩa' }, 'vi', 'def')).toBe('Nghĩa');
+  });
+  it('falls back to another non-empty locale when the active one is blank', () => {
+    expect(resolveLabel({ en: 'Definition', vi: '' }, 'vi', 'def')).toBe('Definition');
+  });
+  it('falls back to the field key when every locale is blank', () => {
+    expect(resolveLabel({ en: '', vi: '  ' }, 'vi', 'def')).toBe('def');
+  });
+  it('passes a plain string label through unchanged (trimmed)', () => {
+    expect(resolveLabel('  Definition  ', 'vi', 'def')).toBe('Definition');
+  });
+  it('falls back to the key for an empty or whitespace-only string label', () => {
+    expect(resolveLabel('', 'en', 'def')).toBe('def');
+    expect(resolveLabel('   ', 'en', 'def')).toBe('def');
+  });
+  it('is null-safe (legacy/hand-edited field with no label) — falls back to key', () => {
+    expect(resolveLabel(null as never, 'en', 'def')).toBe('def');
+    expect(resolveLabel(undefined as never, 'en', 'def')).toBe('def');
+  });
+});
+
+describe('labelLocaleValue / setLabelLocale', () => {
+  it('labelLocaleValue reads the requested locale slot of an object label', () => {
+    expect(labelLocaleValue({ en: 'Definition', vi: 'Nghĩa' }, 'vi', 'en')).toBe('Nghĩa');
+    expect(labelLocaleValue({ en: 'Definition' }, 'vi', 'en')).toBe('');
+  });
+  it('labelLocaleValue shows a legacy string label only under the first locale', () => {
+    expect(labelLocaleValue('Definition', 'en', 'en')).toBe('Definition');
+    expect(labelLocaleValue('Definition', 'vi', 'en')).toBe('');
+  });
+  it('labelLocaleValue is null-safe (missing label) → empty string', () => {
+    expect(labelLocaleValue(null as never, 'en', 'en')).toBe('');
+  });
+  it('setLabelLocale writes into an object label, preserving the other locales', () => {
+    expect(setLabelLocale({ en: 'Definition', vi: '' }, 'vi', 'Nghĩa', 'en')).toEqual({ en: 'Definition', vi: 'Nghĩa' });
+  });
+  it('setLabelLocale converts a legacy string label to an object, keeping it under the first locale', () => {
+    expect(setLabelLocale('Definition', 'vi', 'Nghĩa', 'en')).toEqual({ en: 'Definition', vi: 'Nghĩa' });
+  });
+  it('setLabelLocale converts a blank label to an object with only the new locale set', () => {
+    expect(setLabelLocale('', 'en', 'Definition', 'en')).toEqual({ en: 'Definition' });
   });
 });
 

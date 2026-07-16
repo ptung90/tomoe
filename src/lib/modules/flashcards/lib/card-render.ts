@@ -30,6 +30,44 @@ export function resolveLocale(val: LocalizedText | undefined | null, locale: str
   return val;
 }
 
+/** Resolve a field label to display text. Unlike `resolveLocale` (used for field *values*,
+ *  which may legitimately be blank), a label always renders something meaningful: the active
+ *  `locale`'s text → else the first non-empty value across locales → else the field `key`.
+ *  Never returns an empty string. Pure. */
+export function resolveLabel(label: LocalizedText, locale: string, key: string): string {
+  if (label === null || label === undefined) return key;  // null-safe like resolveLocale (legacy/hand-edited fields)
+  if (typeof label === 'object') {
+    const cur = (label[locale] ?? '').trim();
+    if (cur) return cur;
+    for (const v of Object.values(label)) {
+      const t = (v ?? '').trim();
+      if (t) return t;
+    }
+    return key;
+  }
+  const s = (label ?? '').trim();
+  return s || key;
+}
+
+/** Read the per-locale editor value for a label input: an object label reads its `locale`
+ *  slot directly (blank if unset); a legacy string label is shown ONLY under `firstLocale` (so
+ *  it appears once, not duplicated under every locale) and blank everywhere else. Pure —
+ *  companion to `setLabelLocale` for the label editor UI (SchemaEditorModal / SchemaLibraryModal). */
+export function labelLocaleValue(label: LocalizedText, locale: string, firstLocale: string): string {
+  if (label === null || label === undefined) return '';
+  if (typeof label === 'object') return label[locale] ?? '';
+  return locale === firstLocale ? label : '';
+}
+
+/** Write one locale's text into a label, normalizing to an object. A legacy string label is
+ *  first carried into `{ [firstLocale]: label }` (so editing any OTHER locale never loses it);
+ *  a blank label starts from `{}`. Pure — companion to `labelLocaleValue`. */
+export function setLabelLocale(label: LocalizedText, locale: string, text: string, firstLocale: string): LocalizedText {
+  const base: Record<string, string> = typeof label === 'object' ? { ...label } : (label ? { [firstLocale]: label } : {});
+  base[locale] = text;
+  return base;
+}
+
 export function mdInline(text: string): string { return marked.parseInline(text || '', { async: false }) as string; }
 export function mdBlock(text: string): string {
   if (!text) return '';

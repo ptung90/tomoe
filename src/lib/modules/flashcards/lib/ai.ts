@@ -1,17 +1,24 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { type Schema, type RecordItem, type LocalizedText } from '../model';
+import { resolveLabel } from './card-render';
 
 export const DEFAULT_AI_MODEL = 'claude-opus-4-8';
 export interface AiConfig { apiKey: string; model: string }
 
-/** Build the system + user prompt for generating `count` records for `schema`. Pure. */
+/** Build the system + user prompt for generating `count` records for `schema`. The field
+ *  description resolves each field's (possibly multilingual) label to the FIRST of `locales`
+ *  (a stand-in "canonical" locale here — this prompt only has the enabled-locales list, not a
+ *  single active one) via `resolveLabel`; the AI still keys record values by field `key`, so
+ *  which locale's label text it sees does not change generation. Pure. */
 export function buildRecordsPrompt(
   schema: Schema, instruction: string, count: number, locales: string[],
 ): { system: string; user: string } {
+  const canonicalLocale = locales[0] ?? '';
   const fieldLines = schema.fields.map((f) => {
-    if (f.type === 'image') return `- "${f.key}" (${f.label}): image — value is a string URL (use "" if none).`;
-    if (f.multilingual === false) return `- "${f.key}" (${f.label}): text — value is a plain string.`;
-    return `- "${f.key}" (${f.label}): text — value is an object mapping locale → string, locales: ${locales.join(', ')}.`;
+    const label = resolveLabel(f.label, canonicalLocale, f.key);
+    if (f.type === 'image') return `- "${f.key}" (${label}): image — value is a string URL (use "" if none).`;
+    if (f.multilingual === false) return `- "${f.key}" (${label}): text — value is a plain string.`;
+    return `- "${f.key}" (${label}): text — value is an object mapping locale → string, locales: ${locales.join(', ')}.`;
   }).join('\n');
   const system =
     `You generate flashcard records as strict JSON.\n` +

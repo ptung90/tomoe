@@ -68,6 +68,18 @@ describe('recordToCard', () => {
     const c = recordToCard(rec, schema(), t, settings, 'en');
     expect(c.orientation).toBe('landscape');
   });
+  it('resolves an {en,vi} field label to the active locale in a section label', () => {
+    const s = schema();
+    s.fields = s.fields.map((f) => (f.key === 'def' ? { ...f, label: { en: 'Definition', vi: 'Nghĩa' } } : f));
+    const c = recordToCard(rec, s, deriveAutoTemplate(s), DEFAULT_SETTINGS, 'vi');
+    expect(c.sections[0].label).toBe('Nghĩa');
+  });
+  it('falls back to another locale when the active one\'s label is blank', () => {
+    const s = schema();
+    s.fields = s.fields.map((f) => (f.key === 'def' ? { ...f, label: { en: 'Definition', vi: '' } } : f));
+    const c = recordToCard(rec, s, deriveAutoTemplate(s), DEFAULT_SETTINGS, 'vi');
+    expect(c.sections[0].label).toBe('Definition');
+  });
 });
 
 describe('applySettings / applyTemplatePatch', () => {
@@ -264,15 +276,15 @@ describe('viewLabel', () => {
   const sch = schema();
   it('uses the explicit name when set', () => {
     const t = { ...deriveAutoTemplate(sch), name: 'Cover' };
-    expect(viewLabel(t, sch, 0)).toBe('Cover');
+    expect(viewLabel(t, sch, 0, 'en')).toBe('Cover');
   });
   it('derives from a single selected field\'s label', () => {
     const t = { ...deriveAutoTemplate(sch), fields: ['pic'] };
-    expect(viewLabel(t, sch, 0)).toBe('Pic');
+    expect(viewLabel(t, sch, 0, 'en')).toBe('Pic');
   });
   it('joins several selected fields\' labels with " + "', () => {
     const t = { ...deriveAutoTemplate(sch), fields: ['title', 'def'] };
-    expect(viewLabel(t, sch, 0)).toBe('Title + Definition');
+    expect(viewLabel(t, sch, 0, 'en')).toBe('Title + Definition');
   });
   it('truncates a long joined label to <=24 chars with a trailing ellipsis', () => {
     const longSchema: Schema = { id: 's2', name: 'Long', cardTemplates: [], fields: [
@@ -280,13 +292,29 @@ describe('viewLabel', () => {
       { id: 'f2', key: 'b', label: 'Another Long Field Label', type: 'text' },
     ] };
     const t = { ...deriveAutoTemplate(longSchema), fields: ['a', 'b'] };
-    const label = viewLabel(t, longSchema, 0);
+    const label = viewLabel(t, longSchema, 0, 'en');
     expect(label.length).toBeLessThanOrEqual(24);
     expect(label.endsWith('…')).toBe(true);
   });
   it('falls back to "View {n}" (1-based) when no fields are selected and no name is set', () => {
     const t = deriveAutoTemplate(sch); // no fields, no name
-    expect(viewLabel(t, sch, 0)).toBe('View 1');
-    expect(viewLabel(t, sch, 2)).toBe('View 3');
+    expect(viewLabel(t, sch, 0, 'en')).toBe('View 1');
+    expect(viewLabel(t, sch, 2, 'en')).toBe('View 3');
+  });
+  it('resolves a single selected field\'s {en,vi} label to the requested locale', () => {
+    const mlSchema: Schema = { id: 's3', name: 'ML', cardTemplates: [], fields: [
+      { id: 'f1', key: 'def', label: { en: 'Definition', vi: 'Nghĩa' }, type: 'text' },
+    ] };
+    const t = { ...deriveAutoTemplate(mlSchema), fields: ['def'] };
+    expect(viewLabel(t, mlSchema, 0, 'vi')).toBe('Nghĩa');
+    expect(viewLabel(t, mlSchema, 0, 'en')).toBe('Definition');
+  });
+  it('falls back to another locale when the requested one is blank, in a joined label', () => {
+    const mlSchema: Schema = { id: 's4', name: 'ML2', cardTemplates: [], fields: [
+      { id: 'f1', key: 'a', label: { en: 'Word', vi: '' }, type: 'text' },
+      { id: 'f2', key: 'b', label: 'Note', type: 'text' },
+    ] };
+    const t = { ...deriveAutoTemplate(mlSchema), fields: ['a', 'b'] };
+    expect(viewLabel(t, mlSchema, 0, 'vi')).toBe('Word + Note');
   });
 });

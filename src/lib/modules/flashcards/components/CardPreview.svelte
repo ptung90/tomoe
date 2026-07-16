@@ -99,7 +99,7 @@
       const vLay = sheetLayout(v, vEff.paperSize, vEff.orientation);
       const vCellPx = { w: vLay.cellW, h: vLay.cellH };
       const html = buildCardHTML(recordToCard(record, schema, v, $project.settings, $project.activeLocale), vEff, $project.activeLocale, false, vCellPx);
-      return { id: v.id, label: viewLabel(v, schema, i), html, cellPx: vCellPx };
+      return { id: v.id, label: viewLabel(v, schema, i, $project.activeLocale), html, cellPx: vCellPx };
     });
   });
   // Each column fits within an equal share of the pane's width; explicit userZoom overrides all columns.
