@@ -587,12 +587,14 @@ git commit -m "feat(flashcards): add Document layout group to picker"
 
 Add to `CardPreview.svelte` a routine that, after the preview HTML mounts, finds each `.fc-flow-inner`, measures, and sets the CSS var. Because the flow card's outer shell has `overflow:hidden` and a fixed height, measure the inner content's natural height by temporarily clearing the transform:
 
+Preview has TWO render paths: card mode renders each view via `viewCards[].html` (one `buildCardHTML` per view), sheet mode via `sheetHtml`. The effect must re-run when EITHER changes:
+
 ```svelte
 import { fitFlowScale } from '../lib/flow-render';
 
 $effect(() => {
-  // re-run whenever the rendered sheet HTML changes
-  void sheetHtml;
+  // re-run whenever either render path changes (card mode = viewCards, sheet mode = sheetHtml)
+  void viewCards; void sheetHtml;
   queueMicrotask(() => {
     for (const inner of document.querySelectorAll<HTMLElement>('.preview .fc-flow-inner')) {
       const shell = inner.closest<HTMLElement>('.fc-flow');
