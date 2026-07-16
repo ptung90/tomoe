@@ -207,6 +207,10 @@ export function duplicateRecord(id: string): void {
 export function setField(recordId: string, key: string, value: string, locale?: string): void {
   commit(ops.setField(get(project), recordId, key, value, locale));
 }
+export function applyImageAutofill(updates: { recordId: string; key: string; url: string }[]): void {
+  if (updates.length === 0) return;
+  commit(ops.setImageFields(get(project), updates));
+}
 
 // ── Schema actions ─────────────────────────────────────────────────────
 export function addSchema(name: string): string {

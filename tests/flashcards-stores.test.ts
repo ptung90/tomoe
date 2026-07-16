@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import * as S from '../src/lib/modules/flashcards/stores';
+import { newProject, type Schema } from '../src/lib/modules/flashcards/model';
 
 beforeEach(() => { S.initProject(); });
 
@@ -141,5 +142,28 @@ describe('style setters (cascade)', () => {
     S.setCardStyle(cid, { titleFont: { size: 22 }, margin: 8 });
     S.resetScopeStyle('card', cid);
     expect(get(S.project).cards.find((c) => c.id === cid)!.style).toBeUndefined();
+  });
+});
+
+describe('applyImageAutofill', () => {
+  it('commits image updates as one undo step, and no-ops on empty', () => {
+    const p = newProject();
+    const schema: Schema = { id: 's1', name: 'W', cardTemplates: [], fields: [
+      { id: 'f1', key: 'title', label: 'T', type: 'text', multilingual: true },
+      { id: 'f2', key: 'pic', label: 'P', type: 'image' },
+    ] };
+    p.schemas.push(schema);
+    p.records.push({ id: 'r1', schemaId: 's1', fieldsHash: '', fields: { title: { en: 'Owl', vi: '' }, pic: '' } });
+    S.loadProject(p, null);
+
+    S.applyImageAutofill([]); // empty → no commit, stays clean
+    expect(get(S.dirty)).toBe(false);
+
+    S.applyImageAutofill([{ recordId: 'r1', key: 'pic', url: 'https://x/a.jpg' }]);
+    expect(get(S.project).records[0].fields.pic).toBe('https://x/a.jpg');
+    expect(get(S.dirty)).toBe(true);
+
+    S.undo();
+    expect(get(S.project).records[0].fields.pic).toBe('');
   });
 });

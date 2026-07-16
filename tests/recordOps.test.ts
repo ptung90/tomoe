@@ -159,3 +159,23 @@ describe('recordOps locale + import', () => {
     expect(p2.records).toHaveLength(2);
   });
 });
+
+describe('recordOps.setImageFields', () => {
+  it('sets only the target key on listed records, leaves others untouched, immutably', () => {
+    const { p } = withSchema();
+    const a = ops.addRecord(p, 's1');
+    const b = ops.addRecord(a.project, 's1');
+    const p2 = ops.setImageFields(b.project, [{ recordId: a.id, key: 'pic', url: 'https://x/a.jpg' }]);
+    expect(p2.records[0].fields.pic).toBe('https://x/a.jpg');
+    expect(p2.records[0].fields.title).toEqual({ en: '', vi: '' }); // other field untouched
+    expect(p2.records[1].fields.pic).toBe(''); // other record untouched
+    expect(b.project.records[0].fields.pic).toBe(''); // input not mutated
+  });
+
+  it('ignores updates whose recordId is unknown', () => {
+    const { p } = withSchema();
+    const a = ops.addRecord(p, 's1');
+    const p2 = ops.setImageFields(a.project, [{ recordId: 'nope', key: 'pic', url: 'https://x/a.jpg' }]);
+    expect(p2.records[0].fields.pic).toBe('');
+  });
+});

@@ -136,3 +136,25 @@ export function importRecords(
     : [...p.records, ...normalized];
   return migrateRecordFields({ ...p, records });
 }
+
+/** Set image-field values on records in one immutable pass. Each update writes
+ *  `url` to `key` on the record with `recordId`; unknown recordIds are ignored. */
+export function setImageFields(
+  p: Project, updates: { recordId: string; key: string; url: string }[],
+): Project {
+  if (updates.length === 0) return p;
+  const byId = new Map<string, { key: string; url: string }[]>();
+  for (const u of updates) {
+    const list = byId.get(u.recordId) ?? [];
+    list.push({ key: u.key, url: u.url });
+    byId.set(u.recordId, list);
+  }
+  const records = p.records.map((r) => {
+    const ups = byId.get(r.id);
+    if (!ups) return r;
+    const fields = { ...r.fields };
+    for (const { key, url } of ups) fields[key] = url;
+    return { ...r, fields };
+  });
+  return { ...p, records };
+}
