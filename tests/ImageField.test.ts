@@ -28,11 +28,11 @@ describe('ImageField', () => {
     expect(style).toContain('%27');
     expect(style).not.toContain("o'brien");
   });
-  it('shows a Search button and a Crop button (Crop only when a value exists)', () => {
+  it('shows a Search button and an Edit image button (edit only when a value exists)', () => {
     const { rerender } = render(ImageField, { value: '', onChange: vi.fn() });
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /crop/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit image/i })).not.toBeInTheDocument();
     rerender({ value: 'http://x/a.png', onChange: vi.fn() });
-    expect(screen.getByRole('button', { name: /crop/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit image/i })).toBeInTheDocument();
   });
 });
