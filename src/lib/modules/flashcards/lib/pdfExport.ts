@@ -4,6 +4,21 @@ import './card-render.css';
 import type { Project } from '../model';
 import { collectPrintSheets } from './printCards';
 import { buildSheetHTML, PAPER_MM } from './card-render';
+import { fitFlowScale } from './flow-render';
+
+/** Measure + shrink each rendered flow page's `.fc-flow-inner` to fit its shell, same pass as
+ * the on-screen preview/print — keeps the exported PDF WYSIWYG with what the user saw. */
+function fitFlowPages(root: ParentNode): void {
+  for (const inner of root.querySelectorAll<HTMLElement>('.fc-flow-inner')) {
+    const shell = inner.closest<HTMLElement>('.fc-flow');
+    if (!shell) continue;
+    inner.style.setProperty('--flow-scale', '1');
+    const pad = parseFloat(getComputedStyle(shell).paddingTop) || 0;
+    const pageInnerH = shell.clientHeight - 2 * pad;
+    const scale = fitFlowScale(inner.scrollHeight, pageInnerH);
+    inner.style.setProperty('--flow-scale', String(scale));
+  }
+}
 
 /** Slug + timestamp filename, e.g. "vong-tuan-hoan-20260715-1042.pdf". Vietnamese-safe. Pure. */
 export function pdfFileName(projectName: string, stamp: string): string {
@@ -58,6 +73,7 @@ export async function exportCardsPdf(project: Project): Promise<Uint8Array | nul
 
       await document.fonts?.ready;
       await new Promise((r) => requestAnimationFrame(() => r(null)));  // let fonts/layout settle before capture
+      fitFlowPages(page);  // shrink overflowing flow pages so the PDF matches the on-screen preview
 
       const canvas = await toCanvas(page, { pixelRatio: scale, backgroundColor: '#ffffff', cacheBust: false });
       const data = canvas.toDataURL(mime, quality);

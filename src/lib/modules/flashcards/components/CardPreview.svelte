@@ -9,6 +9,7 @@
   import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, renameView, deleteView } from '../stores';
   import { deriveAutoTemplate, recordToCard, chunkRecords, viewLabel } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
+  import { fitFlowScale } from '../lib/flow-render';
   import { resolveStyle } from '../lib/style';
   import { LAYOUTS } from '../lib/layouts';
   import { FLOW_LAYOUTS } from '../lib/flow-layouts';
@@ -171,6 +172,26 @@
     };
     window.addEventListener('click', onDocClick);
     return () => window.removeEventListener('click', onDocClick);
+  });
+
+  // Auto-fit flow (Document layout) pages: after either render path paints, measure each
+  // flow page's natural content height against its shell's inner height and shrink it via
+  // a CSS scale var so an overflowing page fits on one sheet instead of clipping/spilling.
+  // Re-runs whenever card mode's viewCards OR sheet mode's sheetHtml changes (only one is
+  // in the DOM at a time, but both are tracked so switching modes/content re-measures).
+  $effect(() => {
+    void viewCards; void sheetHtml;
+    queueMicrotask(() => {
+      for (const inner of document.querySelectorAll<HTMLElement>('.preview .fc-flow-inner')) {
+        const shell = inner.closest<HTMLElement>('.fc-flow');
+        if (!shell) continue;
+        inner.style.setProperty('--flow-scale', '1');
+        const pad = parseFloat(getComputedStyle(shell).paddingTop) || 0;
+        const pageInnerH = shell.clientHeight - 2 * pad;
+        const scale = fitFlowScale(inner.scrollHeight, pageInnerH);
+        inner.style.setProperty('--flow-scale', String(scale));
+      }
+    });
   });
 </script>
 
