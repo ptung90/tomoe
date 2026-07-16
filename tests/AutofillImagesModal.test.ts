@@ -1,0 +1,52 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, fireEvent, screen } from '@testing-library/svelte';
+import { get } from 'svelte/store';
+import AutofillImagesModal from '../src/lib/modules/flashcards/components/AutofillImagesModal.svelte';
+import * as stores from '../src/lib/modules/flashcards/stores';
+import { newProject, type Project, type Schema } from '../src/lib/modules/flashcards/model';
+
+function setup(): { project: Project; schema: Schema } {
+  const project = newProject();
+  const schema: Schema = { id: 's1', name: 'W', cardTemplates: [], fields: [
+    { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+    { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+  ] };
+  project.schemas.push(schema);
+  project.records.push(
+    { id: 'a', schemaId: 's1', fieldsHash: '', fields: { title: { en: 'Owl', vi: '' }, pic: '' } },
+    { id: 'b', schemaId: 's1', fieldsHash: '', fields: { title: { en: 'Cat', vi: '' }, pic: '' } },
+  );
+  stores.loadProject(project, null);
+  return { project, schema };
+}
+
+describe('AutofillImagesModal', () => {
+  beforeEach(() => setup());
+
+  it('runs auto-fill, writes top-1 urls to the store, and closes', async () => {
+    const schema = get(stores.project).schemas[0];
+    const records = get(stores.project).records;
+    const search = vi.fn(async (q: string) => [{ thumb: q + '_t', full: 'https://img/' + q + '.jpg', title: q }]);
+    const onClose = vi.fn();
+    render(AutofillImagesModal, { records, schema, onClose, search });
+
+    await fireEvent.click(screen.getByRole('button', { name: /fill|run/i }));
+    // let the sequential async run settle
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(get(stores.project).records[0].fields.pic).toBe('https://img/Owl.jpg');
+    expect(get(stores.project).records[1].fields.pic).toBe('https://img/Cat.jpg');
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('lets the user pick the query field', async () => {
+    const schema = get(stores.project).schemas[0];
+    const records = get(stores.project).records;
+    render(AutofillImagesModal, { records, schema, onClose: vi.fn(), search: vi.fn(async () => []) });
+    // only non-image fields are options
+    const opts = Array.from(screen.getByLabelText(/query field/i).querySelectorAll('option')).map((o) => o.textContent);
+    expect(opts).toContain('Title');
+    expect(opts).not.toContain('Pic');
+  });
+});
