@@ -335,12 +335,15 @@
   .slider { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); }
   .slider input { vertical-align:middle; }
   .erase-area { padding:12px 14px; height:52vh; overflow:auto; background:var(--bg); }
-  /* Checkerboard so transparency is visible — two token-coloured diagonal grids, no hardcoded hex. */
+  /* Transparency checkerboard — a functional indicator, so it uses FIXED neutral greys, not theme
+     tokens (like the fixed card-interior print colours). With tokens, dark mode's --surface and
+     --border are near-identical dark browns, collapsing the pattern into a flat near-black fill that
+     reads as a black background behind erased pixels. A light checker stays legible in both themes. */
   .checker { display:inline-block;
-    background-color:var(--surface);
+    background-color:#ffffff;
     background-image:
-      linear-gradient(45deg, var(--border) 25%, transparent 25%, transparent 75%, var(--border) 75%),
-      linear-gradient(45deg, var(--border) 25%, transparent 25%, transparent 75%, var(--border) 75%);
+      linear-gradient(45deg, #c8c8c8 25%, transparent 25%, transparent 75%, #c8c8c8 75%),
+      linear-gradient(45deg, #c8c8c8 25%, transparent 25%, transparent 75%, #c8c8c8 75%);
     background-size:16px 16px; background-position:0 0, 8px 8px; }
   .checker canvas { display:block; cursor:crosshair; touch-action:none; } /* touch-action:none so a drag paints, not scrolls */
   .checker canvas.eyedrop { cursor:cell; }
