@@ -19,8 +19,12 @@ brush for touch-ups — all client-side, no external/AI service.
   opens `CropModal.svelte`.
 - `CropModal.svelte` runs **cropperjs** on an `<img>` (sets `crossOrigin='anonymous'` before `src` so a
   CORS-clean remote stays untainted) and `onApply(canvas.toDataURL('image/jpeg', 0.9))`.
-- Native HTTP (no CORS) already exists for the image-search/autofill feature — reusable to fetch a
-  remote image's bytes into a data URL (guaranteeing an untainted canvas).
+- **Correction (verified in code):** there is NO Tauri HTTP plugin. Image search is a plain browser
+  `fetch` to the Wikimedia API (`origin=*`, CORS-safe) and returns **Wikimedia image URLs, which serve
+  CORS** — so `crossOrigin='anonymous'` keeps their canvas untainted (CropModal already relies on this).
+  Adding native HTTP would require a new `@tauri-apps/plugin-http` dependency + `http:` capability +
+  Rust registration + a `package.json` change (off-limits) — out of scope. So the real image sources
+  (data URLs from upload/crop, and CORS-clean Wikimedia URLs) load fine WITHOUT native HTTP.
 - `resolveImgStyle`/card render already handle transparent PNGs (empty image slots are transparent).
 
 ## Architecture — evolve CropModal into a 2-mode "Edit image" modal
@@ -42,12 +46,16 @@ Crop from the pre-erase source and the erase edits are dropped. No confirm neede
 **Apply**: crop-only (no erase touched) → `toDataURL('image/jpeg', 0.9)` (unchanged). Erase used →
 `toDataURL('image/png')` (alpha). `onApply(dataUrl)` → the field value.
 
-## Loading an untainted canvas
+## Loading the canvas (untainted where possible)
 
-Helper `loadImageDataUrl(src): Promise<string>` (a lib fn): if `src` starts with `data:` return it
-as-is; else fetch the bytes via native HTTP → base64 → `data:<mime>;base64,…`. The Erase canvas always
-seeds from a data URL (or the crop canvas, already same-origin), so `getImageData` never throws on a
-tainted canvas. (Crop mode keeps its existing `crossOrigin='anonymous'` path.)
+The Erase canvas seeds from the **crop canvas** (`getCroppedCanvas()`, same-origin — always readable)
+when reached via Crop, or from the source image loaded with `crossOrigin='anonymous'` (like CropModal)
+for data URLs and CORS-clean remotes (Wikimedia). No native HTTP fetch (see the correction above).
+
+**Tainted fallback:** if `getImageData` throws (an arbitrary non-CORS remote pasted by hand), catch it,
+show a toast ("Can't edit this remote image — upload it first"), and keep Erase disabled / bail to
+Crop-only. This matches CropModal's existing behaviour (its `apply()` already catches the tainted-canvas
+throw). No crash. Editing after uploading/cropping to a data URL always works.
 
 ## Erase mode — canvas model + tools
 
@@ -85,8 +93,6 @@ without a real canvas.
 - `imageEdit.ts`: `colorDistance` (identical→0, opposite→max); `pickCornerColor` (a border-dominant
   image); `removeSolidBackground` (matching pixels → alpha 0 within tolerance, non-matching untouched,
   tolerance boundary, input not mutated).
-- `loadImageDataUrl`: `data:` passthrough; a remote URL → native-http fetch mocked → returns a
-  `data:image/...;base64,` string.
 - **jsdom has no real `<canvas>`/`getImageData`**, so the modal's canvas interactions (eraser/restore/
   zoom/eyedropper) are NOT unit-tested — pixel logic lives in the pure fns above; the modal is thin
   glue verified by a **human visual pass** (as CropModal already is). Component tests only assert
@@ -98,13 +104,15 @@ without a real canvas.
 - AI subject segmentation; magic-wand **flood-fill by contiguous region** (this chroma-key removes by
   COLOUR across the whole image, not a connected region); multiple layers; feathered/anti-aliased edge
   refinement beyond the hard tolerance threshold.
+- **Fetching arbitrary non-CORS remote images** (would need a Tauri HTTP plugin + capability +
+  `package.json` change) — such images must be uploaded/cropped to a data URL first (tainted fallback
+  toast above).
 
 ## Plan shape (→ writing-plans → subagent-driven)
 
 1. **`lib/imageEdit.ts`** — `colorDistance`, `pickCornerColor`, `removeSolidBackground`. Pure, TDD.
-2. **`loadImageDataUrl`** — native-http fetch of a remote image → data URL (`data:` passthrough). Tests.
-3. **CropModal → Crop|Erase editor** — mode toggle; crop→erase bridge (`getCroppedCanvas`); erase
+2. **CropModal → Crop|Erase editor** — mode toggle; crop→erase bridge (`getCroppedCanvas`); erase
    canvas with chroma-key (auto + eyedropper + tolerance) / eraser / restore / brush-size / undo /
-   reset / zoom-pan; checkerboard; re-crop-after-erase confirm; Apply → JPEG (crop-only) / PNG
-   (erased); relabel the ImageField trigger to "Edit image". (Visual pass is human.)
-4. **Whole-branch review + visual pass.**
+   reset / zoom-pan; checkerboard; tainted-canvas toast fallback; re-crop-after-erase confirm; Apply →
+   JPEG (crop-only) / PNG (erased); relabel the ImageField trigger to "Edit image". (Visual pass is human.)
+3. **Whole-branch review + visual pass.**
