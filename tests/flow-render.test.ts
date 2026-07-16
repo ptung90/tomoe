@@ -37,6 +37,20 @@ describe('buildFlowCardHTML — page', () => {
     expect(second).toBeGreaterThan(-1);
   });
 });
+describe('buildFlowCardHTML — page header edge cases', () => {
+  // A page view can start with an image but no title/meta (e.g. a continuation page whose first
+  // field is an image). recordToFlowCard still collects that leading image as headerImage, so the
+  // renderer must render the header block and NOT drop the image.
+  const headerImageOnly: Card = { id: 'c2', layout: 'country-page', imageHeightPercent: 50,
+    images: [], title: '', meta: [],
+    headerImage: { slot: 0, url: 'flag-only.png' },
+    sections: [{ id: 's1', label: 'Food', content: '- Pho' }] };
+  const html = buildFlowCardHTML(headerImageOnly, DEFAULT_SETTINGS, 'en', getFlowLayout('country-page')!);
+  it('renders the header block and keeps headerImage when there is no title/meta', () => {
+    expect(html).toContain('fc-flow-header');
+    expect(html).toContain('flag-only.png');
+  });
+});
 describe('buildFlowCardHTML — collage', () => {
   const html = buildFlowCardHTML(cover, DEFAULT_SETTINGS, 'en', getFlowLayout('country-cover')!);
   it('renders a grid of image tiles and an outline title', () => {

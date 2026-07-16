@@ -40,6 +40,9 @@ function sideFor(def: FlowLayoutDef, i: number): 'left' | 'right' {
 
 export function buildFlowCardHTML(
   card: Card, settings: Settings, locale: string, def: FlowLayoutDef,
+  // `forPrint` is intentionally unused for flow layouts: flow images are CSS background-image,
+  // so there is no empty-slot placeholder to swap out for print (unlike the grid path). Kept for
+  // signature parity with `buildCardHTML` (dispatched with the same args).
   forPrint = false, overridePx: { w: number; h: number } | null = null,
 ): string {
   const { w, h } = overridePx || getPaperPx(settings.paperSize, card.orientation || settings.orientation);
@@ -70,7 +73,12 @@ export function buildFlowCardHTML(
   }
 
   // page mode
-  const hasHeader = !!title || (card.meta?.length ?? 0) > 0;
+  // Include headerImage in the header condition: recordToFlowCard collects a leading image as
+  // `headerImage` regardless of title/meta, so a view like [imageFlag, contentX, imageX] (leading
+  // image, no title/meta) must still render its header block — otherwise that image is dropped.
+  const hasHeader = !!title || (card.meta?.length ?? 0) > 0 || !!card.headerImage;
+  // meta label/value are already resolved to plain strings at map time (recordToFlowCard);
+  // resolveLocale here is a harmless no-op on strings (kept for LocalizedText type-safety).
   const metaLines = (card.meta ?? [])
     .map((m) => `<div class="fc-flow-meta">${esc(resolveLocale(m.label, locale))}- ${esc(resolveLocale(m.value, locale))}</div>`).join('');
   const header = hasHeader

@@ -185,6 +185,10 @@
     queueMicrotask(() => {
       if (previewEl) applyFlowFit(previewEl);
     });
+    // The microtask pass can measure against fallback-font metrics if a web font (e.g. Lexend)
+    // is still loading; re-measure once fonts are ready for parity with the PDF export path
+    // (pdfExport awaits document.fonts.ready before capturing).
+    document.fonts?.ready?.then(() => { if (previewEl) applyFlowFit(previewEl); });
   });
 </script>
 
