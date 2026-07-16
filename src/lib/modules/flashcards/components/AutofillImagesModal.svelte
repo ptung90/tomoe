@@ -14,7 +14,10 @@
   const textFields = $derived(schema.fields.filter((f) => f.type !== 'image'));
   const imageFields = $derived(schema.fields.filter((f) => f.type === 'image'));
 
+  // Modal mounts fresh per open, so seeding defaults from the initial schema is intentional.
+  // svelte-ignore state_referenced_locally
   let queryKey = $state(schema.fields.find((f) => f.type !== 'image')?.key ?? '');
+  // svelte-ignore state_referenced_locally
   let imageKey = $state(schema.fields.find((f) => f.type === 'image')?.key ?? '');
   let overwrite = $state(false);
   let running = $state(false);
