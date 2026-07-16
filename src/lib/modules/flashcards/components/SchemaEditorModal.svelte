@@ -93,8 +93,24 @@
 
         {#each fields as f, i (f.id)}
           <div class="field-row">
-            <input aria-label="field key" placeholder="key" bind:value={f.key}
-              oninput={(e) => patchField(i, { key: (e.target as HTMLInputElement).value })} />
+            <div class="field-top">
+              <input class="key-input" aria-label="field key" placeholder="key" bind:value={f.key}
+                oninput={(e) => patchField(i, { key: (e.target as HTMLInputElement).value })} />
+              <select aria-label="field type" value={f.type}
+                onchange={(e) => patchField(i, { type: (e.target as HTMLSelectElement).value as SchemaField['type'] })}>
+                <option value="text">text</option>
+                <option value="text-long">text-long</option>
+                <option value="image">image</option>
+              </select>
+              <label class="ml" title="multilingual">
+                <input type="checkbox" checked={f.multilingual !== false}
+                  disabled={f.type === 'image'}
+                  onchange={(e) => patchField(i, { multilingual: (e.target as HTMLInputElement).checked })} /> ML
+              </label>
+              <button type="button" aria-label="move up" onclick={() => moveField(i, -1)}>↑</button>
+              <button type="button" aria-label="move down" onclick={() => moveField(i, 1)}>↓</button>
+              <button type="button" aria-label="remove field" onclick={() => removeField(i)}><X size={13} /></button>
+            </div>
             <div class="label-locales">
               {#each $project.locales as loc (loc)}
                 <div class="loc-row">
@@ -105,20 +121,6 @@
                 </div>
               {/each}
             </div>
-            <select aria-label="field type" value={f.type}
-              onchange={(e) => patchField(i, { type: (e.target as HTMLSelectElement).value as SchemaField['type'] })}>
-              <option value="text">text</option>
-              <option value="text-long">text-long</option>
-              <option value="image">image</option>
-            </select>
-            <label class="ml" title="multilingual">
-              <input type="checkbox" checked={f.multilingual !== false}
-                disabled={f.type === 'image'}
-                onchange={(e) => patchField(i, { multilingual: (e.target as HTMLInputElement).checked })} /> ML
-            </label>
-            <button type="button" aria-label="move up" onclick={() => moveField(i, -1)}>↑</button>
-            <button type="button" aria-label="move down" onclick={() => moveField(i, 1)}>↓</button>
-            <button type="button" aria-label="remove field" onclick={() => removeField(i)}><X size={13} /></button>
           </div>
         {/each}
       </div>
@@ -151,16 +153,22 @@
   .add { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); background:transparent;
     color:var(--text); border-radius:6px; padding:4px 9px; font:inherit; font-size:12px; }
   .add:hover { background:var(--accent-weak); color:var(--accent); }
-  .field-row { display:flex; align-items:flex-start; gap:6px; }
+  /* Each field is a small stacked card: controls on top, per-locale label inputs below. */
+  .field-row { display:flex; flex-direction:column; gap:6px; padding:8px 9px;
+    border:1px solid var(--border); border-radius:8px; background:var(--bg); }
   .field-row input:not([type]), .field-row select { padding:5px 7px;
     border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font:inherit; font-size:13px; }
-  .field-row > input { flex:1; min-width:0; }
-  .field-row > button { border:1px solid var(--border); background:transparent; color:var(--text-muted);
-    border-radius:6px; padding:4px 7px; font:inherit; margin-top:2px; }
-  .label-locales { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .field-top { display:flex; align-items:center; gap:6px; }
+  .field-top .key-input { flex:1; min-width:0; }
+  .field-top select { flex:none; }
+  .field-top > button { flex:none; border:1px solid var(--border); background:transparent; color:var(--text-muted);
+    border-radius:6px; padding:4px 7px; font:inherit; line-height:1; }
+  .field-top > button:hover { border-color:var(--accent); color:var(--accent); }
+  .label-locales { display:flex; flex-direction:column; gap:4px; }
   .loc-row { display:flex; align-items:center; gap:6px; }
+  .loc-row .txt { flex:1; min-width:0; }
   .loc-tag { font-size:10px; font-weight:600; color:var(--accent); min-width:20px; flex:none; }
-  .ml { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-muted); margin-top:5px; }
+  .ml { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-muted); flex:none; white-space:nowrap; }
   .modal-foot { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
   .spacer { flex:1; }
   .modal-foot button { border:1px solid var(--border); background:transparent; color:var(--text);
