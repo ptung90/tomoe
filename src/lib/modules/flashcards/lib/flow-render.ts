@@ -8,6 +8,25 @@ export function fitFlowScale(naturalH: number, pageInnerH: number): number {
   return Math.max(0.5, pageInnerH / naturalH);
 }
 
+/**
+ * Measure + shrink each flow page's `.fc-flow-inner` under `root` to fit its `.fc-flow` shell,
+ * via the `--flow-scale` CSS var — keeps overflowing Document-layout pages to one sheet instead
+ * of clipping/spilling. No-op for grid cards (they have no `.fc-flow-inner`). Shared by the live
+ * preview, the print view, and the PDF exporter so all three stay WYSIWYG with each other.
+ * Browser-only (reads layout: `getComputedStyle`, `clientHeight`, `scrollHeight`).
+ */
+export function applyFlowFit(root: ParentNode): void {
+  for (const inner of root.querySelectorAll<HTMLElement>('.fc-flow-inner')) {
+    const shell = inner.closest<HTMLElement>('.fc-flow');
+    if (!shell) continue;
+    inner.style.setProperty('--flow-scale', '1');
+    const pad = parseFloat(getComputedStyle(shell).paddingTop) || 0;
+    const pageInnerH = shell.clientHeight - 2 * pad;
+    const scale = fitFlowScale(inner.scrollHeight, pageInnerH);
+    inner.style.setProperty('--flow-scale', String(scale));
+  }
+}
+
 function imgBox(url: string, side: 'left' | 'right', width: string): string {
   return `<div class="fc-flow-img" style="float:${side};width:${width};margin:${side === 'right' ? '0 0 8px 12px' : '0 12px 8px 0'};">` +
     `<div style="width:100%;padding-top:66%;background-image:url('${esc(url)}');background-size:contain;background-position:center;background-repeat:no-repeat;"></div></div>`;

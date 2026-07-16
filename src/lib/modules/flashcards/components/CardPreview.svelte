@@ -9,7 +9,7 @@
   import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, renameView, deleteView } from '../stores';
   import { deriveAutoTemplate, recordToCard, chunkRecords, viewLabel } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
-  import { fitFlowScale } from '../lib/flow-render';
+  import { applyFlowFit } from '../lib/flow-render';
   import { resolveStyle } from '../lib/style';
   import { LAYOUTS } from '../lib/layouts';
   import { FLOW_LAYOUTS } from '../lib/flow-layouts';
@@ -19,6 +19,7 @@
   import type { Card } from '../model';
 
   let paneW = $state(440);
+  let previewEl = $state<HTMLDivElement | undefined>(undefined);
   let showStyle = $state(false);
   let mode = $state<'card' | 'sheet'>('card');
   // null = auto-fit; a number = explicit user zoom (Ctrl/⌘ + wheel, +/- buttons). Opens at 100%;
@@ -182,20 +183,12 @@
   $effect(() => {
     void viewCards; void sheetHtml;
     queueMicrotask(() => {
-      for (const inner of document.querySelectorAll<HTMLElement>('.preview .fc-flow-inner')) {
-        const shell = inner.closest<HTMLElement>('.fc-flow');
-        if (!shell) continue;
-        inner.style.setProperty('--flow-scale', '1');
-        const pad = parseFloat(getComputedStyle(shell).paddingTop) || 0;
-        const pageInnerH = shell.clientHeight - 2 * pad;
-        const scale = fitFlowScale(inner.scrollHeight, pageInnerH);
-        inner.style.setProperty('--flow-scale', String(scale));
-      }
+      if (previewEl) applyFlowFit(previewEl);
     });
   });
 </script>
 
-<div class="preview" bind:clientWidth={paneW}>
+<div class="preview" bind:clientWidth={paneW} bind:this={previewEl}>
   <header class="preview-toolbar">
     <label>Layout
       <select value={template?.layout ?? 'fulltext'} onchange={onLayout} disabled={!schema}>
