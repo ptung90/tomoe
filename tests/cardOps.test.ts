@@ -36,6 +36,20 @@ describe('packRecords / packAllForSchema', () => {
     ops.packAllForSchema(p, 's1');
     expect(p.cards).toHaveLength(0);
   });
+  it('re-packing preserves a card\'s per-card style override (was reset to global)', () => {
+    const once = ops.packAllForSchema(proj('1top-1bot', 1), 's1');
+    // user sets a "This card" style override (like setCardStyle)
+    const styled = { ...once, cards: once.cards.map((c) => ({ ...c, style: { border: { color: '#E00000' } } })) };
+    const again = ops.packAllForSchema(styled, 's1');   // e.g. "Pack all" in card view
+    expect(again.cards).toHaveLength(1);
+    expect(again.cards[0].style).toEqual({ border: { color: '#E00000' } });
+  });
+  it('regenerateCard keeps the per-card style override (only content is regenerated)', () => {
+    const once = ops.packAllForSchema(proj('1top-1bot', 1), 's1');
+    const styled = { ...once, cards: once.cards.map((c) => ({ ...c, style: { border: { color: '#E00000' } } })) };
+    const regen = ops.regenerateCard(styled, styled.cards[0].id);
+    expect(regen.cards[0].style).toEqual({ border: { color: '#E00000' } });
+  });
 });
 
 function projMultiView(): Project {
