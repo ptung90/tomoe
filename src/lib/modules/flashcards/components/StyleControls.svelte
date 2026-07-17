@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ColorField from './ColorField.svelte';
   import Type from 'lucide-svelte/icons/type';
   import ALargeSmall from 'lucide-svelte/icons/a-large-small';
   import Bold from 'lucide-svelte/icons/bold';
@@ -64,6 +65,11 @@
   // ── Cascade scope: Global (settings) → This view (template.style) → This card (card.style) ──
   let scope = $state<'global' | 'schema' | 'card'>('global');
   const eff = $derived(resolveStyle($project.settings, template?.style, card?.style));
+  // Image background fill: 'transparent'/empty = off. The colour <input> needs a valid hex, so
+  // fall back to white when off; toggling on seeds white.
+  const imgFillOn = $derived(!!eff.image.backgroundColor && eff.image.backgroundColor !== 'transparent');
+  const imgFillColor = $derived(imgFillOn ? eff.image.backgroundColor : '#ffffff');
+  function toggleImgFill() { write({ image: { backgroundColor: imgFillOn ? 'transparent' : '#ffffff' } }); }
   // The override object at the CURRENT scope — used to show "set here" vs "inherited" + drive reset.
   const scopeStyle = $derived<StyleOverrides | undefined>(
     scope === 'global' ? undefined : scope === 'schema' ? template?.style : card?.style,
@@ -181,8 +187,8 @@
             {#each ['solid','dashed','dotted','double','none'] as st (st)}<option value={st}>{st}</option>{/each}
           </select>
         </span>
-        <span class="tool" title="Border color"><input aria-label="Border color" type="color" value={eff.border.color}
-          oninput={(e) => write({ border: { color: str(e) } })} /></span>
+        <span class="tool" title="Border color"><ColorField ariaLabel="Border color" value={eff.border.color}
+          oninput={(hex) => write({ border: { color: hex } })} /></span>
         <span class="tool" title="Corner radius"><Spline size={14} /><input aria-label="Radius" type="number" min="0" value={eff.border.radius}
           onchange={(e) => write({ border: { radius: num(e) } })} /></span>
         {@render resetBtn('border')}
@@ -220,6 +226,13 @@
           <select aria-label="Position" value={eff.image.backgroundPosition} onchange={(e) => write({ image: { backgroundPosition: str(e) } })}>
             {#each ['center','top','bottom','left','right'] as v (v)}<option value={v}>{v}</option>{/each}
           </select>
+        </span>
+        <span class="tool" title="Image corner radius (px)"><Spline size={14} /><input aria-label="Image corner radius" type="number" min="0"
+          value={eff.image.borderRadius} onchange={(e) => write({ image: { borderRadius: num(e) } })} /></span>
+        <span class="tool" title="Fill a background behind the image (for images whose background can't be removed)">
+          <input type="checkbox" aria-label="Fill image background" checked={imgFillOn} onchange={toggleImgFill} />
+          <ColorField ariaLabel="Image background color" value={imgFillColor} disabled={!imgFillOn}
+            oninput={(hex) => write({ image: { backgroundColor: hex } })} />
         </span>
         {@render resetBtn('image')}
       </div>
@@ -301,8 +314,8 @@
     </span>
     <span class="tool" title="Line height"><Baseline size={14} /><input aria-label="Line height" type="number" min="0.5" step="0.1" value={f.lineHeight}
       onchange={(e) => patch({ lineHeight: num(e) })} /></span>
-    <span class="tool" title="Text color"><input aria-label="Color" type="color" value={f.color}
-      oninput={(e) => patch({ color: str(e) })} /></span>
+    <span class="tool" title="Text color"><ColorField ariaLabel="Color" value={f.color}
+      oninput={(hex) => patch({ color: hex })} /></span>
     <div class="seg" title="Text align">
       {#each ALIGNS as a (a)}
         {@const Icon = ALIGN_ICON[a]}
@@ -345,7 +358,6 @@
   .tool:focus-within { border-color:var(--accent); outline:2px solid var(--accent); outline-offset:-1px; }
   .tool input[type=number] { width:42px; }
   .tool select { max-width:112px; cursor:pointer; }
-  .tool input[type=color] { width:24px; height:20px; padding:0; border:none; background:none; cursor:pointer; }
   .tool input[type=checkbox] { width:15px; height:15px; cursor:pointer; accent-color:var(--accent); }
 
   .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
