@@ -11,6 +11,7 @@
   import SaveConflictModal from './components/SaveConflictModal.svelte';
   import EditHistoryModal from './components/EditHistoryModal.svelte';
   import FileLockModal from './components/FileLockModal.svelte';
+  import BackupsModal from './components/BackupsModal.svelte';
   import { releaseLock } from './io/lockService';
   import { lastEdit, relativeTime } from './lib/editLog';
   import CardPreview from './components/CardPreview.svelte';
@@ -23,6 +24,7 @@
   import { showToast } from '../../shell';
   import Printer from 'lucide-svelte/icons/printer';
   import FileDown from 'lucide-svelte/icons/file-down';
+  import Archive from 'lucide-svelte/icons/archive';
   import PanelLeft from 'lucide-svelte/icons/panel-left';
   import PanelRight from 'lucide-svelte/icons/panel-right';
   import Library from 'lucide-svelte/icons/library';
@@ -35,6 +37,7 @@
   const printCount = $derived(collectPrintCards($project).length);
   let exporting = $state(false);
   let showHistory = $state(false);
+  let showBackups = $state(false);
   const lastEditEntry = $derived(lastEdit($project.editLog));
 
   // Best-effort lock release when the flashcards workspace unmounts (module switch / close).
@@ -103,6 +106,9 @@
       <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
         onclick={() => (view = 'cards')}>Cards</button>
     </div>
+    <button type="button" class="print-btn" onclick={() => (showBackups = true)} title="Backups">
+      <Archive size={14} /> Backups
+    </button>
     <button type="button" class="print-btn" onclick={() => schemaLibraryOpen.set(true)} title="Schema library">
       <Library size={14} /> Library
     </button>
@@ -146,6 +152,7 @@
   <SaveConflictModal />
   <FileLockModal />
   <EditHistoryModal open={showHistory} onClose={() => (showHistory = false)} />
+  <BackupsModal open={showBackups} onClose={() => (showBackups = false)} />
   <PrintView />
 </div>
 

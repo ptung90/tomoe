@@ -1,6 +1,8 @@
 <script lang="ts">
   import X from 'lucide-svelte/icons/x';
-  import { configOpen, theme, userName, setUserName } from '../shell';
+  import { configOpen, theme, userName, setUserName,
+    backupEnabled, backupDir, backupKeep, setBackupEnabled, setBackupKeep,
+    chooseBackupDir, openBackupFolder } from '../shell';
   import type { Theme } from '../theme';
 
   function close() { configOpen.set(false); }
@@ -48,6 +50,29 @@
         <input type="radio" name="theme" checked={$theme === 'dark'} onchange={() => setTheme('dark')} />
         Dark
       </label>
+
+      <p class="label">Backups</p>
+      <label class="opt">
+        <input type="checkbox" aria-label="enable backups"
+          checked={$backupEnabled}
+          onchange={(e) => setBackupEnabled((e.target as HTMLInputElement).checked)} />
+        Save a backup copy on every save
+      </label>
+      {#if $backupEnabled}
+        <div class="folder-row">
+          <span class="folder-path" title={$backupDir ?? ''}>{$backupDir ?? 'No folder chosen'}</span>
+          <button type="button" class="mini" onclick={chooseBackupDir}>Choose…</button>
+          {#if $backupDir}<button type="button" class="mini" onclick={openBackupFolder}>Open</button>{/if}
+        </div>
+        <label class="keep-row">
+          Keep latest
+          <input class="keep" type="number" min="1" aria-label="keep count"
+            value={$backupKeep}
+            onchange={(e) => setBackupKeep(Number((e.target as HTMLInputElement).value))} />
+          backups
+        </label>
+        <p class="hint">Tip: use a local folder outside your Drive/Dropbox, so backups aren't part of the sync.</p>
+      {/if}
     </div>
   </div>
 {/if}
@@ -67,4 +92,12 @@
   .text { width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border);
     border-radius:6px; background:var(--bg); color:var(--text); font:inherit; }
   .hint { font-size:11px; color:var(--text-muted); margin:2px 0 6px; }
+  .folder-row { display:flex; align-items:center; gap:6px; margin:4px 0; }
+  .folder-path { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:12px; color:var(--text-muted); }
+  .mini { border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);
+    font:inherit; font-size:12px; padding:3px 8px; cursor:pointer; }
+  .keep-row { display:flex; align-items:center; gap:6px; font-size:13px; margin:4px 0; }
+  .keep { width:64px; padding:4px 6px; border:1px solid var(--border); border-radius:6px;
+    background:var(--bg); color:var(--text); font:inherit; }
 </style>

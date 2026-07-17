@@ -16,6 +16,7 @@ vi.mock('../src/lib/shell', () => ({ showToast, userName }));
 vi.mock('../src/lib/modules/flashcards/io/lockService', () => ({
   acquireLock: vi.fn(), checkAndAcquireLock: vi.fn(), releaseLock: vi.fn(),
 }));
+vi.mock('../src/lib/modules/flashcards/io/backupService', () => ({ writeBackup: vi.fn() }));
 
 import { flashcards } from '../src/lib/modules/flashcards/module';
 import { project, filePath, dirty } from '../src/lib/modules/flashcards/stores';

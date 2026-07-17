@@ -18,6 +18,8 @@ vi.mock('../src/lib/shell', () => ({
 }));
 // Neutralize the lock write doWrite performs, so writeTextFile call counts stay about the project file.
 vi.mock('../src/lib/modules/flashcards/io/lockService', () => ({ acquireLock: vi.fn() }));
+// Isolate the fire-and-forget auto-backup from real fs.
+vi.mock('../src/lib/modules/flashcards/io/backupService', () => ({ writeBackup: vi.fn() }));
 
 import * as S from '../src/lib/modules/flashcards/stores';
 import * as svc from '../src/lib/modules/flashcards/io/saveService';

@@ -5,6 +5,7 @@ import * as S from '../stores';
 import { parseProject, serializeProject } from '../model';
 import { hasExternalChange } from '../lib/fileSync';
 import { acquireLock } from './lockService';
+import { writeBackup } from './backupService';
 import { showToast, userName } from '../../../shell';
 
 async function readDisk(path: string): Promise<string | null> {
@@ -24,6 +25,7 @@ async function doWrite(path: string): Promise<void> {
     S.setReadOnly(false);
     await acquireLock(path);
     showToast('Saved');
+    void writeBackup(text);  // best-effort, non-blocking auto-backup to the configured folder
   } catch (e) { showToast(`Could not save: ${(e as Error).message}`, 'error'); }
 }
 

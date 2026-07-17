@@ -10,6 +10,9 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({ confirm: vi.fn(async () => true) }
 vi.mock('../src/lib/modules/flashcards/io/lockService', () => ({
   acquireLock: vi.fn(), checkAndAcquireLock: vi.fn(), releaseLock: vi.fn(),
 }));
+vi.mock('../src/lib/modules/flashcards/io/backupService', () => ({
+  writeBackup: vi.fn(), listBackups: vi.fn(async () => []), chooseBackupDir: vi.fn(), openBackupFolder: vi.fn(),
+}));
 
 beforeEach(() => {
   S.initProject();

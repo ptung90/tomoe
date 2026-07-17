@@ -5,22 +5,14 @@ import type { Project } from '../model';
 import { collectPrintSheets } from './printCards';
 import { buildSheetHTML, PAPER_MM } from './card-render';
 import { applyFlowFit } from './flow-render';
+import { slugifyName } from './filename';
+export { timeStamp as pdfStamp } from './filename';
 
 /** Slug + timestamp filename, e.g. "vong-tuan-hoan-20260715-1042.pdf". Vietnamese-safe. Pure. */
 export function pdfFileName(projectName: string, stamp: string): string {
-  const slug = (projectName || '')
-    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // strip combining diacritics
-    .toLowerCase().trim()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cards';
-  return `${slug}-${stamp}.pdf`;
+  return `${slugifyName(projectName) || 'cards'}-${stamp}.pdf`;
 }
 
-/** YYYYMMDD-HHmm for a given Date (caller supplies `new Date()` at runtime). Pure. */
-export function pdfStamp(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
-}
 
 /**
  * Render every printed sheet (N-up tiled, html-to-image, WYSIWYG with the preview) and
