@@ -4,6 +4,8 @@
   import { configOpen, theme, userName, setUserName,
     backupEnabled, backupDir, backupKeep, setBackupEnabled, setBackupKeep,
     chooseBackupDir, openBackupFolder } from '../shell';
+  import { continentColors, setContinentColor, resetContinentColors } from '../modules/flashcards/stores';
+  import { CONTINENT_COLORS } from '../modules/flashcards/lib/palette';
   import type { Theme } from '../theme';
 
   function close() { configOpen.set(false); }
@@ -80,6 +82,20 @@
         </label>
         <p class="hint">Tip: use a local folder outside your Drive/Dropbox, so backups aren't part of the sync.</p>
       {/if}
+
+      <p class="label">Continent colors</p>
+      <p class="hint">Used as quick presets in every color picker. Remap any continent below.</p>
+      <div class="continents">
+        {#each CONTINENT_COLORS as c (c.key)}
+          <label class="continent-row">
+            <span class="cont-name">{c.en}</span>
+            <input type="color" aria-label={`${c.en} color`}
+              value={$continentColors[c.key] ?? c.hex}
+              oninput={(e) => setContinentColor(c.key, (e.target as HTMLInputElement).value)} />
+          </label>
+        {/each}
+      </div>
+      <button type="button" class="mini reset-continents" onclick={resetContinentColors}>Reset to defaults</button>
     </div>
     {#if appVersion}<footer class="version">Tomoe v{appVersion}</footer>{/if}
   </div>
@@ -102,6 +118,12 @@
   .hint { font-size:11px; color:var(--text-muted); margin:2px 0 6px; }
   .version { margin-top:6px; padding-top:8px; border-top:1px solid var(--border); text-align:right;
     font-size:11px; color:var(--text-muted); }
+  .continents { display:flex; flex-direction:column; gap:2px; margin:2px 0 6px; }
+  .continent-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 0; }
+  .cont-name { font-size:13px; }
+  .continent-row input[type=color] { width:28px; height:22px; padding:0; border:1px solid var(--border);
+    border-radius:5px; background:none; cursor:pointer; }
+  .reset-continents { margin-top:2px; }
   .folder-row { display:flex; align-items:center; gap:6px; margin:4px 0; }
   .folder-path { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     font-size:12px; color:var(--text-muted); }

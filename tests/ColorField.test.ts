@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import ColorField from '../src/lib/modules/flashcards/components/ColorField.svelte';
+import { resetContinentColors } from '../src/lib/modules/flashcards/stores';
+
+beforeEach(() => { localStorage.clear(); resetContinentColors(); }); // presets = palette defaults
 
 describe('ColorField', () => {
   it('lists the 7 continent presets plus Custom and reflects a matching color', () => {

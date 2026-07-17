@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { CONTINENT_COLORS, continentForColor } from '../lib/palette';
+  import { CONTINENT_COLORS } from '../lib/palette';
+  import { continentColors } from '../stores';
 
   let { value, oninput, ariaLabel, disabled = false }: {
     value: string; oninput: (hex: string) => void; ariaLabel: string; disabled?: boolean;
   } = $props();
 
   const CUSTOM = '__custom__';
-  // Reflect the current color: a matching continent name, else "Custom…".
-  const selectValue = $derived(continentForColor(value)?.hex ?? CUSTOM);
+  const norm = (h: string) => (h || '').toLowerCase();
+  // Effective presets: continent (English) label + the user's remapped color (or the default).
+  const presets = $derived(CONTINENT_COLORS.map((c) => ({ key: c.key, label: c.en, hex: $continentColors[c.key] ?? c.hex })));
+  // Reflect the current color: a matching continent, else "Custom…".
+  const selectValue = $derived(presets.find((p) => norm(p.hex) === norm(value))?.hex ?? CUSTOM);
 
   function onSelect(e: Event) {
     const v = (e.target as HTMLSelectElement).value;
@@ -17,7 +21,7 @@
 
 <span class="colorfield">
   <select class="preset" aria-label={`${ariaLabel} preset`} value={selectValue} onchange={onSelect} {disabled}>
-    {#each CONTINENT_COLORS as c (c.key)}<option value={c.hex}>{c.vi}</option>{/each}
+    {#each presets as p (p.key)}<option value={p.hex}>{p.label}</option>{/each}
     <option value={CUSTOM}>Custom…</option>
   </select>
   <input class="swatch" type="color" aria-label={ariaLabel} value={value} {disabled}

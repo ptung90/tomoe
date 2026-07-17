@@ -9,6 +9,7 @@ import { mergeStyle } from './lib/style';
 import { parseSchemaExport, type SchemaExportPayload, type SchemaLibraryEntry } from './io/schemaIO';
 import { hashContent } from './lib/fileSync';
 import type { FileLock } from './lib/lockFile';
+import { CONTINENT_COLORS } from './lib/palette';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -28,6 +29,34 @@ export const readOnly: Writable<boolean> = writable(false);
 export function setReadOnly(v: boolean): void { readOnly.set(v); }
 // Set when opening a file that a live foreign lock covers; drives FileLockModal. null = no prompt.
 export const openLock: Writable<FileLock | null> = writable(null);
+
+// ── Continent color palette (app-level, localStorage; editable in Settings) ─────────────────
+// Defaults come from CONTINENT_COLORS; the user can remap any continent's color in Settings and it
+// feeds the color-picker presets (ColorField) everywhere.
+const CONTINENT_COLORS_KEY = 'tomoe.continentColors';
+function defaultContinentColors(): Record<string, string> {
+  return Object.fromEntries(CONTINENT_COLORS.map((c) => [c.key, c.hex]));
+}
+function loadContinentColors(): Record<string, string> {
+  const defaults = defaultContinentColors();
+  try {
+    const raw = localStorage.getItem(CONTINENT_COLORS_KEY);
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return defaults;
+}
+export const continentColors: Writable<Record<string, string>> = writable(loadContinentColors());
+export function setContinentColor(key: string, hex: string): void {
+  continentColors.update((m) => {
+    const next = { ...m, [key]: hex };
+    try { localStorage.setItem(CONTINENT_COLORS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+}
+export function resetContinentColors(): void {
+  continentColors.set(defaultContinentColors());
+  try { localStorage.removeItem(CONTINENT_COLORS_KEY); } catch { /* ignore */ }
+}
 
 // ── AI config (localStorage, NOT in the document) ───────────────────────
 function loadAiConfig(): ai.AiConfig {

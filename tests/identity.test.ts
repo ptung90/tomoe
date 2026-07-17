@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { userName, setUserName, configOpen, backupEnabled, setBackupEnabled } from '../src/lib/shell';
+import { continentColors, resetContinentColors } from '../src/lib/modules/flashcards/stores';
 import ConfigModal from '../src/lib/components/ConfigModal.svelte';
 
-beforeEach(() => { localStorage.clear(); setUserName(''); setBackupEnabled(false); configOpen.set(false); });
+beforeEach(() => { localStorage.clear(); setUserName(''); setBackupEnabled(false); resetContinentColors(); configOpen.set(false); });
 
 describe('shell userName identity', () => {
   it('setUserName updates the store and persists to localStorage', () => {
@@ -39,5 +40,14 @@ describe('ConfigModal — Backups toggle', () => {
     await fireEvent.click(screen.getByLabelText('enable backups'));
     expect(get(backupEnabled)).toBe(true);
     expect(localStorage.getItem('tomoe.backup.enabled')).toBe('1');
+  });
+});
+
+describe('ConfigModal — Continent colors', () => {
+  it('remaps a continent color from Settings (English labels)', async () => {
+    configOpen.set(true);
+    render(ConfigModal);
+    await fireEvent.input(screen.getByLabelText('Asia color'), { target: { value: '#112233' } });
+    expect(get(continentColors).asia).toBe('#112233');
   });
 });
