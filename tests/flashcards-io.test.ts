@@ -12,6 +12,10 @@ const { writeTextFile, save, showToast, userName } = vi.hoisted(() => ({
 vi.mock('@tauri-apps/plugin-fs', () => ({ writeTextFile }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save }));
 vi.mock('../src/lib/shell', () => ({ showToast, userName }));
+// Isolate the module's save/open from real lock-file fs so writeTextFile counts stay about the project.
+vi.mock('../src/lib/modules/flashcards/io/lockService', () => ({
+  acquireLock: vi.fn(), checkAndAcquireLock: vi.fn(), releaseLock: vi.fn(),
+}));
 
 import { flashcards } from '../src/lib/modules/flashcards/module';
 import { project, filePath, dirty } from '../src/lib/modules/flashcards/stores';

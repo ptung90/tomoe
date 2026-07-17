@@ -16,6 +16,8 @@ vi.mock('../src/lib/shell', () => ({
   // minimal Readable<string> so saveService's `get(userName)` in doWrite resolves
   userName: { subscribe: (run: (v: string) => void) => { run('Tester'); return () => {}; } },
 }));
+// Neutralize the lock write doWrite performs, so writeTextFile call counts stay about the project file.
+vi.mock('../src/lib/modules/flashcards/io/lockService', () => ({ acquireLock: vi.fn() }));
 
 import * as S from '../src/lib/modules/flashcards/stores';
 import * as svc from '../src/lib/modules/flashcards/io/saveService';
@@ -50,6 +52,15 @@ describe('saveService.saveToPath', () => {
     await svc.saveToPath('/p.tomoe.json');
     expect(writeTextFile).toHaveBeenCalledTimes(1);
     expect(get(S.saveConflict)).toBeNull();
+  });
+
+  it('is a no-op (no write, no conflict) when the project is read-only', async () => {
+    S.setReadOnly(true);
+    S.diskBaselineHash.set(hashContent(diskText as string));
+    await svc.saveToPath('/p.tomoe.json');
+    expect(writeTextFile).not.toHaveBeenCalled();
+    expect(get(S.saveConflict)).toBeNull();
+    S.setReadOnly(false);
   });
 });
 

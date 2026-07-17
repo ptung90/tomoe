@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { project, setProjectName, selectRecord, schemaLibraryOpen } from './stores';
+  import { onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
+  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen } from './stores';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
@@ -8,6 +10,8 @@
   import CardEditorModal from './components/CardEditorModal.svelte';
   import SaveConflictModal from './components/SaveConflictModal.svelte';
   import EditHistoryModal from './components/EditHistoryModal.svelte';
+  import FileLockModal from './components/FileLockModal.svelte';
+  import { releaseLock } from './io/lockService';
   import { lastEdit, relativeTime } from './lib/editLog';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
@@ -32,6 +36,10 @@
   let exporting = $state(false);
   let showHistory = $state(false);
   const lastEditEntry = $derived(lastEdit($project.editLog));
+
+  // Best-effort lock release when the flashcards workspace unmounts (module switch / close).
+  // A hard crash relies on the lock's TTL instead.
+  onDestroy(() => { const p = get(filePath); if (p) releaseLock(p); });
 
   async function exportPdf() {
     if (printCount === 0 || exporting) return;
@@ -136,6 +144,7 @@
   <SchemaLibraryModal />
   <CardEditorModal />
   <SaveConflictModal />
+  <FileLockModal />
   <EditHistoryModal open={showHistory} onClose={() => (showHistory = false)} />
   <PrintView />
 </div>

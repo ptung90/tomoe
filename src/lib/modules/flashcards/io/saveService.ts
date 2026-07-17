@@ -4,6 +4,7 @@ import { get } from 'svelte/store';
 import * as S from '../stores';
 import { parseProject, serializeProject } from '../model';
 import { hasExternalChange } from '../lib/fileSync';
+import { acquireLock } from './lockService';
 import { showToast, userName } from '../../../shell';
 
 async function readDisk(path: string): Promise<string | null> {
@@ -16,8 +17,14 @@ async function readDisk(path: string): Promise<string | null> {
 async function doWrite(path: string): Promise<void> {
   S.stampEditLog(get(userName).trim() || 'unknown', new Date().toISOString());
   const text = serializeProject(get(S.project));
-  try { await writeTextFile(path, text); S.markSaved(path, text); showToast('Saved'); }
-  catch (e) { showToast(`Could not save: ${(e as Error).message}`, 'error'); }
+  try {
+    await writeTextFile(path, text);
+    S.markSaved(path, text);
+    // A successful write means we own this file now: clear read-only and (re)take/refresh the lock.
+    S.setReadOnly(false);
+    await acquireLock(path);
+    showToast('Saved');
+  } catch (e) { showToast(`Could not save: ${(e as Error).message}`, 'error'); }
 }
 
 /** Save to an existing path. First checks the on-disk file hasn't changed since we last synced;
@@ -26,6 +33,10 @@ async function doWrite(path: string): Promise<void> {
  *  Note: this is a check-then-write, not a lock — a sync landing in the tiny window between the
  *  read and the write can still be overwritten (residual last-write-wins). */
 export async function saveToPath(path: string): Promise<void> {
+  if (get(S.readOnly)) {
+    showToast('Opened read-only — someone else is editing this file', 'error');
+    return;
+  }
   const disk = await readDisk(path);
   if (disk !== null && hasExternalChange(get(S.diskBaselineHash), disk)) {
     S.saveConflict.set({ path, diskText: disk });

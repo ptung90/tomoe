@@ -8,6 +8,7 @@ import * as ai from './lib/ai';
 import { mergeStyle } from './lib/style';
 import { parseSchemaExport, type SchemaExportPayload, type SchemaLibraryEntry } from './io/schemaIO';
 import { hashContent } from './lib/fileSync';
+import type { FileLock } from './lib/lockFile';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -21,6 +22,12 @@ export const diskBaselineHash: Writable<string | null> = writable(null);
 // Set when a save is blocked because the file changed externally; drives SaveConflictModal.
 // null = no pending conflict.
 export const saveConflict: Writable<{ path: string; diskText: string } | null> = writable(null);
+// Read-only mode: set when the file was opened while someone else holds a live lock and the user
+// chose "open read-only". Blocks saving to the current file (see saveService.saveToPath).
+export const readOnly: Writable<boolean> = writable(false);
+export function setReadOnly(v: boolean): void { readOnly.set(v); }
+// Set when opening a file that a live foreign lock covers; drives FileLockModal. null = no prompt.
+export const openLock: Writable<FileLock | null> = writable(null);
 
 // ── AI config (localStorage, NOT in the document) ───────────────────────
 function loadAiConfig(): ai.AiConfig {
@@ -152,6 +159,7 @@ export function initProject(): void {
   history.set(H.createHistory(newProject()));
   filePath.set(null); dirty.set(false);
   diskBaselineHash.set(null); saveConflict.set(null);
+  readOnly.set(false); openLock.set(null);
   selectedRecordId.set(null); activeSchemaId.set(null); schemaEditorOpen.set(null); cardEditorOpen.set(null);
   activeViewId.set(null);
 }
@@ -162,6 +170,7 @@ export function loadProject(p: Project, path: string | null, rawText?: string): 
   filePath.set(path); dirty.set(false);
   diskBaselineHash.set(rawText != null ? hashContent(rawText) : null);
   saveConflict.set(null);
+  readOnly.set(false); openLock.set(null);
   selectedRecordId.set(null);
   activeSchemaId.set(p.schemas[0]?.id ?? null);
   schemaEditorOpen.set(null);
