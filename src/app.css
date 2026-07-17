@@ -4,11 +4,15 @@
   --accent:#c0562f; --accent-weak:#faece6;
   --danger:#b91c1c; --danger-weak:color-mix(in srgb, var(--danger) 10%, var(--surface)); --danger-border:color-mix(in srgb, var(--danger) 25%, var(--surface));
   --radius:8px;
+  /* Tells the webview to render native controls (select option popups, scrollbars, date pickers)
+     in the matching scheme — without this a dark-mode <select> popup stays white with light text. */
+  color-scheme: light;
   font-family: 'Lexend', system-ui, -apple-system, sans-serif; font-size:14px;
   color:var(--text); background:var(--bg);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg:#1c1a17; --surface:#26231f; --sidebar:#211e1a;
     --text:#ece7de; --text-muted:#8a8073; --border:#3a352d;
     --accent:#e0703f; --accent-weak:#3a2a22;
@@ -16,6 +20,7 @@
   }
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg:#1c1a17; --surface:#26231f; --sidebar:#211e1a;
   --text:#ece7de; --text-muted:#8a8073; --border:#3a352d;
   --accent:#e0703f; --accent-weak:#3a2a22;
