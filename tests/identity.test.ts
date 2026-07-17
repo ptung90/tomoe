@@ -1,0 +1,33 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { get } from 'svelte/store';
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import { userName, setUserName, configOpen } from '../src/lib/shell';
+import ConfigModal from '../src/lib/components/ConfigModal.svelte';
+
+beforeEach(() => { localStorage.clear(); setUserName(''); configOpen.set(false); });
+
+describe('shell userName identity', () => {
+  it('setUserName updates the store and persists to localStorage', () => {
+    setUserName('Tung');
+    expect(get(userName)).toBe('Tung');
+    expect(localStorage.getItem('tomoe.userName')).toBe('Tung');
+  });
+
+  it('overwrites a previous name', () => {
+    setUserName('A');
+    setUserName('B');
+    expect(get(userName)).toBe('B');
+    expect(localStorage.getItem('tomoe.userName')).toBe('B');
+  });
+});
+
+describe('ConfigModal — Your name field', () => {
+  it('renders the name field and writes edits to the identity store', async () => {
+    configOpen.set(true);
+    render(ConfigModal);
+    const input = screen.getByLabelText('your name') as HTMLInputElement;
+    await fireEvent.input(input, { target: { value: 'Tung' } });
+    expect(get(userName)).toBe('Tung');
+    expect(localStorage.getItem('tomoe.userName')).toBe('Tung');
+  });
+});

@@ -4,7 +4,7 @@
   import StartScreen from './lib/components/StartScreen.svelte';
   import Toast from './lib/components/Toast.svelte';
   import ConfigModal from './lib/components/ConfigModal.svelte';
-  import { activeModuleId, theme } from './lib/shell';
+  import { activeModuleId, theme, seedUserName } from './lib/shell';
   import { getModule } from './lib/modules/registry';
   import { pickOpen, loadStartupFile, listenForOpenFile } from './lib/fileService';
   import { applyTheme } from './lib/theme';
@@ -22,6 +22,7 @@
   $effect(() => { applyTheme($theme); });
 
   onMount(() => {
+    seedUserName();
     listenForOpenFile();
     loadStartupFile();
     window.addEventListener('keydown', onKeydown);

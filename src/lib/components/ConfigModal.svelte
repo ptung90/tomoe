@@ -1,6 +1,6 @@
 <script lang="ts">
   import X from 'lucide-svelte/icons/x';
-  import { configOpen, theme } from '../shell';
+  import { configOpen, theme, userName, setUserName } from '../shell';
   import type { Theme } from '../theme';
 
   function close() { configOpen.set(false); }
@@ -25,6 +25,16 @@
       <button class="x" aria-label="close" onclick={close}><X size={18} /></button>
     </header>
     <div class="body">
+      <p class="label">Your name</p>
+      <input
+        class="text"
+        type="text"
+        aria-label="your name"
+        placeholder="e.g. Tung"
+        value={$userName}
+        oninput={(e) => setUserName((e.target as HTMLInputElement).value)}
+      />
+      <p class="hint">Shown in the edit history and file lock, so teammates know who made a change.</p>
       <p class="label">Theme</p>
       <label class="opt">
         <input type="radio" name="theme" checked={$theme === 'system'} onchange={() => setTheme('system')} />
@@ -54,4 +64,7 @@
   .x { border:none; background:transparent; color:var(--text-muted); cursor:pointer; }
   .label { font-size:12px; color:var(--text-muted); margin:6px 0 2px; }
   .opt { display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer; }
+  .text { width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border);
+    border-radius:6px; background:var(--bg); color:var(--text); font:inherit; }
+  .hint { font-size:11px; color:var(--text-muted); margin:2px 0 6px; }
 </style>

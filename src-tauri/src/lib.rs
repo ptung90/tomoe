@@ -23,6 +23,15 @@ fn take_startup_file(state: State<StartupFile>) -> Option<String> {
     state.0.lock().unwrap().take()
 }
 
+/// The OS account name, used to seed the collaboration "Your name" identity.
+/// Windows sets USERNAME; Unix sets USER. Empty string if neither is set.
+#[tauri::command]
+fn os_username() -> String {
+    std::env::var("USERNAME")
+        .or_else(|_| std::env::var("USER"))
+        .unwrap_or_default()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -32,7 +41,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(StartupFile(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![take_startup_file])
+        .invoke_handler(tauri::generate_handler![take_startup_file, os_username])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
