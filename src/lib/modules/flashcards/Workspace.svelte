@@ -6,6 +6,7 @@
   import SchemaEditorModal from './components/SchemaEditorModal.svelte';
   import SchemaLibraryModal from './components/SchemaLibraryModal.svelte';
   import CardEditorModal from './components/CardEditorModal.svelte';
+  import SaveConflictModal from './components/SaveConflictModal.svelte';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
   import PrintView from './components/PrintView.svelte';
@@ -124,6 +125,7 @@
   <SchemaEditorModal />
   <SchemaLibraryModal />
   <CardEditorModal />
+  <SaveConflictModal />
   <PrintView />
 </div>
 

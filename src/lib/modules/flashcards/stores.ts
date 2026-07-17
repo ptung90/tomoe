@@ -7,6 +7,7 @@ import * as cardOps from './cardOps';
 import * as ai from './lib/ai';
 import { mergeStyle } from './lib/style';
 import { parseSchemaExport, type SchemaExportPayload, type SchemaLibraryEntry } from './io/schemaIO';
+import { hashContent } from './lib/fileSync';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -14,6 +15,12 @@ export const canUndo: Readable<boolean> = derived(history, (h) => H.canUndo(h));
 export const canRedo: Readable<boolean> = derived(history, (h) => H.canRedo(h));
 export const dirty: Writable<boolean> = writable(false);
 export const filePath: Writable<string | null> = writable(null);
+// Hash of the file's on-disk content as of our last sync (open, or a successful save). Compared
+// against the current on-disk content at save time to detect an external change (see fileSync).
+export const diskBaselineHash: Writable<string | null> = writable(null);
+// Set when a save is blocked because the file changed externally; drives SaveConflictModal.
+// null = no pending conflict.
+export const saveConflict: Writable<{ path: string; diskText: string } | null> = writable(null);
 
 // ── AI config (localStorage, NOT in the document) ───────────────────────
 function loadAiConfig(): ai.AiConfig {
@@ -144,12 +151,17 @@ export function updateLibraryEntryFromSchema(entryId: string, schemaId: string):
 export function initProject(): void {
   history.set(H.createHistory(newProject()));
   filePath.set(null); dirty.set(false);
+  diskBaselineHash.set(null); saveConflict.set(null);
   selectedRecordId.set(null); activeSchemaId.set(null); schemaEditorOpen.set(null); cardEditorOpen.set(null);
   activeViewId.set(null);
 }
-export function loadProject(p: Project, path: string | null): void {
+/** `rawText` (when given) is the exact on-disk text this project was loaded from; it seeds the
+ *  external-change baseline so a later save can detect the file being overwritten out from under us. */
+export function loadProject(p: Project, path: string | null, rawText?: string): void {
   history.set(H.createHistory(p));
   filePath.set(path); dirty.set(false);
+  diskBaselineHash.set(rawText != null ? hashContent(rawText) : null);
+  saveConflict.set(null);
   selectedRecordId.set(null);
   activeSchemaId.set(p.schemas[0]?.id ?? null);
   schemaEditorOpen.set(null);
@@ -159,7 +171,12 @@ export function loadProject(p: Project, path: string | null): void {
 export function commit(next: Project): void { history.update((h) => H.push(h, next)); dirty.set(true); }
 export function undo(): void { history.update((h) => H.undo(h)); dirty.set(true); }
 export function redo(): void { history.update((h) => H.redo(h)); dirty.set(true); }
-export function markSaved(path: string): void { filePath.set(path); dirty.set(false); }
+/** `savedText` (when given) is the exact text just written to disk; it refreshes the
+ *  external-change baseline so the next save compares against what WE last wrote. */
+export function markSaved(path: string, savedText?: string): void {
+  filePath.set(path); dirty.set(false);
+  diskBaselineHash.set(savedText != null ? hashContent(savedText) : null);
+}
 export function setProjectName(name: string): void { commit({ ...get(project), projectName: name }); }
 
 // ── UI-only state (not in history) ─────────────────────────────────────
