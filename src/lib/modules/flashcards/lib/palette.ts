@@ -7,7 +7,7 @@ export const CONTINENT_COLORS: ContinentColor[] = [
   { key: 'southAmerica', en: 'South America', vi: 'Nam Mỹ',          hex: '#E0619B' },
   { key: 'europe',       en: 'Europe',        vi: 'Châu Âu',         hex: '#E00000' },
   { key: 'africa',       en: 'Africa',        vi: 'Châu Phi',        hex: '#1E7A45' },
-  { key: 'asia',         en: 'Asia',          vi: 'Châu Á',          hex: '#F5E13A' },
+  { key: 'asia',         en: 'Asia',          vi: 'Châu Á',          hex: '#E0A400' },
   { key: 'oceania',      en: 'Oceania',       vi: 'Châu Đại Dương',  hex: '#7A4A22' },
   { key: 'antarctica',   en: 'Antarctica',    vi: 'Nam Cực',         hex: '#2E86C1' },
 ];
