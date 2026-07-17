@@ -19,7 +19,9 @@ async function doWrite(path: string): Promise<void> {
 
 /** Save to an existing path. First checks the on-disk file hasn't changed since we last synced;
  *  on an external change, raises `S.saveConflict` (SaveConflictModal resolves it) instead of
- *  overwriting. If the file is gone/unreadable, treats it as no conflict and writes. */
+ *  overwriting. If the file is gone/unreadable, treats it as no conflict and writes.
+ *  Note: this is a check-then-write, not a lock — a sync landing in the tiny window between the
+ *  read and the write can still be overwritten (residual last-write-wins). */
 export async function saveToPath(path: string): Promise<void> {
   const disk = await readDisk(path);
   if (disk !== null && hasExternalChange(get(S.diskBaselineHash), disk)) {
@@ -29,10 +31,18 @@ export async function saveToPath(path: string): Promise<void> {
   await doWrite(path);
 }
 
+/** Prompt for a path and write the current project there. Returns true if a file was written,
+ *  false if the user cancelled the dialog. */
+async function saveToNewPath(): Promise<boolean> {
+  const np = await saveDialog({ filters: [{ name: 'Tomoe Project', extensions: ['tomoe.json'] }] });
+  if (!np) return false;
+  await doWrite(np);
+  return true;
+}
+
 /** Prompt for a new path and write there (Save As / save-a-copy). */
 export async function pickSaveTo(): Promise<void> {
-  const np = await saveDialog({ filters: [{ name: 'Tomoe Project', extensions: ['tomoe.json'] }] });
-  if (np) await doWrite(np);
+  await saveToNewPath();
 }
 
 // ── Conflict resolutions (called by SaveConflictModal) ─────────────────────
@@ -44,17 +54,22 @@ export async function resolveOverwrite(): Promise<void> {
   if (c) await doWrite(c.path);
 }
 
-/** Discard our in-memory changes and load the current on-disk version instead. */
+/** Discard our in-memory changes and load the current on-disk version instead. Keeps the conflict
+ *  open (and toasts) if the on-disk text can't be parsed — e.g. a truncated/partial cloud sync. */
 export function resolveReload(): void {
   const c = get(S.saveConflict);
+  if (!c) return;
+  let p;
+  try { p = parseProject(c.diskText); }
+  catch (e) { showToast(`Could not load the on-disk version: ${(e as Error).message}`, 'error'); return; }
   S.saveConflict.set(null);
-  if (c) S.loadProject(parseProject(c.diskText), c.path, c.diskText);
+  S.loadProject(p, c.path, c.diskText);
 }
 
-/** Keep both versions: write ours to a new path, leaving theirs untouched. */
+/** Keep both versions: write ours to a new path, leaving theirs untouched. Only clears the
+ *  conflict once the copy is actually written — cancelling the dialog leaves it open. */
 export async function resolveSaveCopy(): Promise<void> {
-  S.saveConflict.set(null);
-  await pickSaveTo();
+  if (await saveToNewPath()) S.saveConflict.set(null);
 }
 
 /** Dismiss the conflict without saving. */

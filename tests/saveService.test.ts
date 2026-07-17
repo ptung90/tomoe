@@ -5,7 +5,7 @@ import { get } from 'svelte/store';
 let diskText: string | null = '{"disk":true}';
 const readTextFile = vi.fn(async (_p: string) => { if (diskText === null) throw new Error('nofile'); return diskText; });
 const writeTextFile = vi.fn(async (_p: string, _t: string) => {});
-const saveDialog = vi.fn(async () => '/new/copy.tomoe.json');
+const saveDialog = vi.fn(async (): Promise<string | null> => '/new/copy.tomoe.json');
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readTextFile: (...a: unknown[]) => (readTextFile as (...x: unknown[]) => unknown)(...a),
   writeTextFile: (...a: unknown[]) => (writeTextFile as (...x: unknown[]) => unknown)(...a),
@@ -72,6 +72,30 @@ describe('saveService conflict resolutions', () => {
     S.saveConflict.set({ path: '/p.tomoe.json', diskText: '{"theirs":true}' });
     svc.resolveCancel();
     expect(get(S.saveConflict)).toBeNull();
+    expect(writeTextFile).not.toHaveBeenCalled();
+  });
+
+  it('resolveReload keeps the conflict open (no throw, no load) when on-disk text is unparseable', () => {
+    S.saveConflict.set({ path: '/p.tomoe.json', diskText: '{ truncated partial sync' });
+    const before = get(S.project);
+    expect(() => svc.resolveReload()).not.toThrow();
+    expect(get(S.saveConflict)).not.toBeNull();      // still open so the user can pick another option
+    expect(get(S.project)).toBe(before);             // project untouched
+    expect(writeTextFile).not.toHaveBeenCalled();
+  });
+
+  it('resolveSaveCopy writes a copy and clears the conflict on success', async () => {
+    S.saveConflict.set({ path: '/p.tomoe.json', diskText: '{"theirs":true}' });
+    await svc.resolveSaveCopy();
+    expect(writeTextFile).toHaveBeenCalledTimes(1);
+    expect(get(S.saveConflict)).toBeNull();
+  });
+
+  it('resolveSaveCopy keeps the conflict open when the save dialog is cancelled', async () => {
+    saveDialog.mockResolvedValueOnce(null);
+    S.saveConflict.set({ path: '/p.tomoe.json', diskText: '{"theirs":true}' });
+    await svc.resolveSaveCopy();
+    expect(get(S.saveConflict)).not.toBeNull();
     expect(writeTextFile).not.toHaveBeenCalled();
   });
 });

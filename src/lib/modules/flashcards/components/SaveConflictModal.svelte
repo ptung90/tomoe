@@ -41,5 +41,5 @@
   .foot { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; padding:12px 14px; border-top:1px solid var(--border); }
   .foot button { border:1px solid var(--border); border-radius:6px; padding:6px 12px; font:inherit; }
   .ghost { background:transparent; color:var(--text); }
-  .danger { background:var(--danger, #dc2626); border-color:var(--danger, #dc2626); color:#fff; }
+  .danger { background:var(--danger); border-color:var(--danger); color:#fff; }
 </style>
