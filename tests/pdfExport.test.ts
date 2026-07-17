@@ -20,8 +20,8 @@ describe('pdfFileName', () => {
 
 describe('pdfStamp', () => {
   it('formats YYYYMMDD-HHmm with zero-padding', () => {
-    expect(pdfStamp(new Date(2026, 6, 15, 10, 42))).toBe('20260715-1042');
-    expect(pdfStamp(new Date(2026, 0, 5, 9, 3))).toBe('20260105-0903');
+    expect(pdfStamp(new Date(2026, 6, 15, 10, 42))).toBe('2026-07-15_10h42');
+    expect(pdfStamp(new Date(2026, 0, 5, 9, 3))).toBe('2026-01-05_09h03');
   });
 });
 

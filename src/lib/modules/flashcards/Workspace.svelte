@@ -39,6 +39,8 @@
   let showHistory = $state(false);
   let showBackups = $state(false);
   const lastEditEntry = $derived(lastEdit($project.editLog));
+  // Basename of the open file (everything after the last slash/backslash), or null when unsaved.
+  const fileName = $derived($filePath ? $filePath.replace(/^.*[\\/]/, '') : null);
 
   // Best-effort lock release when the flashcards workspace unmounts (module switch / close).
   // A hard crash relies on the lock's TTL instead.
@@ -78,6 +80,9 @@
       value={$project.projectName}
       onchange={(e) => setProjectName((e.target as HTMLInputElement).value.trim() || 'Untitled')}
     />
+    <span class="filename" class:unsaved={!fileName} title={$filePath ?? 'Not saved to a file yet'}>
+      {fileName ?? 'Unsaved'}
+    </span>
     <span class="counts">
       {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
@@ -165,6 +170,9 @@
   .project-name:hover { border-color:var(--border); }
   .project-name:focus { outline:none; border-color:var(--accent); background:var(--bg); }
   .counts { color:var(--text-muted); font-size:12px; }
+  .filename { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:12px; color:var(--text); font-family:ui-monospace,"Cascadia Code",Consolas,monospace; }
+  .filename.unsaved { color:var(--text-muted); font-style:italic; font-family:inherit; }
   .last-edited { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px;
     cursor:pointer; padding:0; text-decoration:underline dotted; text-underline-offset:2px; }
   .last-edited:hover { color:var(--text); }

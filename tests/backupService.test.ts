@@ -35,7 +35,7 @@ describe('writeBackup', () => {
     await writeBackup('{"x":1}');
     expect(writeTextFile).toHaveBeenCalledTimes(1);
     const [path, text] = writeTextFile.mock.calls[0] as [string, string];
-    expect(path).toMatch(/^\/bk\/vn-\d{8}-\d{4}\.tomoe\.json$/);
+    expect(path).toMatch(/^\/bk\/vn-\d{4}-\d{2}-\d{2}_\d{2}h\d{2}\.tomoe\.json$/);
     expect(text).toBe('{"x":1}');
   });
   it('prunes this project\'s backups beyond keep-N (oldest removed, foreign untouched)', async () => {

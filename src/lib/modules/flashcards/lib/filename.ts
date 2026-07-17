@@ -10,8 +10,9 @@ export function slugifyName(name: string): string {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-/** YYYYMMDD-HHmm for a given Date — sorts chronologically as text. Caller supplies `new Date()`. */
+/** `YYYY-MM-DD_HHhMM` for a given Date, e.g. "2026-07-17_12h36" — readable and still sorts
+ *  chronologically as text (year-month-day lead). Caller supplies `new Date()`. */
 export function timeStamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}h${p(d.getMinutes())}`;
 }

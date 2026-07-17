@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import X from 'lucide-svelte/icons/x';
   import { configOpen, theme, userName, setUserName,
     backupEnabled, backupDir, backupKeep, setBackupEnabled, setBackupKeep,
@@ -8,6 +9,12 @@
   function close() { configOpen.set(false); }
   function onWindowKeydown(e: KeyboardEvent) { if ($configOpen && e.key === 'Escape') close(); }
   function setTheme(t: Theme) { theme.set(t); }
+
+  let appVersion = $state('');
+  onMount(async () => {
+    try { const { getVersion } = await import('@tauri-apps/api/app'); appVersion = await getVersion(); }
+    catch { /* not under Tauri (dev/test) */ }
+  });
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -74,6 +81,7 @@
         <p class="hint">Tip: use a local folder outside your Drive/Dropbox, so backups aren't part of the sync.</p>
       {/if}
     </div>
+    {#if appVersion}<footer class="version">Tomoe v{appVersion}</footer>{/if}
   </div>
 {/if}
 
@@ -92,6 +100,8 @@
   .text { width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border);
     border-radius:6px; background:var(--bg); color:var(--text); font:inherit; }
   .hint { font-size:11px; color:var(--text-muted); margin:2px 0 6px; }
+  .version { margin-top:6px; padding-top:8px; border-top:1px solid var(--border); text-align:right;
+    font-size:11px; color:var(--text-muted); }
   .folder-row { display:flex; align-items:center; gap:6px; margin:4px 0; }
   .folder-path { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     font-size:12px; color:var(--text-muted); }

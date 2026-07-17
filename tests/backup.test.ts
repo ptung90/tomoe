@@ -8,8 +8,8 @@ describe('filename helpers', () => {
     expect(slugifyName('Đà Nẵng!!')).toBe('da-nang');
     expect(slugifyName('')).toBe('');
   });
-  it('timeStamp is YYYYMMDD-HHmm', () => {
-    expect(timeStamp(new Date(2026, 6, 17, 9, 5))).toBe('20260717-0905');
+  it('timeStamp is YYYY-MM-DD_HHhMM', () => {
+    expect(timeStamp(new Date(2026, 6, 17, 9, 5))).toBe('2026-07-17_09h05');
   });
 });
 
