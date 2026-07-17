@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { get } from 'svelte/store';
   import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen } from './stores';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
@@ -10,10 +8,8 @@
   import CardEditorModal from './components/CardEditorModal.svelte';
   import SaveConflictModal from './components/SaveConflictModal.svelte';
   import EditHistoryModal from './components/EditHistoryModal.svelte';
-  import FileLockModal from './components/FileLockModal.svelte';
   import BackupsModal from './components/BackupsModal.svelte';
   import ExportModal from './components/ExportModal.svelte';
-  import { releaseLock } from './io/lockService';
   import { lastEdit, relativeTime } from './lib/editLog';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
@@ -38,9 +34,6 @@
   // Basename of the open file (everything after the last slash/backslash), or null when unsaved.
   const fileName = $derived($filePath ? $filePath.replace(/^.*[\\/]/, '') : null);
 
-  // Best-effort lock release when the flashcards workspace unmounts (module switch / close).
-  // A hard crash relies on the lock's TTL instead.
-  onDestroy(() => { const p = get(filePath); if (p) releaseLock(p); });
   const cols = $derived(
     `${leftHidden ? 0 : leftWidth}px ${leftHidden ? 0 : 6}px 1fr ${rightHidden ? 0 : 6}px ${rightHidden ? 0 : rightWidth}px`,
   );
@@ -125,7 +118,6 @@
   <SchemaLibraryModal />
   <CardEditorModal />
   <SaveConflictModal />
-  <FileLockModal />
   <EditHistoryModal open={showHistory} onClose={() => (showHistory = false)} />
   <BackupsModal open={showBackups} onClose={() => (showBackups = false)} />
   <ExportModal open={showExport} onClose={() => (showExport = false)} />

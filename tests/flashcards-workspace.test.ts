@@ -5,11 +5,6 @@ import Workspace from '../src/lib/modules/flashcards/Workspace.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ confirm: vi.fn(async () => true) }));
-// Workspace's onDestroy releases the file lock (fire-and-forget); mock the service so tests never
-// touch real lock-file fs (avoids a flaky post-unmount unhandled rejection).
-vi.mock('../src/lib/modules/flashcards/io/lockService', () => ({
-  acquireLock: vi.fn(), checkAndAcquireLock: vi.fn(), releaseLock: vi.fn(),
-}));
 vi.mock('../src/lib/modules/flashcards/io/backupService', () => ({
   writeBackup: vi.fn(), listBackups: vi.fn(async () => []), chooseBackupDir: vi.fn(), openBackupFolder: vi.fn(),
 }));
