@@ -179,6 +179,17 @@ export function markSaved(path: string, savedText?: string): void {
 }
 export function setProjectName(name: string): void { commit({ ...get(project), projectName: name }); }
 
+const EDIT_LOG_CAP = 50;
+/** Append a {by, at} entry to the document's shared edit log, capped to the last EDIT_LOG_CAP.
+ *  Patches `present` directly — deliberately NOT an undoable history step and does NOT flip
+ *  `dirty` — because it is stamped as part of saving (saveService.doWrite), not a user edit. */
+export function stampEditLog(by: string, at: string): void {
+  history.update((h) => {
+    const editLog = [...(h.present.editLog ?? []), { by, at }].slice(-EDIT_LOG_CAP);
+    return { ...h, present: { ...h.present, editLog } };
+  });
+}
+
 // ── UI-only state (not in history) ─────────────────────────────────────
 export const selectedRecordId = writable<string | null>(null);
 export const activeSchemaId = writable<string | null>(null);

@@ -11,7 +11,11 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   writeTextFile: (...a: unknown[]) => (writeTextFile as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save: (...a: unknown[]) => (saveDialog as (...x: unknown[]) => unknown)(...a) }));
-vi.mock('../src/lib/shell', () => ({ showToast: vi.fn() }));
+vi.mock('../src/lib/shell', () => ({
+  showToast: vi.fn(),
+  // minimal Readable<string> so saveService's `get(userName)` in doWrite resolves
+  userName: { subscribe: (run: (v: string) => void) => { run('Tester'); return () => {}; } },
+}));
 
 import * as S from '../src/lib/modules/flashcards/stores';
 import * as svc from '../src/lib/modules/flashcards/io/saveService';

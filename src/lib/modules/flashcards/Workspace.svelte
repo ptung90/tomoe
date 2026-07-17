@@ -7,6 +7,8 @@
   import SchemaLibraryModal from './components/SchemaLibraryModal.svelte';
   import CardEditorModal from './components/CardEditorModal.svelte';
   import SaveConflictModal from './components/SaveConflictModal.svelte';
+  import EditHistoryModal from './components/EditHistoryModal.svelte';
+  import { lastEdit, relativeTime } from './lib/editLog';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
   import PrintView from './components/PrintView.svelte';
@@ -28,6 +30,8 @@
   let view = $state<'records' | 'cards'>('records');
   const printCount = $derived(collectPrintCards($project).length);
   let exporting = $state(false);
+  let showHistory = $state(false);
+  const lastEditEntry = $derived(lastEdit($project.editLog));
 
   async function exportPdf() {
     if (printCount === 0 || exporting) return;
@@ -67,6 +71,12 @@
       {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
       {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
     </span>
+    {#if lastEditEntry}
+      <button type="button" class="last-edited" title="Show edit history"
+        onclick={() => (showHistory = true)}>
+        edited by {lastEditEntry.by} · {relativeTime(lastEditEntry.at, Date.now())}
+      </button>
+    {/if}
     {#if view === 'records'}
       <div class="panel-toggles" aria-label="panels">
         <button type="button" class="panel-btn" class:off={leftHidden} aria-pressed={!leftHidden}
@@ -126,6 +136,7 @@
   <SchemaLibraryModal />
   <CardEditorModal />
   <SaveConflictModal />
+  <EditHistoryModal open={showHistory} onClose={() => (showHistory = false)} />
   <PrintView />
 </div>
 
@@ -138,6 +149,9 @@
   .project-name:hover { border-color:var(--border); }
   .project-name:focus { outline:none; border-color:var(--accent); background:var(--bg); }
   .counts { color:var(--text-muted); font-size:12px; }
+  .last-edited { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px;
+    cursor:pointer; padding:0; text-decoration:underline dotted; text-underline-offset:2px; }
+  .last-edited:hover { color:var(--text); }
   .view-toggle { margin-left:auto; display:inline-flex; gap:2px; border:1px solid var(--border); border-radius:8px; padding:2px; }
   .view-toggle button { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px;
     padding:3px 12px; border-radius:6px; cursor:pointer; transition:background .12s ease, color .12s ease; }

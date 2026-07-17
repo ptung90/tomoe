@@ -4,14 +4,17 @@ import { get } from 'svelte/store';
 import * as S from '../stores';
 import { parseProject, serializeProject } from '../model';
 import { hasExternalChange } from '../lib/fileSync';
-import { showToast } from '../../../shell';
+import { showToast, userName } from '../../../shell';
 
 async function readDisk(path: string): Promise<string | null> {
   try { return await readTextFile(path); } catch { return null; }
 }
 
-/** Serialize + write the current project to `path`, refresh the sync baseline, toast. */
+/** Serialize + write the current project to `path`, refresh the sync baseline, toast.
+ *  Stamps the shared edit log with who saved and when BEFORE serializing, so the entry lands
+ *  in the written file (and updates the in-app "last edited by" line). */
 async function doWrite(path: string): Promise<void> {
+  S.stampEditLog(get(userName).trim() || 'unknown', new Date().toISOString());
   const text = serializeProject(get(S.project));
   try { await writeTextFile(path, text); S.markSaved(path, text); showToast('Saved'); }
   catch (e) { showToast(`Could not save: ${(e as Error).message}`, 'error'); }

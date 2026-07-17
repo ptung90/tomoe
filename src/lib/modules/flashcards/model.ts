@@ -34,7 +34,10 @@ export interface RecordItem { id: string; schemaId: string; fieldsHash: string; 
 export interface CardSection { id: string; label: LocalizedText; content: LocalizedText; recordId?: string; customClass?: string; fontSize?: number; textAlign?: string; labelSize?: number; /** flow-only: paired image (e.g. a section illustration); grid path never reads this */ image?: CardImage }
 export interface CardImage { slot: number; url: string; recordId?: string; size?: string|null; color?: string; attribution?: unknown; search_query?: string }
 export interface Card { id: string; layout: string; imageHeightPercent: number; imageGridSplit?: { row: number; col: number; inner: number; rowBorders?: boolean }; images: CardImage[]; title: LocalizedText; sections: CardSection[]; orientation?: string|null; hideTitle?: boolean; hideSectionLabels?: boolean; style?: StyleOverrides; /** legacy: only read by parseProject migration (folded into `style.titleFont`/`style.contentFont`); never written */ titleFont?: FontSpec|null; /** legacy: see titleFont */ contentFont?: FontSpec|null; customCss?: string; cssClass?: string; recordId?: string; templateId?: string; /** legacy/read-only: only read by parseProject to drop old compound-card snapshots; never written */ packedRecordIds?: string[]; sourceHash?: string; edited?: boolean; /** flow-only: short label/value lines (e.g. Capital, Language); grid path never reads this */ meta?: { label: LocalizedText; value: LocalizedText }[]; /** flow-only: leading/header image (e.g. a flag); grid path never reads this */ headerImage?: CardImage; [k: string]: unknown }
-export interface Project { version: number; projectName: string; projectIcon: string; settings: Settings; schemas: Schema[]; records: RecordItem[]; cards: Card[]; locales: Locale[]; activeLocale: Locale }
+/** One entry in a project's shared edit log: who saved and when (ISO 8601). Lives IN the
+ *  document so it travels with the file and every collaborator sees the same history. */
+export interface EditLogEntry { by: string; at: string }
+export interface Project { version: number; projectName: string; projectIcon: string; settings: Settings; schemas: Schema[]; records: RecordItem[]; cards: Card[]; locales: Locale[]; activeLocale: Locale; editLog?: EditLogEntry[] }
 
 export const DEFAULT_SETTINGS: Settings = {
   paperSize: 'A5', orientation: 'portrait', margin: 9, padding: 2, imgPadding: 0,
@@ -49,7 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
 let _n = 0;
 export function uid(prefix = 'id'): string { _n += 1; const r = Math.abs(Math.floor((performance.now()*1000)%1e9)).toString(36); return `${prefix}_${_n.toString(36)}${r}`; }
 export function newProject(): Project {
-  return { version: 1, projectName: 'Untitled', projectIcon: '🗂️', settings: structuredClone(DEFAULT_SETTINGS), schemas: [], records: [], cards: [], locales: ['en','vi'], activeLocale: 'en' };
+  return { version: 1, projectName: 'Untitled', projectIcon: '🗂️', settings: structuredClone(DEFAULT_SETTINGS), schemas: [], records: [], cards: [], locales: ['en','vi'], activeLocale: 'en', editLog: [] };
 }
 export function serializeProject(p: Project): string { return JSON.stringify(p, null, 2) + '\n'; }
 
@@ -138,7 +141,10 @@ export function parseProject(text: string): Project {
     projectName: raw.projectName ?? raw.project_name ?? base.projectName,
     projectIcon: raw.projectIcon ?? raw.project_icon ?? base.projectIcon,
     settings, schemas, records, cards,
-    locales: raw.locales ?? base.locales, activeLocale: raw.activeLocale ?? base.activeLocale };
+    locales: raw.locales ?? base.locales, activeLocale: raw.activeLocale ?? base.activeLocale,
+    editLog: Array.isArray(raw.editLog)
+      ? raw.editLog.filter((e: any) => e && typeof e.by === 'string' && typeof e.at === 'string')
+      : [] };
 }
 export function looksLikeFlashcards(text: string): boolean {
   try {

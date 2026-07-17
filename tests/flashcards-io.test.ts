@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 
-const { writeTextFile, save, showToast } = vi.hoisted(() => ({
+const { writeTextFile, save, showToast, userName } = vi.hoisted(() => ({
   writeTextFile: vi.fn(async (_path: string, _contents: string) => {}),
   save: vi.fn(async () => null as string | null),
   showToast: vi.fn(),
+  // minimal Readable<string> so the module's save path (doWrite -> get(userName)) resolves
+  userName: { subscribe: (run: (v: string) => void) => { run('Tester'); return () => {}; } },
 }));
 
 vi.mock('@tauri-apps/plugin-fs', () => ({ writeTextFile }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save }));
-vi.mock('../src/lib/shell', () => ({ showToast }));
+vi.mock('../src/lib/shell', () => ({ showToast, userName }));
 
 import { flashcards } from '../src/lib/modules/flashcards/module';
 import { project, filePath, dirty } from '../src/lib/modules/flashcards/stores';
