@@ -14,6 +14,25 @@ function proj(layout: string, n: number, templatePatch: Partial<CardTemplate> = 
   return p;
 }
 
+describe('collectPrintSheets — selection filter', () => {
+  const p = proj('fulltext', 3); // one view (t1), 3 records, 1 card per page
+
+  it('no selection → every sheet', () => {
+    expect(collectPrintSheets(p)).toHaveLength(3);
+  });
+  it('filters by record ids', () => {
+    expect(collectPrintSheets(p, { records: new Set(['r0', 'r1']) })).toHaveLength(2);
+  });
+  it('filters by view ids', () => {
+    expect(collectPrintSheets(p, { views: new Set(['t1']) })).toHaveLength(3);
+    expect(collectPrintSheets(p, { views: new Set(['nope']) })).toHaveLength(0);
+  });
+  it('an empty selection set means none', () => {
+    expect(collectPrintSheets(p, { records: new Set() })).toHaveLength(0);
+    expect(collectPrintSheets(p, { views: new Set() })).toHaveLength(0);
+  });
+});
+
 describe('collectPrintCards', () => {
   it('single layout → one card per record', () => {
     expect(collectPrintCards(proj('1top-1bot', 3))).toHaveLength(3);

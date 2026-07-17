@@ -12,17 +12,13 @@
   import EditHistoryModal from './components/EditHistoryModal.svelte';
   import FileLockModal from './components/FileLockModal.svelte';
   import BackupsModal from './components/BackupsModal.svelte';
+  import ExportModal from './components/ExportModal.svelte';
   import { releaseLock } from './io/lockService';
   import { lastEdit, relativeTime } from './lib/editLog';
   import CardPreview from './components/CardPreview.svelte';
   import CardGallery from './components/CardGallery.svelte';
   import PrintView from './components/PrintView.svelte';
   import { collectPrintCards } from './lib/printCards';
-  import { exportCardsPdf, pdfFileName, pdfStamp } from './lib/pdfExport';
-  import { save as saveDialog } from '@tauri-apps/plugin-dialog';
-  import { writeFile } from '@tauri-apps/plugin-fs';
-  import { showToast } from '../../shell';
-  import Printer from 'lucide-svelte/icons/printer';
   import FileDown from 'lucide-svelte/icons/file-down';
   import Archive from 'lucide-svelte/icons/archive';
   import PanelLeft from 'lucide-svelte/icons/panel-left';
@@ -35,9 +31,9 @@
   let rightHidden = $state(false);
   let view = $state<'records' | 'cards'>('records');
   const printCount = $derived(collectPrintCards($project).length);
-  let exporting = $state(false);
   let showHistory = $state(false);
   let showBackups = $state(false);
+  let showExport = $state(false);
   const lastEditEntry = $derived(lastEdit($project.editLog));
   // Basename of the open file (everything after the last slash/backslash), or null when unsaved.
   const fileName = $derived($filePath ? $filePath.replace(/^.*[\\/]/, '') : null);
@@ -45,28 +41,6 @@
   // Best-effort lock release when the flashcards workspace unmounts (module switch / close).
   // A hard crash relies on the lock's TTL instead.
   onDestroy(() => { const p = get(filePath); if (p) releaseLock(p); });
-
-  async function exportPdf() {
-    if (printCount === 0 || exporting) return;
-    exporting = true;
-    try {
-      const bytes = await exportCardsPdf($project);
-      if (!bytes) { showToast('No cards to export', 'error'); return; }
-      const name = pdfFileName($project.projectName, pdfStamp(new Date()));
-      const path = await saveDialog({ defaultPath: name, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
-      if (!path) return;
-      await writeFile(path, bytes);
-      showToast('Exported PDF');
-    } catch (e) {
-      // Tauri command rejections (and some webview/canvas errors) can reject with a bare string
-      // or plain object rather than an Error — `(e as Error).message` on those is `undefined`,
-      // which is why this used to surface as the unhelpful "Export failed: undefined".
-      const msg = e instanceof Error ? e.message : String(e);
-      showToast(`Export failed: ${msg || 'unknown error'}`, 'error');
-    } finally {
-      exporting = false;
-    }
-  }
   const cols = $derived(
     `${leftHidden ? 0 : leftWidth}px ${leftHidden ? 0 : 6}px 1fr ${rightHidden ? 0 : 6}px ${rightHidden ? 0 : rightWidth}px`,
   );
@@ -118,12 +92,8 @@
       <Library size={14} /> Library
     </button>
     <button type="button" class="print-btn" disabled={printCount === 0}
-      onclick={() => window.print()} title="Print (system dialog)">
-      <Printer size={14} /> Print
-    </button>
-    <button type="button" class="print-btn" disabled={printCount === 0 || exporting}
-      onclick={exportPdf} title="Export PDF (image, matches preview)">
-      <FileDown size={14} /> {exporting ? 'Exporting…' : 'PDF'}
+      onclick={() => (showExport = true)} title="Export / print — pick views & records">
+      <FileDown size={14} /> Export…
     </button>
   </header>
   {#if view === 'records'}
@@ -158,6 +128,7 @@
   <FileLockModal />
   <EditHistoryModal open={showHistory} onClose={() => (showHistory = false)} />
   <BackupsModal open={showBackups} onClose={() => (showBackups = false)} />
+  <ExportModal open={showExport} onClose={() => (showExport = false)} />
   <PrintView />
 </div>
 

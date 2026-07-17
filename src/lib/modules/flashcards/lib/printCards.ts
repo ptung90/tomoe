@@ -26,13 +26,21 @@ export function collectPrintCards(project: Project): Card[] {
 
 export interface Sheet { cards: Card[]; lay: ReturnType<typeof sheetLayout>; settings: Settings; }
 
+/** Optional export filter — include only the given view ids and/or record ids. An unset field means
+ *  "all" for that dimension; an empty Set means "none". */
+export interface PrintSelection { views?: Set<string>; records?: Set<string> }
+
 /** Every printed sheet, grouped by view (all of view 1's sheets, then view 2's, ...), each in the
- *  view's own resolved N-up layout. Pure — collectPrintSheets applies the leftover merge on top. */
-function sheetsByView(project: Project): Sheet[] {
+ *  view's own resolved N-up layout, filtered by `selection`. Pure — collectPrintSheets applies the
+ *  leftover merge on top. */
+function sheetsByView(project: Project, selection?: PrintSelection): Sheet[] {
   const out: Sheet[] = [];
   for (const schema of project.schemas) {
-    const recs = project.records.filter((r) => r.schemaId === schema.id);
+    const recs = project.records.filter((r) => r.schemaId === schema.id
+      && (!selection?.records || selection.records.has(r.id)));
     for (const template of viewsFor(schema)) {
+      if (selection?.views && !selection.views.has(template.id)) continue;
+      if (!recs.length) continue;   // this view has no selected records → no sheets
       const schemaEff = resolveStyle(project.settings, template.style);
       const orient = schemaEff.orientation;
       const lay = sheetLayout(template, schemaEff.paperSize, orient);
@@ -99,6 +107,6 @@ export function mergeLeftoverSheets(sheets: Sheet[]): Sheet[] {
 
 /** Every printed sheet -- grouped by view, with each group's trailing partial page merged across
  *  same-layout views (fewer, fuller pages on export/print). Pure. */
-export function collectPrintSheets(project: Project): Sheet[] {
-  return mergeLeftoverSheets(sheetsByView(project));
+export function collectPrintSheets(project: Project, selection?: PrintSelection): Sheet[] {
+  return mergeLeftoverSheets(sheetsByView(project, selection));
 }

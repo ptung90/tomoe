@@ -10,6 +10,7 @@ import { parseSchemaExport, type SchemaExportPayload, type SchemaLibraryEntry } 
 import { hashContent } from './lib/fileSync';
 import type { FileLock } from './lib/lockFile';
 import { CONTINENT_COLORS } from './lib/palette';
+import type { PrintSelection } from './lib/printCards';
 
 const history = writable<H.History<Project>>(H.createHistory(newProject()));
 export const project: Readable<Project> = derived(history, (h) => h.present);
@@ -29,6 +30,9 @@ export const readOnly: Writable<boolean> = writable(false);
 export function setReadOnly(v: boolean): void { readOnly.set(v); }
 // Set when opening a file that a live foreign lock covers; drives FileLockModal. null = no prompt.
 export const openLock: Writable<FileLock | null> = writable(null);
+// Transient export filter for the print flow: set before window.print(), read by PrintView, then
+// cleared. null = print everything (default). PDF export passes its selection directly instead.
+export const printSelection: Writable<PrintSelection | null> = writable(null);
 
 // ── Continent color palette (app-level, localStorage; editable in Settings) ─────────────────
 // Defaults come from CONTINENT_COLORS; the user can remap any continent's color in Settings and it

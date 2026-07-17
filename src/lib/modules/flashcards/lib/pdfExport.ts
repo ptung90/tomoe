@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { toCanvas } from 'html-to-image';
 import './card-render.css';
 import type { Project } from '../model';
-import { collectPrintSheets } from './printCards';
+import { collectPrintSheets, type PrintSelection } from './printCards';
 import { buildSheetHTML, PAPER_MM } from './card-render';
 import { applyFlowFit } from './flow-render';
 import { slugifyName } from './filename';
@@ -20,8 +20,8 @@ export function pdfFileName(projectName: string, stamp: string): string {
  * null if there are no sheets. Browser/webview only (uses DOM + canvas). Throws on a
  * tainted canvas (a non-CORS remote image) — the caller surfaces that.
  */
-export async function exportCardsPdf(project: Project): Promise<Uint8Array | null> {
-  const sheets = collectPrintSheets(project);
+export async function exportCardsPdf(project: Project, selection?: PrintSelection): Promise<Uint8Array | null> {
+  const sheets = collectPrintSheets(project, selection);
   if (!sheets.length) return null;
 
   const s = project.settings;

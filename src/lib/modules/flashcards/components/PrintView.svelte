@@ -1,11 +1,11 @@
 <script lang="ts">
   import '../lib/card-render.css';
-  import { project } from '../stores';
+  import { project, printSelection } from '../stores';
   import { collectPrintSheets } from '../lib/printCards';
   import { buildSheetHTML } from '../lib/card-render';
   import { applyFlowFit } from '../lib/flow-render';
 
-  const sheets = $derived(collectPrintSheets($project));
+  const sheets = $derived(collectPrintSheets($project, $printSelection ?? undefined));
 
   let printViewEl = $state<HTMLDivElement | undefined>(undefined);
 
