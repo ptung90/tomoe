@@ -1,4 +1,4 @@
-import { writeTextFile, readDir, remove } from '@tauri-apps/plugin-fs';
+import { writeFile, readDir, remove } from '@tauri-apps/plugin-fs';
 import { get } from 'svelte/store';
 import * as S from '../stores';
 import { backupEnabled, backupDir, backupKeep, showToast } from '../../../shell';
@@ -29,7 +29,7 @@ export async function writeBackup(text: string): Promise<void> {
   if (!dir) return;
   const projectName = get(S.project).projectName;
   try {
-    await writeTextFile(join(dir, backupFileName(projectName, timeStamp(new Date()))), text);
+    await writeFile(join(dir, backupFileName(projectName, timeStamp(new Date()))), new TextEncoder().encode(text));
     await pruneBackups(dir, projectName, get(backupKeep));
   } catch (e) {
     showToast(`Backup failed: ${(e as Error).message}`, 'error');

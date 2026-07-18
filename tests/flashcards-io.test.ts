@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 
-const { writeTextFile, save, showToast, userName } = vi.hoisted(() => ({
-  writeTextFile: vi.fn(async (_path: string, _contents: string) => {}),
+const { writeFile, save, showToast, userName } = vi.hoisted(() => ({
+  writeFile: vi.fn(async (_path: string, _contents: Uint8Array) => {}),
   save: vi.fn(async () => null as string | null),
   showToast: vi.fn(),
   // minimal Readable<string> so the module's save path (doWrite -> get(userName)) resolves
   userName: { subscribe: (run: (v: string) => void) => { run('Tester'); return () => {}; } },
 }));
 
-vi.mock('@tauri-apps/plugin-fs', () => ({ writeTextFile }));
+vi.mock('@tauri-apps/plugin-fs', () => ({ writeFile }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save }));
 vi.mock('../src/lib/shell', () => ({ showToast, userName }));
 vi.mock('../src/lib/modules/flashcards/io/backupService', () => ({ writeBackup: vi.fn() }));
@@ -43,10 +43,10 @@ describe('flashcards module io', () => {
     flashcards.open(serializeProject(newProject()), '/x.tomoe.json');
     await flashcards.save();
 
-    expect(writeTextFile).toHaveBeenCalledTimes(1);
-    const [calledPath, calledText] = writeTextFile.mock.calls[0];
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    const [calledPath, bytes] = writeFile.mock.calls[0] as [string, Uint8Array];
     expect(calledPath).toBe('/x.tomoe.json');
-    expect(calledText.endsWith('\n')).toBe(true);
+    expect(new TextDecoder().decode(bytes).endsWith('\n')).toBe(true);
     expect(save).not.toHaveBeenCalled();
     expect(get(dirty)).toBe(false);
     expect(showToast).toHaveBeenCalledWith('Saved');
@@ -57,6 +57,6 @@ describe('flashcards module io', () => {
     await flashcards.save();
 
     expect(save).toHaveBeenCalledTimes(1);
-    expect(writeTextFile).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
   });
 });

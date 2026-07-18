@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let dirEntries: { name: string; isFile: boolean }[] = [];
-const writeTextFile = vi.fn(async (_p: string, _t: string) => {});
+const writeFile = vi.fn(async (_p: string, _t: Uint8Array) => {});
 const readDir = vi.fn(async (_p: string) => dirEntries);
 const remove = vi.fn(async (_p: string) => {});
 vi.mock('@tauri-apps/plugin-fs', () => ({
-  writeTextFile: (...a: unknown[]) => (writeTextFile as (...x: unknown[]) => unknown)(...a),
+  writeFile: (...a: unknown[]) => (writeFile as (...x: unknown[]) => unknown)(...a),
   readDir: (...a: unknown[]) => (readDir as (...x: unknown[]) => unknown)(...a),
   remove: (...a: unknown[]) => (remove as (...x: unknown[]) => unknown)(...a),
 }));
@@ -23,20 +23,20 @@ beforeEach(() => {
 describe('writeBackup', () => {
   it('is a no-op when backups are disabled', async () => {
     await writeBackup('{}');
-    expect(writeTextFile).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
   });
   it('is a no-op when no folder is set', async () => {
     shell.setBackupEnabled(true);
     await writeBackup('{}');
-    expect(writeTextFile).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
   });
   it('writes a timestamped backup into the folder when enabled', async () => {
     shell.setBackupEnabled(true); shell.setBackupDir('/bk');
     await writeBackup('{"x":1}');
-    expect(writeTextFile).toHaveBeenCalledTimes(1);
-    const [path, text] = writeTextFile.mock.calls[0] as [string, string];
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    const [path, bytes] = writeFile.mock.calls[0] as [string, Uint8Array];
     expect(path).toMatch(/^\/bk\/vn-\d{4}-\d{2}-\d{2}_\d{2}h\d{2}\.tomoe\.json$/);
-    expect(text).toBe('{"x":1}');
+    expect(new TextDecoder().decode(bytes)).toBe('{"x":1}');
   });
   it('prunes this project\'s backups beyond keep-N (oldest removed, foreign untouched)', async () => {
     shell.setBackupEnabled(true); shell.setBackupDir('/bk'); shell.setBackupKeep(2);

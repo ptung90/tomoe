@@ -1,4 +1,4 @@
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeFile } from '@tauri-apps/plugin-fs';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { get } from 'svelte/store';
 import * as S from '../stores';
@@ -18,7 +18,10 @@ async function doWrite(path: string): Promise<void> {
   S.stampEditLog(get(userName).trim() || 'unknown', new Date().toISOString());
   const text = serializeProject(get(S.project));
   try {
-    await writeTextFile(path, text);
+    // Binary write (UTF-8 bytes) rather than writeTextFile: the text plugin JSON-encodes the whole
+    // string over the webview→native IPC bridge, which is slow for multi-MB projects (embedded
+    // images) — especially on lower-end machines. writeFile sends raw bytes and is much faster.
+    await writeFile(path, new TextEncoder().encode(text));
     S.markSaved(path, text);
     showToast('Saved');
     void writeBackup(text);  // best-effort, non-blocking auto-backup to the configured folder
