@@ -5,8 +5,13 @@ import type { Project } from '../model';
 import { collectPrintSheets, type PrintSelection } from './printCards';
 import { buildSheetHTML, PAPER_MM } from './card-render';
 import { applyFlowFit } from './flow-render';
+import { withTimeout, heapMB } from './perf';
 import { slugifyName } from './filename';
 export { timeStamp as pdfStamp } from './filename';
+
+/** Per-sheet render cap (ms). Generous — a real large sheet on a slow machine can take many
+ *  seconds — but finite, so a memory-starved hang fails loudly instead of spinning forever. */
+const EXPORT_SHEET_TIMEOUT_MS = 45_000;
 
 /** Slug + timestamp filename, e.g. "vong-tuan-hoan-20260715-1042.pdf". Vietnamese-safe. Pure. */
 export function pdfFileName(projectName: string, stamp: string): string {
@@ -37,7 +42,8 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
 
   let pdf: jsPDF | null = null;
   try {
-    for (const sheet of sheets) {
+    for (let i = 0; i < sheets.length; i++) {
+      const sheet = sheets[i];
       // The sheet's own paper size/orientation, from `lay`/`settings` (schema-effective —
       // matches the grid buildSheetHTML actually renders, not a re-derivation from card data).
       const paperMm = PAPER_MM[sheet.settings.paperSize] ?? PAPER_MM.A4;
@@ -53,7 +59,19 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
       await new Promise((r) => requestAnimationFrame(() => r(null)));  // let fonts/layout settle before capture
       applyFlowFit(page);  // shrink overflowing flow pages so the PDF matches the on-screen preview
 
-      const canvas = await toCanvas(page, { pixelRatio: scale, backgroundColor: '#ffffff', cacheBust: false });
+      // Watchdog: on a memory-starved webview the canvas render can hang forever (its backing
+      // <img> never fires onload/onerror). Cap each sheet so that surfaces as an actionable error
+      // — naming the sheet and heap — instead of an infinite spinner. See lib/perf.ts.
+      const canvas = await withTimeout(
+        toCanvas(page, { pixelRatio: scale, backgroundColor: '#ffffff', cacheBust: false }),
+        EXPORT_SHEET_TIMEOUT_MS,
+        () => {
+          const mb = heapMB();
+          const heap = mb == null ? '' : ` (heap ${mb} MB)`;
+          return `Export stalled on sheet ${i + 1}/${sheets.length}${heap}`
+            + ` — likely out of memory. Export fewer records or views at a time, or restart the app first.`;
+        },
+      );
       const data = canvas.toDataURL(mime, quality);
 
       if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [pageW, pageH], orientation: landscape ? 'l' : 'p' });

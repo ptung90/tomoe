@@ -5,6 +5,7 @@ import * as S from '../stores';
 import { parseProject, serializeProject } from '../model';
 import { hasExternalChange } from '../lib/fileSync';
 import { writeBackup } from './backupService';
+import { heapSuffix } from '../lib/perf';
 import { showToast, userName } from '../../../shell';
 
 async function readDisk(path: string): Promise<string | null> {
@@ -16,6 +17,7 @@ async function readDisk(path: string): Promise<string | null> {
  *  in the written file (and updates the in-app "last edited by" line). */
 async function doWrite(path: string): Promise<void> {
   S.stampEditLog(get(userName).trim() || 'unknown', new Date().toISOString());
+  const t0 = performance.now();
   const text = serializeProject(get(S.project));
   try {
     // Binary write (UTF-8 bytes) rather than writeTextFile: the text plugin JSON-encodes the whole
@@ -23,7 +25,10 @@ async function doWrite(path: string): Promise<void> {
     // images) — especially on lower-end machines. writeFile sends raw bytes and is much faster.
     await writeFile(path, new TextEncoder().encode(text));
     S.markSaved(path, text);
-    showToast('Saved');
+    // Annotate a slow save (serialize + write) with elapsed time and heap so a lagging low-RAM
+    // machine reports numbers we can act on, without adding noise to fast saves.
+    const ms = Math.round(performance.now() - t0);
+    showToast(ms >= 2000 ? `Saved (${(ms / 1000).toFixed(1)}s${heapSuffix()})` : 'Saved');
     void writeBackup(text);  // best-effort, non-blocking auto-backup to the configured folder
   } catch (e) { showToast(`Could not save: ${(e as Error).message}`, 'error'); }
 }

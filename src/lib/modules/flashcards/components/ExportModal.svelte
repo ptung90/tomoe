@@ -8,6 +8,7 @@
   import { deriveAutoTemplate, viewLabel, schemaTitleKey } from '../cardMapping';
   import { collectPrintSheets } from '../lib/printCards';
   import { exportCardsPdf, pdfFileName, pdfStamp } from '../lib/pdfExport';
+  import { heapSuffix } from '../lib/perf';
   import { resolveLocale } from '../lib/card-render';
   import { showToast } from '../../../shell';
 
@@ -62,7 +63,7 @@
       const path = await saveDialog({ defaultPath: pdfFileName($project.projectName, pdfStamp(new Date())), filters: [{ name: 'PDF', extensions: ['pdf'] }] });
       if (!path) return;
       await writeFile(path, bytes);
-      showToast('Exported PDF');
+      showToast(`Exported PDF (${pageCount} sheet${pageCount === 1 ? '' : 's'})${heapSuffix()}`);
       onClose();
     } catch (e) {
       showToast(`Export failed: ${e instanceof Error ? e.message : String(e) || 'unknown error'}`, 'error');
