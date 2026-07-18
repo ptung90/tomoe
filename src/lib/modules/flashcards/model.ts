@@ -1,5 +1,6 @@
 import { LAYOUT_IDS } from './lib/layouts';
 import { isFlowLayout } from './lib/flow-layouts';
+import { deflateAssets, inflateAssets } from './lib/imageAssets';
 
 export type Locale = string;
 export type LocalizedText = string | Record<Locale, string>;
@@ -11,7 +12,10 @@ export interface Settings {
   paraGap: number;
   textVAlign: 'top'|'middle'|'bottom';
   border: { width: number; style: string; color: string; radius: number };
-  image: { backgroundSize: string; backgroundPosition: string };
+  /** backgroundSize/Position drive object-fit; borderRadius (px) rounds the image corners and
+   *  backgroundColor fills behind it — the latter two "frame" images whose background can't be
+   *  cleanly removed (a colored rounded card instead of a raw cut-out). */
+  image: { backgroundSize: string; backgroundPosition: string; borderRadius: number; backgroundColor: string };
   titleFont: FontSpec; contentFont: FontSpec;
   pdfImageFormat: 'jpeg'|'png'; pdfJpegQuality: number; pdfScale: number; customCss: string;
 }
@@ -44,7 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   paraGap: 2,
   textVAlign: 'middle',
   border: { width: 4, style: 'double', color: '#6B21A8', radius: 0 },
-  image: { backgroundSize: 'cover', backgroundPosition: 'center' },
+  image: { backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 0, backgroundColor: 'transparent' },
   titleFont: { family: 'Lexend', size: 14, weight: 700, color: '#1a1a1a', lineHeight: 1.0 },
   contentFont: { family: 'Lexend', size: 12, weight: 400, color: '#1a1a1a', lineHeight: 1.1 },
   pdfImageFormat: 'jpeg', pdfJpegQuality: 0.85, pdfScale: 2, customCss: '',
@@ -54,7 +58,13 @@ export function uid(prefix = 'id'): string { _n += 1; const r = Math.abs(Math.fl
 export function newProject(): Project {
   return { version: 1, projectName: 'Untitled', projectIcon: '🗂️', settings: structuredClone(DEFAULT_SETTINGS), schemas: [], records: [], cards: [], locales: ['en','vi'], activeLocale: 'en', editLog: [] };
 }
-export function serializeProject(p: Project): string { return JSON.stringify(p, null, 2) + '\n'; }
+export function serializeProject(p: Project): string {
+  // Pool duplicated base64 images under `_assets` (record + its packed cards share one blob) so the
+  // file stores each unique image once. inflateAssets restores them on parse. See lib/imageAssets.ts.
+  const { data, assets } = deflateAssets(p);
+  const out = assets.length ? { ...(data as object), _assets: assets } : data;
+  return JSON.stringify(out, null, 2) + '\n';
+}
 
 // ── Migration: removed compound/3card layouts → single-card + cardsPerPage ──
 const COMPOUND_MIGRATION: Record<string, { layout: string; cardsPerPage: number }> = {
@@ -90,7 +100,11 @@ function migrateHideTitle(t: any, fields: SchemaField[], titleKey: string | null
 }
 
 export function parseProject(text: string): Project {
-  const raw = JSON.parse(text) as any; const base = newProject();
+  let raw = JSON.parse(text) as any;
+  // Restore pooled base64 images (see serializeProject / lib/imageAssets.ts). Every ref inflates to
+  // the SAME string reference, so shared images cost one string in memory, not one per occurrence.
+  if (raw && Array.isArray(raw._assets)) { raw = inflateAssets(raw, raw._assets) as any; delete raw._assets; }
+  const base = newProject();
   const s = raw.settings || {};
   const settings: Settings = { ...base.settings, ...s,
     border: { ...base.settings.border, ...(s.border||{}) },

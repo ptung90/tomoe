@@ -47,6 +47,43 @@ describe('flashcards model', () => {
     expect(parseProject(serializeProject(p))).toEqual(p);
   });
   it('serialize ends with newline', () => { expect(serializeProject(newProject()).endsWith('\n')).toBe(true); });
+  it('pools a duplicated base64 image once in the file and round-trips it (shared reference)', () => {
+    const IMG = 'data:image/png;base64,ZZZZ9999';
+    const p = newProject();
+    p.schemas.push({ id: 's1', name: 'Words', cardTemplates: [],
+      fields: [{ id: 'f1', key: 'pic', label: 'Pic', type: 'image' }] });
+    p.records.push({ id: 'r1', schemaId: 's1', fieldsHash: '', fields: { pic: IMG } });
+    // same blob duplicated into two packed cards (as Pack All would, once per view)
+    p.cards.push({ id: 'c1', layout: 'title-img-text', images: [{ slot: 0, url: IMG }], title: '', sections: [], orientation: 'portrait', recordId: 'r1', templateId: 't1' } as never);
+    p.cards.push({ id: 'c2', layout: 'title-img-text', images: [{ slot: 0, url: IMG }], title: '', sections: [], orientation: 'portrait', recordId: 'r1', templateId: 't2' } as never);
+
+    const text = serializeProject(p);
+    expect(text.split('data:image/png;base64,ZZZZ9999').length - 1).toBe(1); // blob written exactly once
+    expect(text).toContain('"_assets"');
+
+    const back = parseProject(text);
+    expect(back.records[0].fields.pic).toBe(IMG);        // content preserved
+    expect(back.cards[0].images[0].url).toBe(IMG);
+    expect(back.cards[0].images[0].url).toBe(back.cards[1].images[0].url); // shared string reference
+    expect(back).toEqual(p);
+  });
+  it('still reads an old file with base64 stored inline (no _assets)', () => {
+    const IMG = 'data:image/png;base64,OLDINLINE';
+    const legacy = JSON.stringify({ version: 1, projectName: 'X', schemas: [], records: [{ id: 'r1', schemaId: 's', fieldsHash: '', fields: { pic: IMG } }], cards: [], locales: ['en'], activeLocale: 'en' });
+    expect(parseProject(legacy).records[0].fields.pic).toBe(IMG);
+  });
+  it('DEFAULT_SETTINGS.image has borderRadius 0 and transparent backgroundColor', () => {
+    expect(DEFAULT_SETTINGS.image.borderRadius).toBe(0);
+    expect(DEFAULT_SETTINGS.image.backgroundColor).toBe('transparent');
+  });
+  it('parseProject fills image.borderRadius/backgroundColor defaults for files missing them', () => {
+    const legacy = JSON.stringify({ projectName: 'Old', schemas: [], records: [], cards: [],
+      settings: { image: { backgroundSize: 'contain', backgroundPosition: 'top' } } });
+    const p = parseProject(legacy);
+    expect(p.settings.image.backgroundSize).toBe('contain');
+    expect(p.settings.image.borderRadius).toBe(0);
+    expect(p.settings.image.backgroundColor).toBe('transparent');
+  });
   it('parseProject accepts legacy flashcard-creator JSON', () => {
     const legacy = JSON.stringify({ project_name:'Old', project_icon:'🐦',
       settings:{ paperSize:'A5' }, schemas:[], records:[],
