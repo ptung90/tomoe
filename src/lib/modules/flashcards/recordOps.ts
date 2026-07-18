@@ -1,4 +1,5 @@
 import { uid, type Project, type RecordItem, type SchemaField, type LocalizedText, type Schema } from './model';
+import { IMAGE_PLACEHOLDER } from './lib/copyStrip';
 
 export function emptyFieldValue(field: SchemaField, locales: string[]): LocalizedText {
   if (field.type === 'image' || field.multilingual === false) return '';
@@ -121,7 +122,7 @@ export function setActiveLocale(p: Project, locale: string): Project {
 }
 
 export function importRecords(
-  p: Project, schemaId: string, incoming: RecordItem[], mode: 'overwrite' | 'append',
+  p: Project, schemaId: string, incoming: RecordItem[], mode: 'overwrite' | 'append' | 'merge',
 ): Project {
   if (!p.schemas.some((s) => s.id === schemaId)) return p;
   const normalized: RecordItem[] = incoming.map((r) => ({
@@ -131,10 +132,37 @@ export function importRecords(
     fieldsHash: r.fieldsHash ?? '',
     fields: r.fields ?? {},
   }));
+  if (mode === 'merge') return migrateRecordFields({ ...p, records: mergeRecords(p.records, normalized, schemaId) });
   const records = mode === 'overwrite'
     ? [...p.records.filter((r) => r.schemaId !== schemaId), ...normalized]
     : [...p.records, ...normalized];
   return migrateRecordFields({ ...p, records });
+}
+
+/** Overlay `incoming` onto `existing` by record id (within `schemaId`): each
+ *  incoming field is applied EXCEPT where its value is the IMAGE_PLACEHOLDER —
+ *  there the existing field is kept (real image survives). Incoming records with
+ *  no id match are appended, with any leftover placeholder cleared to ''.
+ *  Recovers text edits from an image-stripped backup without losing images. */
+function mergeRecords(existing: RecordItem[], incoming: RecordItem[], schemaId: string): RecordItem[] {
+  const byId = new Map(incoming.map((r) => [r.id, r]));
+  const merged = existing.map((r) => {
+    const inc = r.schemaId === schemaId ? byId.get(r.id) : undefined;
+    if (!inc) return r;
+    byId.delete(r.id); // consumed — won't be appended
+    const fields = { ...r.fields };
+    for (const [k, v] of Object.entries(inc.fields)) {
+      if (v === IMAGE_PLACEHOLDER) continue; // keep existing image, ignore placeholder
+      fields[k] = v;
+    }
+    return { ...r, fields };
+  });
+  const appended = incoming.filter((r) => byId.has(r.id)).map((r) => {
+    const fields = { ...r.fields };
+    for (const [k, v] of Object.entries(fields)) if (v === IMAGE_PLACEHOLDER) fields[k] = ''; // no image to recover
+    return { ...r, fields };
+  });
+  return [...merged, ...appended];
 }
 
 /** Set image-field values on records in one immutable pass. Each update writes

@@ -50,9 +50,20 @@
       if (!Array.isArray(parsed)) throw new Error('not an array');
       incoming = parsed as RecordItem[];
     } catch { showToast('Clipboard is not a records JSON array', 'error'); return; }
-    const overwrite = await confirm(
-      `Paste ${incoming.length} record(s)? OK = overwrite this schema, Cancel = append.`,
+    // Merge is the safe default: it overlays text edits onto matching records by id
+    // and keeps existing images (a copied backup has "[image]" where a picture was stripped).
+    const doMerge = await confirm(
+      `Paste ${incoming.length} record(s).\n\nOK = Merge (apply text edits into matching records, keep existing images)\nCancel = other options`,
       { title: 'Paste records', kind: 'info' },
+    );
+    if (doMerge) {
+      importRecords(schemaId, incoming, 'merge');
+      showToast('Records merged');
+      return;
+    }
+    const overwrite = await confirm(
+      `OK = Overwrite this schema's records\nCancel = Append as new records`,
+      { title: 'Paste records', kind: 'warning' },
     );
     importRecords(schemaId, incoming, overwrite ? 'overwrite' : 'append');
     showToast('Records pasted');

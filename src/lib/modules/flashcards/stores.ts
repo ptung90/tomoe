@@ -296,7 +296,7 @@ export function removeLocale(l: string): void { commit(ops.removeLocale(get(proj
 export function setActiveLocale(l: string): void { commit(ops.setActiveLocale(get(project), l)); }
 
 // ── Import ─────────────────────────────────────────────────────────────
-export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'overwrite' | 'append'): void {
+export function importRecords(schemaId: string, incoming: RecordItem[], mode: 'overwrite' | 'append' | 'merge'): void {
   commit(ops.importRecords(get(project), schemaId, incoming, mode));
 }
 

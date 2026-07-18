@@ -158,6 +158,30 @@ describe('recordOps locale + import', () => {
     const p2 = ops.importRecords(seeded, 's1', [{ id: 'x', schemaId: 's1', fieldsHash: '', fields: {} }], 'append');
     expect(p2.records).toHaveLength(2);
   });
+  it('importRecords merge overlays text by id but keeps existing images ([image] placeholder)', () => {
+    const { p } = withSchema();
+    const existing: RecordItem = {
+      id: 'r1', schemaId: 's1', fieldsHash: '',
+      fields: { title: { en: 'old', vi: '' }, pic: 'data:image/png;base64,AAAA' },
+    };
+    const seeded: Project = { ...p, records: [existing] };
+    const incoming: RecordItem[] = [
+      // matched record: text edited, image was stripped to the placeholder on copy
+      { id: 'r1', schemaId: 's1', fieldsHash: '', fields: { title: { en: 'new', vi: '' }, pic: '[image]' } },
+      // brand-new record present only in the backup
+      { id: 'r2', schemaId: 's1', fieldsHash: '', fields: { title: { en: 'brand', vi: '' }, pic: '[image]' } },
+    ];
+    const p2 = ops.importRecords(seeded, 's1', incoming, 'merge');
+    expect(p2.records).toHaveLength(2);                        // r1 merged in place, r2 appended
+    const r1 = p2.records.find((r) => r.id === 'r1')!;
+    expect(r1.fields.title).toEqual({ en: 'new', vi: '' });   // text edit applied
+    expect(r1.fields.pic).toBe('data:image/png;base64,AAAA'); // real image kept, placeholder ignored
+    const r2 = p2.records.find((r) => r.id === 'r2')!;
+    expect(r2.fields.title).toEqual({ en: 'brand', vi: '' });
+    expect(r2.fields.pic).toBe('');                           // no image to recover -> placeholder cleared, not stored literally
+    // immutable: original untouched
+    expect(seeded.records[0].fields.title).toEqual({ en: 'old', vi: '' });
+  });
 });
 
 describe('recordOps.setImageFields', () => {
