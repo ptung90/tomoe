@@ -6,7 +6,8 @@
   import Heading6 from 'lucide-svelte/icons/heading-6';
   import { createEditor, htmlToMd } from '../lib/richtext';
 
-  let { value = '', onChange }: { value?: string; onChange: (md: string) => void } = $props();
+  let { value = '', onChange, compact = false }:
+    { value?: string; onChange: (md: string) => void; compact?: boolean } = $props();
   let editor = $state<Editor | undefined>(undefined);
   let tick = $state(0); // bump to recompute toolbar active-state
 
@@ -26,7 +27,7 @@
   };
 </script>
 
-<div class="rt">
+<div class="rt" class:compact>
   <div class="rt-toolbar">
     <button type="button" class:on={active('bold')} aria-label="bold"
       onclick={() => editor?.chain().focus().toggleBold().run()}><strong>B</strong></button>
@@ -69,5 +70,8 @@
   .rt-div { width:1px; height:18px; background:var(--border); margin:0 4px; }
   .rt-editor { padding:8px 10px; min-height:60px; }
   .rt-editor :global(.ProseMirror) { outline:none; min-height:44px; }
+  /* Short (text) fields share this editor — same toolbar, just fewer lines tall. */
+  .rt.compact .rt-editor { padding:6px 9px; min-height:32px; }
+  .rt.compact .rt-editor :global(.ProseMirror) { min-height:20px; }
   .rt-editor :global(.ProseMirror p) { margin:0 0 6px; }
 </style>

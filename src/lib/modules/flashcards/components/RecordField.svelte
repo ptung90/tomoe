@@ -30,20 +30,13 @@
       {#each locales as l (l)}
         <div class="loc-row">
           <span class="loc-tag">{l.toUpperCase()}</span>
-          {#if field.type === 'text-long'}
-            <RichText value={loc(l)} onChange={(md) => onChange(md, l)} />
-          {:else}
-            <textarea class="txt" rows="2" value={loc(l)}
-              oninput={(e) => onChange((e.target as HTMLTextAreaElement).value, l)}></textarea>
-          {/if}
+          <RichText value={loc(l)} compact={field.type !== 'text-long'}
+            onChange={(md) => onChange(md, l)} />
         </div>
       {/each}
     </div>
-  {:else if field.type === 'text-long'}
-    <RichText value={str()} onChange={(md) => onChange(md)} />
   {:else}
-    <textarea class="txt" rows="2" value={str()}
-      oninput={(e) => onChange((e.target as HTMLTextAreaElement).value)}></textarea>
+    <RichText value={str()} compact={field.type !== 'text-long'} onChange={(md) => onChange(md)} />
   {/if}
 </div>
 
@@ -53,7 +46,4 @@
   .locales { display:flex; flex-direction:column; gap:6px; }
   .loc-row { display:flex; gap:8px; align-items:flex-start; }
   .loc-tag { font-size:11px; font-weight:600; color:var(--accent); padding-top:8px; min-width:24px; }
-  .txt { flex:1; min-width:0; width:100%; box-sizing:border-box; padding:7px 9px;
-    border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);
-    font:inherit; resize:vertical; min-height:34px; line-height:1.4; }
 </style>

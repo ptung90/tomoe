@@ -235,6 +235,11 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     'px;';
   const gridStyle = getGridTemplateStyle(card.layout, split);
   const resolvedTitle = resolveLocale(card.title, locale);
+  // Title renders through markdown too (same engine as sections), so a title authored in the
+  // RichText editor shows its formatting — incl. an h6 "Subtitle" line — instead of literal
+  // markdown. mdBlock passes raw HTML straight through, so legacy hand-typed <br>/<small> titles
+  // still render as before.
+  const titleHtml = mdBlock(resolvedTitle);
   // Font overrides are resolved into `settings` by the caller (global → schema.style → card.style cascade).
   const titleF = { ...s.titleFont };
   const contentF = { ...s.contentFont };
@@ -246,7 +251,11 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     `${_cs} .fc-section__content h2{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.85)}px;}` +
     `${_cs} .fc-section__content h3{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.75)}px;}` +
     // h6 = "Subtitle" (RichText toolbar): a small, muted secondary line — not a bold heading.
-    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 0.82)}px;}`;
+    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 0.82)}px;}` +
+    // The title is markdown-rendered too: strip the wrapping <p>'s margins, and give an h6 subtitle
+    // line in the title a small, muted look sized off the title font.
+    `${_cs} .fc-title p{margin:0;padding:0;}` +
+    `${_cs} .fc-title h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((titleF.size || 14) * 0.62)}px;}`;
   const _labelSizeRule = card.labelSize
     ? `${_cs} .fc-section__label{font-size:${card.labelSize}px}${_cs} .fc-img-label{font-size:${card.labelSize}px}`
     : '';
@@ -287,7 +296,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       cardStyleTag +
       '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
       '" style="' + sizeStyle + borderStyle + '">' +
-      (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '') +
+      (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>' : '') +
       // Image auto-fills the empty middle between title and text; imageHeightPercent is the floor (min-height).
       '<div class="fc-image-area" style="min-height:' + imgH + 'px;position:relative;flex:1 1 auto;' + imgAreaPad + '">' + slots + handles + '</div>' +
       '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
@@ -303,7 +312,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
       '" style="' + sizeStyle + borderStyle + '">' +
       '<div class="fc-text-area" style="height:' + cardH + 'px;overflow:auto;' + textVAlignStyle + '">' +
-      (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>' : '') +
+      (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>' : '') +
       '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' + sectionsHtml + '</div>' +
       '</div></div>'
     );
@@ -332,7 +341,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     '</div>' +
     '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
     (showTitle
-      ? '<div class="fc-title" style="' + titleStyle + '">' + resolvedTitle + '</div>'
+      ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>'
       : '') +
     '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' +
     sectionsHtml +
