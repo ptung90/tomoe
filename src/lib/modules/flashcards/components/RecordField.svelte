@@ -2,13 +2,15 @@
   import type { SchemaField, LocalizedText } from '../model';
   import { resolveLabel } from '../lib/card-render';
   import RichText from './RichText.svelte';
+  import ShortText from './ShortText.svelte';
   import ImageField from './ImageField.svelte';
 
-  let { field, value, locales, activeLocale = 'en', onChange }: {
+  let { field, value, locales, activeLocale = 'en', imageQuery = '', onChange }: {
     field: SchemaField;
     value: LocalizedText;
     locales: string[];
     activeLocale?: string;
+    imageQuery?: string;
     onChange: (val: string, locale?: string) => void;
   } = $props();
 
@@ -23,7 +25,7 @@
   <span class="field-label">{resolveLabel(field.label, activeLocale, field.key)}</span>
 
   {#if field.type === 'image'}
-    <ImageField value={str()} onChange={(u) => onChange(u)} />
+    <ImageField value={str()} query={imageQuery} onChange={(u) => onChange(u)} />
   {:else if multilingual}
     <div class="locales">
       {#each locales as l (l)}
@@ -32,8 +34,7 @@
           {#if field.type === 'text-long'}
             <RichText value={loc(l)} onChange={(md) => onChange(md, l)} />
           {:else}
-            <input class="txt" type="text" value={loc(l)}
-              oninput={(e) => onChange((e.target as HTMLInputElement).value, l)} />
+            <ShortText value={loc(l)} onChange={(v) => onChange(v, l)} />
           {/if}
         </div>
       {/each}
@@ -41,8 +42,7 @@
   {:else if field.type === 'text-long'}
     <RichText value={str()} onChange={(md) => onChange(md)} />
   {:else}
-    <input class="txt" type="text" value={str()}
-      oninput={(e) => onChange((e.target as HTMLInputElement).value)} />
+    <ShortText value={str()} onChange={(v) => onChange(v)} />
   {/if}
 </div>
 
@@ -52,6 +52,4 @@
   .locales { display:flex; flex-direction:column; gap:6px; }
   .loc-row { display:flex; gap:8px; align-items:flex-start; }
   .loc-tag { font-size:11px; font-weight:600; color:var(--accent); padding-top:8px; min-width:24px; }
-  .txt { flex:1; padding:7px 9px; border:1px solid var(--border); border-radius:6px;
-    background:var(--bg); color:var(--text); font:inherit; }
 </style>
