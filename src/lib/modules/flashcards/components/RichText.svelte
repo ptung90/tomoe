@@ -3,6 +3,7 @@
   import AlignLeft from 'lucide-svelte/icons/align-left';
   import AlignCenter from 'lucide-svelte/icons/align-center';
   import AlignRight from 'lucide-svelte/icons/align-right';
+  import Heading6 from 'lucide-svelte/icons/heading-6';
   import { createEditor, htmlToMd } from '../lib/richtext';
 
   let { value = '', onChange }: { value?: string; onChange: (md: string) => void } = $props();
@@ -38,6 +39,9 @@
       onclick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}>H1</button>
     <button type="button" class:on={active('heading', { level: 2 })} aria-label="h2"
       onclick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
+    <button type="button" class="rt-icon" class:on={active('heading', { level: 6 })} aria-label="subtitle"
+      title="Subtitle (small heading — stored as markdown ######)"
+      onclick={() => editor?.chain().focus().toggleHeading({ level: 6 }).run()}><Heading6 size={15} /></button>
     <button type="button" class:on={active('bulletList')} aria-label="bullet list"
       onclick={() => editor?.chain().focus().toggleBulletList().run()}>•</button>
     <button type="button" class:on={active('orderedList')} aria-label="ordered list"

@@ -102,7 +102,17 @@ function resolveImgStyle(img: CardImage | undefined, globalImgStyle: string): st
     (img.size !== 'cover' && img.color ? 'background-color:' + img.color + ';' : '');
 }
 
-function buildSlots(card: Card, slotCount: number, imgStyle: string, forPrint = false): string {
+/** Optional per-image "frame" CSS shared by grid + flow renders: rounds the corners and/or fills a
+ *  solid background behind the image. Emitted only when set (radius > 0, colour not transparent),
+ *  so default images stay unstyled. Trailing semicolons kept so it appends cleanly. */
+export function imageFrameStyle(image: Settings['image']): string {
+  const radius = image.borderRadius ?? 0;
+  const color = image.backgroundColor ?? 'transparent';
+  return (radius > 0 ? 'border-radius:' + radius + 'px;' : '') +
+    (color && color !== 'transparent' ? 'background-color:' + color + ';' : '');
+}
+
+function buildSlots(card: Card, slotCount: number, imgStyle: string, frameStyle: string, forPrint = false): string {
   return Array.from({ length: slotCount }, (_, i) => {
     const img = card.images.find((im) => im.slot === i);
     if (img && img.url) {
@@ -110,7 +120,7 @@ function buildSlots(card: Card, slotCount: number, imgStyle: string, forPrint = 
         '<div class="fc-image-slot fc-image-slot-' + i +
         '"><div class="img-bg" style="background-image:url(\'' + esc(img.url) + '\');' +
         resolveImgStyle(img, imgStyle) +
-        'background-repeat:no-repeat;width:100%;height:100%;"></div>' +
+        'background-repeat:no-repeat;width:100%;height:100%;' + frameStyle + '"></div>' +
         '</div>'
       );
     }
@@ -191,7 +201,8 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     s.image.backgroundPosition +
     ';';
 
-  const slots = buildSlots(card, slotCount, imgStyle, forPrint);
+  const frameStyle = imageFrameStyle(s.image);
+  const slots = buildSlots(card, slotCount, imgStyle, frameStyle, forPrint);
   const handles = '';
   const hideLabels = !!card.hideSectionLabels;
   const sectionsHtml = buildSectionsHtml(card.sections, hideLabels, !!card.inlineSections, locale);
@@ -233,7 +244,9 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const _h1Rule =
     `${_cs} .fc-section__content h1{margin:0;padding:0;${titleStyle}}` +
     `${_cs} .fc-section__content h2{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.85)}px;}` +
-    `${_cs} .fc-section__content h3{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.75)}px;}`;
+    `${_cs} .fc-section__content h3{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.75)}px;}` +
+    // h6 = "Subtitle" (RichText toolbar): a small, muted secondary line — not a bold heading.
+    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 0.82)}px;}`;
   const _labelSizeRule = card.labelSize
     ? `${_cs} .fc-section__label{font-size:${card.labelSize}px}${_cs} .fc-img-label{font-size:${card.labelSize}px}`
     : '';
