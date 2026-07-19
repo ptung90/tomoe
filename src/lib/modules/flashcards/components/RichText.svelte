@@ -3,8 +3,9 @@
   import AlignLeft from 'lucide-svelte/icons/align-left';
   import AlignCenter from 'lucide-svelte/icons/align-center';
   import AlignRight from 'lucide-svelte/icons/align-right';
-  import Heading6 from 'lucide-svelte/icons/heading-6';
   import { createEditor, htmlToMd } from '../lib/richtext';
+
+  const LEVELS = [1, 2, 3, 4, 5, 6] as const; // heading buttons H1–H6
 
   let { value = '', onChange, compact = false }:
     { value?: string; onChange: (md: string) => void; compact?: boolean } = $props();
@@ -36,13 +37,11 @@
     <button type="button" class:on={active('underline')} aria-label="underline"
       onclick={() => editor?.chain().focus().toggleUnderline().run()}><u>U</u></button>
     <span class="rt-div"></span>
-    <button type="button" class:on={active('heading', { level: 1 })} aria-label="h1"
-      onclick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}>H1</button>
-    <button type="button" class:on={active('heading', { level: 2 })} aria-label="h2"
-      onclick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-    <button type="button" class="rt-icon" class:on={active('heading', { level: 6 })} aria-label="subtitle"
-      title="Subtitle (small heading — stored as markdown ######)"
-      onclick={() => editor?.chain().focus().toggleHeading({ level: 6 }).run()}><Heading6 size={15} /></button>
+    {#each LEVELS as lvl (lvl)}
+      <button type="button" class:on={active('heading', { level: lvl })} aria-label={`h${lvl}`}
+        title={lvl === 6 ? 'Heading 6 (subtitle)' : `Heading ${lvl}`}
+        onclick={() => editor?.chain().focus().toggleHeading({ level: lvl }).run()}>H{lvl}</button>
+    {/each}
     <button type="button" class:on={active('bulletList')} aria-label="bullet list"
       onclick={() => editor?.chain().focus().toggleBulletList().run()}>•</button>
     <button type="button" class:on={active('orderedList')} aria-label="ordered list"

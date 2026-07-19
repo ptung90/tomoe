@@ -19,10 +19,10 @@ describe('RecordField', () => {
     expect(screen.queryByText('EN')).not.toBeInTheDocument();
     expect(screen.getAllByLabelText('bold')).toHaveLength(1);
   });
-  it('offers the Subtitle (h6) control in the editor toolbar', () => {
+  it('offers all heading levels H1–H6 in the editor toolbar', () => {
     const field: SchemaField = { id: 'f1', key: 'code', label: 'Code', type: 'text', multilingual: false };
     render(RecordField, { field, value: '', locales: ['en'], onChange: vi.fn() });
-    expect(screen.getByLabelText('subtitle')).toBeInTheDocument();
+    for (const n of [1, 2, 3, 4, 5, 6]) expect(screen.getByLabelText(`h${n}`)).toBeInTheDocument();
   });
   it('renders ImageField for an image field', () => {
     const field: SchemaField = { id: 'f3', key: 'pic', label: 'Pic', type: 'image' };
