@@ -140,7 +140,7 @@
   }
 
   // One flat row of tabs (no Text/Card/Image grouping, no sub-pills).
-  type StyleTab = 'title' | 'content' | 'border' | 'spacing' | 'image' | 'page' | 'fields';
+  type StyleTab = 'title' | 'content' | 'border' | 'spacing' | 'image' | 'page' | 'fields' | 'css';
   let tab = $state<StyleTab>('title');
 </script>
 
@@ -168,7 +168,7 @@
     {/if}
   </div>
   <div class="tabs" role="tablist" aria-label="Style sections">
-    {#each [['title','Title'],['content','Content'],['border','Border'],['spacing','Spacing'],['image','Image'],['page','Page'],['fields','Fields']] as [id, label] (id)}
+    {#each [['title','Title'],['content','Content'],['border','Border'],['spacing','Spacing'],['image','Image'],['page','Page'],['fields','Fields'],['css','CSS']] as [id, label] (id)}
       <button type="button" role="tab" aria-selected={tab === id} class:on={tab === id} onclick={() => (tab = id as StyleTab)}>{label}</button>
     {/each}
   </div>
@@ -260,6 +260,17 @@
           </span>
           <span class="hint">≈ {resolvedPerPage}/page</span>
         {/if}
+      </div>
+    {:else if tab === 'css'}
+      <div class="css-tab">
+        <label class="group-label" for="tomoe-custom-css">Project custom CSS — applies to preview + export</label>
+        <textarea id="tomoe-custom-css" class="css-area" spellcheck="false"
+          placeholder={".fc-title h6 { opacity: .6 !important }\n.fc-section__content { letter-spacing: .2px }"}
+          value={$project.settings.customCss ?? ''}
+          oninput={(e) => setSettings({ customCss: (e.currentTarget as HTMLTextAreaElement).value })}></textarea>
+        <p class="css-hint">Target render classes, e.g. <code>.fc-title</code>, <code>.fc-section__content</code>,
+          <code>.fc-section__label</code>, <code>.fc-image-slot</code>, or headings <code>h1…h6</code>.
+          Add <code>!important</code> to override built-in styles.</p>
       </div>
     {:else}
       <div class="display-group" role="group" aria-label="Show on card">
@@ -397,6 +408,12 @@
   /* Shared small section heading (Show on card / Fields in this view). */
   .group-label { display:block; font-size:10px; font-weight:700; letter-spacing:.06em;
     text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  .css-tab { display:flex; flex-direction:column; gap:6px; }
+  .css-area { width:100%; box-sizing:border-box; min-height:180px; resize:vertical; padding:8px 10px;
+    border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text);
+    font-family:ui-monospace,'Cascadia Code',Consolas,monospace; font-size:12px; line-height:1.5; }
+  .css-hint { margin:0; font-size:11px; color:var(--text-muted); line-height:1.5; }
+  .css-hint code { background:var(--accent-weak); color:var(--accent); padding:0 4px; border-radius:4px; }
   /* "Show on card" — visibility toggles (eye chips): a different shape/affordance from the
      field-selection checkboxes below, so the two groups aren't confused. */
   .display-group { padding-bottom:2px; }

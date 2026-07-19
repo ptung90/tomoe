@@ -35,19 +35,26 @@ describe('SchemaRecordList', () => {
     expect(get(S.project).records.length).toBe(before + 1);
     expect(get(S.project).records.at(-1)!.schemaId).toBe(sid);
   });
-  it('shows the auto-fill trigger for a schema with an image field, and opens the modal', async () => {
+  it('shows the auto-fill trigger (in the actions menu) for an image schema, and opens the modal', async () => {
     const sid = get(S.project).schemas[0].id;
     S.updateSchema(sid, { fields: [
       { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
       { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
     ] });
     render(SchemaRecordList);
-    const btn = screen.getByRole('button', { name: /auto-fill images/i });
-    await fireEvent.click(btn);
+    await fireEvent.click(screen.getByRole('button', { name: /schema actions/i }));
+    await fireEvent.click(screen.getByRole('menuitem', { name: /auto-fill images/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
-  it('hides the auto-fill trigger for a schema with no image field', () => {
+  it('hides the auto-fill trigger for a schema with no image field', async () => {
     render(SchemaRecordList);
-    expect(screen.queryByRole('button', { name: /auto-fill images/i })).toBeNull();
+    await fireEvent.click(screen.getByRole('button', { name: /schema actions/i }));
+    expect(screen.queryByRole('menuitem', { name: /auto-fill images/i })).toBeNull();
+  });
+  it('opens the Edit records JSON editor from the actions menu', async () => {
+    render(SchemaRecordList);
+    await fireEvent.click(screen.getByRole('button', { name: /schema actions/i }));
+    await fireEvent.click(screen.getByRole('menuitem', { name: /edit records json/i }));
+    expect(screen.getByRole('dialog', { name: /edit records json/i })).toBeInTheDocument();
   });
 });

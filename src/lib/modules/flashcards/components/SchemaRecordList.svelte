@@ -6,6 +6,8 @@
   import Layers from 'lucide-svelte/icons/layers';
   import Sparkles from 'lucide-svelte/icons/sparkles';
   import WandSparkles from 'lucide-svelte/icons/wand-sparkles';
+  import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
+  import Braces from 'lucide-svelte/icons/braces';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import {
     project, selectedRecordId, selectRecord, addRecord,
@@ -18,16 +20,26 @@
   import EmptyState from './EmptyState.svelte';
   import AiGenerateModal from './AiGenerateModal.svelte';
   import AutofillImagesModal from './AutofillImagesModal.svelte';
+  import RecordsJsonModal from './RecordsJsonModal.svelte';
 
   let aiSchemaId = $state<string | null>(null);
   let autofillSchemaId = $state<string | null>(null);
+  let jsonSchemaId = $state<string | null>(null);
+  let menuFor = $state<string | null>(null);
+  function act(fn: () => void): void { menuFor = null; fn(); }
+
+  // The row label is plain-text: record fields may hold markdown/HTML (headings, <small>, <br>),
+  // which would otherwise show as literal markup in the list. Strip tags + common md markers.
+  function stripMarkup(s: string): string {
+    return s.replace(/<[^>]*>/g, ' ').replace(/[#*_`~]/g, '').replace(/\s+/g, ' ').trim();
+  }
 
   function rowLabel(rec: RecordItem, schema: Schema): string {
     const f = schema.fields.find((x) => x.type !== 'image');
     if (!f) return '(untitled)';
     const v = rec.fields[f.key];
     const s = v && typeof v === 'object' ? (v[$project.activeLocale] ?? '') : (typeof v === 'string' ? v : '');
-    return s.trim() || '(untitled)';
+    return stripMarkup(s) || '(untitled)';
   }
   const recordsBySchema = $derived((id: string) => $project.records.filter((r) => r.schemaId === id));
   const canAutofill = $derived((schema: Schema) =>
@@ -92,18 +104,22 @@
           <span class="schema-name">{schema.name}</span>
           <span class="count">{recordsBySchema(schema.id).length}</span>
           <div class="schema-actions">
-            <button type="button" aria-label="edit schema" title="Edit schema"
-              onclick={() => schemaEditorOpen.set(schema.id)}><Pencil size={13} /></button>
-            <button type="button" aria-label="copy json" title="Copy records JSON"
-              onclick={() => copyJson(schema.id)}><Clipboard size={13} /></button>
-            <button type="button" aria-label="paste json" title="Paste records JSON"
-              onclick={() => pasteJson(schema.id)}><ClipboardPaste size={13} /></button>
-            {#if canAutofill(schema)}
-              <button type="button" aria-label="auto-fill images" title="Auto-fill images"
-                onclick={() => autofillSchemaId = schema.id}><WandSparkles size={13} /></button>
+            <button type="button" class="kebab" aria-label="schema actions" title="Actions"
+              aria-haspopup="menu" aria-expanded={menuFor === schema.id}
+              onclick={() => (menuFor = menuFor === schema.id ? null : schema.id)}><EllipsisVertical size={15} /></button>
+            {#if menuFor === schema.id}
+              <div class="menu" role="menu">
+                <button type="button" role="menuitem" onclick={() => act(() => schemaEditorOpen.set(schema.id))}><Pencil size={13} /> Edit schema</button>
+                <button type="button" role="menuitem" onclick={() => act(() => (jsonSchemaId = schema.id))}><Braces size={13} /> Edit records JSON…</button>
+                <div class="menu-sep"></div>
+                <button type="button" role="menuitem" onclick={() => act(() => copyJson(schema.id))}><Clipboard size={13} /> Copy records JSON</button>
+                <button type="button" role="menuitem" onclick={() => act(() => pasteJson(schema.id))}><ClipboardPaste size={13} /> Paste records JSON</button>
+                {#if canAutofill(schema)}
+                  <button type="button" role="menuitem" onclick={() => act(() => (autofillSchemaId = schema.id))}><WandSparkles size={13} /> Auto-fill images</button>
+                {/if}
+                <button type="button" role="menuitem" onclick={() => act(() => (aiSchemaId = schema.id))}><Sparkles size={13} /> Generate with AI</button>
+              </div>
             {/if}
-            <button type="button" aria-label="ai generate" title="Generate records with AI"
-              onclick={() => aiSchemaId = schema.id}><Sparkles size={13} /></button>
           </div>
         </header>
         <ul class="records">
@@ -119,6 +135,14 @@
         </button>
       </section>
     {/each}
+  {/if}
+
+  {#if menuFor}
+    <button type="button" class="menu-backdrop" aria-label="close menu" onclick={() => (menuFor = null)}></button>
+  {/if}
+
+  {#if jsonSchemaId}
+    <RecordsJsonModal schemaId={jsonSchemaId} onClose={() => (jsonSchemaId = null)} />
   {/if}
 
   {#if aiSchemaId}
@@ -149,9 +173,18 @@
   .schema-head { display:flex; align-items:center; gap:8px; }
   .schema-name { font-weight:600; font-size:13px; }
   .count { font-size:11px; color:var(--text-muted); background:var(--accent-weak); border-radius:10px; padding:0 7px; }
-  .schema-actions { margin-left:auto; display:flex; gap:2px; }
-  .schema-actions button { border:none; background:transparent; color:var(--text-muted); padding:3px; border-radius:5px; }
-  .schema-actions button:hover { background:var(--accent-weak); color:var(--accent); }
+  .schema-actions { margin-left:auto; position:relative; }
+  .kebab { border:none; background:transparent; color:var(--text-muted); padding:3px; border-radius:5px;
+    display:inline-flex; cursor:pointer; }
+  .kebab:hover, .kebab[aria-expanded="true"] { background:var(--accent-weak); color:var(--accent); }
+  .menu { position:absolute; top:100%; right:0; margin-top:4px; z-index:20; min-width:190px;
+    background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:4px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:1px; }
+  .menu button { display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:none;
+    background:transparent; color:var(--text); padding:7px 9px; border-radius:6px; font:inherit; cursor:pointer; }
+  .menu button:hover { background:var(--accent-weak); color:var(--accent); }
+  .menu-sep { height:1px; background:var(--border); margin:3px 2px; }
+  .menu-backdrop { position:fixed; inset:0; z-index:10; background:transparent; border:none; padding:0; cursor:default; }
   .records { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
   .rec { width:100%; text-align:left; border:none; background:transparent; color:var(--text);
     border-radius:6px; padding:6px 9px; font:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;

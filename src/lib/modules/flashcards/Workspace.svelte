@@ -31,6 +31,19 @@
   let showBackups = $state(false);
   let showExport = $state(false);
   const lastEditEntry = $derived(lastEdit($project.editLog));
+
+  // Inject the project's global custom CSS into <head> so it styles BOTH the live preview and the
+  // export (html-to-image captures the host with these computed styles applied). Editable in the
+  // Style panel's "CSS" tab (settings.customCss). Removed on unmount / when emptied.
+  $effect(() => {
+    const css = ($project.settings.customCss ?? '').trim();
+    if (!css) return;
+    const el = document.createElement('style');
+    el.setAttribute('data-tomoe-custom-css', '');
+    el.textContent = css;
+    document.head.appendChild(el);
+    return () => el.remove();
+  });
   // Basename of the open file (everything after the last slash/backslash), or null when unsaved.
   const fileName = $derived($filePath ? $filePath.replace(/^.*[\\/]/, '') : null);
 
