@@ -73,4 +73,19 @@
   .rt.compact .rt-editor { padding:6px 9px; min-height:32px; }
   .rt.compact .rt-editor :global(.ProseMirror) { min-height:20px; }
   .rt-editor :global(.ProseMirror p) { margin:0 0 6px; }
+  /* TipTap is headless: browser-default headings carry huge margins. Tame them and give a sensible
+     preview scale (h6 = the muted subtitle, mirroring the card). Card styling is still separate. */
+  .rt-editor :global(.ProseMirror h1),
+  .rt-editor :global(.ProseMirror h2),
+  .rt-editor :global(.ProseMirror h3),
+  .rt-editor :global(.ProseMirror h4),
+  .rt-editor :global(.ProseMirror h5),
+  .rt-editor :global(.ProseMirror h6) { margin:2px 0; line-height:1.2; font-weight:600; }
+  .rt-editor :global(.ProseMirror h1) { font-size:1.5em; }
+  .rt-editor :global(.ProseMirror h2) { font-size:1.3em; }
+  .rt-editor :global(.ProseMirror h3) { font-size:1.15em; }
+  .rt-editor :global(.ProseMirror h4) { font-size:1.05em; }
+  /* h5 & h6 are muted subtitles (mirroring the card), h5 the larger of the two. */
+  .rt-editor :global(.ProseMirror h5) { font-size:1.05em; font-weight:400; opacity:0.7; }
+  .rt-editor :global(.ProseMirror h6) { font-size:0.9em; font-weight:400; opacity:0.7; }
 </style>

@@ -251,13 +251,14 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     `${_cs} .fc-section__content h2{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.85)}px;}` +
     `${_cs} .fc-section__content h3{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.75)}px;}` +
     `${_cs} .fc-section__content h4{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.68)}px;}` +
-    `${_cs} .fc-section__content h5{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.6)}px;}` +
-    // h6 = "Subtitle": a small, muted secondary line — not a bold heading.
-    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 0.82)}px;}` +
-    // The title is markdown-rendered too: strip wrapping <p>/heading margins, and give an h6
-    // subtitle line in the title a small, muted look sized off the title font.
-    `${_cs} .fc-title p,${_cs} .fc-title h1,${_cs} .fc-title h2,${_cs} .fc-title h3,${_cs} .fc-title h4,${_cs} .fc-title h5{margin:0;padding:0;}` +
-    `${_cs} .fc-title h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((titleF.size || 14) * 0.62)}px;}`;
+    // h5 and h6 are "Subtitle" lines: muted, not bold headings — h5 the larger of the two.
+    `${_cs} .fc-section__content h5{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 1.05)}px;}` +
+    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 0.9)}px;}` +
+    // Title is markdown-rendered too: reset bold-heading margins; h5/h6 in the title are muted
+    // subtitle lines sized off the title font (h5 larger than h6).
+    `${_cs} .fc-title p,${_cs} .fc-title h1,${_cs} .fc-title h2,${_cs} .fc-title h3,${_cs} .fc-title h4{margin:0;padding:0;}` +
+    `${_cs} .fc-title h5{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((titleF.size || 14) * 0.82)}px;}` +
+    `${_cs} .fc-title h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((titleF.size || 14) * 0.72)}px;}`;
   const _labelSizeRule = card.labelSize
     ? `${_cs} .fc-section__label{font-size:${card.labelSize}px}${_cs} .fc-img-label{font-size:${card.labelSize}px}`
     : '';
