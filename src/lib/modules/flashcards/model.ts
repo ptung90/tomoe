@@ -41,7 +41,7 @@ export interface Card { id: string; layout: string; imageHeightPercent: number; 
 /** One entry in a project's shared edit log: who saved and when (ISO 8601). Lives IN the
  *  document so it travels with the file and every collaborator sees the same history. */
 export interface EditLogEntry { by: string; at: string }
-export interface Project { version: number; projectName: string; projectIcon: string; settings: Settings; schemas: Schema[]; records: RecordItem[]; cards: Card[]; locales: Locale[]; activeLocale: Locale; editLog?: EditLogEntry[] }
+export interface Project { version: number; projectName: string; projectIcon: string; settings: Settings; schemas: Schema[]; records: RecordItem[]; cards: Card[]; locales: Locale[]; activeLocale: Locale; editLog?: EditLogEntry[]; /** Which continent this project belongs to (a CONTINENT_COLORS key), or undefined = none. */ category?: string }
 
 export const DEFAULT_SETTINGS: Settings = {
   paperSize: 'A5', orientation: 'portrait', margin: 9, padding: 2, imgPadding: 0,
@@ -155,6 +155,7 @@ export function parseProject(text: string): Project {
     projectName: raw.projectName ?? raw.project_name ?? base.projectName,
     projectIcon: raw.projectIcon ?? raw.project_icon ?? base.projectIcon,
     settings, schemas, records, cards,
+    category: typeof raw.category === 'string' ? raw.category : undefined,
     locales: raw.locales ?? base.locales, activeLocale: raw.activeLocale ?? base.activeLocale,
     editLog: Array.isArray(raw.editLog)
       ? raw.editLog.filter((e: any) => e && typeof e.by === 'string' && typeof e.at === 'string')

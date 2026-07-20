@@ -47,6 +47,13 @@ describe('flashcards model', () => {
     expect(parseProject(serializeProject(p))).toEqual(p);
   });
   it('serialize ends with newline', () => { expect(serializeProject(newProject()).endsWith('\n')).toBe(true); });
+  it('round-trips Project.category and omits it when undefined', () => {
+    const p = newProject(); p.category = 'europe';
+    expect(parseProject(serializeProject(p)).category).toBe('europe');
+    const p2 = newProject();
+    expect('category' in JSON.parse(serializeProject(p2))).toBe(false);
+    expect(parseProject(serializeProject(p2)).category).toBeUndefined();
+  });
   it('pools a duplicated base64 image once in the file and round-trips it (shared reference)', () => {
     const IMG = 'data:image/png;base64,ZZZZ9999';
     const p = newProject();
