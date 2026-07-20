@@ -8,6 +8,7 @@ import { hashContent } from '../flashcards/lib/fileSync';
 import { fillWeek } from './fillWeek';
 import { loadBank, harvestDishes, dishesByCategory } from './dishBank';
 import { showToast } from '../../shell';
+import { generateWeek, loadAiConfig } from './ai';
 
 const history = writable<H.History<MenuDoc>>(H.createHistory(newMenuDoc()));
 export const doc: Readable<MenuDoc> = derived(history, (h) => h.present);
@@ -197,4 +198,19 @@ export function harvestCurrentWeek(): number {
   const added = harvestDishes(entries);
   showToast(added ? `Đã thêm ${added} món vào kho` : 'Không có món mới để thêm');
   return added;
+}
+
+export async function aiGenerateCurrentWeek(instruction: string): Promise<number> {
+  const id = get(selectedWeekId);
+  const p = get(doc);
+  const week = p.weeks.find((w) => w.id === id);
+  if (!week) return 0;
+  const { cells, newDishes } = await generateWeek(loadAiConfig(), p.template, instruction);
+  const n = Object.keys(cells).length;
+  if (n) {
+    commit({ ...get(doc), weeks: get(doc).weeks.map((w) => (w.id === week.id ? { ...w, cells: { ...w.cells, ...cells } } : w)) });
+  }
+  if (newDishes.length) harvestDishes(newDishes);
+  showToast(n ? `AI đã điền ${n} ô` : 'AI không trả về kết quả', n ? 'success' : 'error');
+  return n;
 }

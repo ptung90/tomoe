@@ -1,8 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import * as S from '../src/lib/modules/menu/stores';
 import { newMenuDoc, uid, cellKey } from '../src/lib/modules/menu/model';
 import * as B from '../src/lib/modules/menu/dishBank';
+
+vi.mock('../src/lib/modules/menu/ai', () => ({
+  loadAiConfig: () => ({ apiKey: 'k', model: 'm' }),
+  generateWeek: vi.fn(async () => ({ cells: { 'c_man:0': 'Cá kho' }, newDishes: [{ name: 'Cá kho', categoryKey: 'man' }] })),
+}));
 
 beforeEach(() => S.initDoc());
 
@@ -125,5 +130,16 @@ describe('menu fill/harvest actions', () => {
     const added = S.harvestCurrentWeek();
     expect(added).toBeGreaterThanOrEqual(1);
     expect(B.dishesByCategory('man').some((d) => d.name === 'Gà kho sả')).toBe(true);
+  });
+});
+
+describe('menu AI action', () => {
+  beforeEach(() => { S.initDoc(); localStorage.clear(); });
+  it('aiGenerateCurrentWeek applies returned cells + harvests dishes', async () => {
+    S.addWeek();
+    const n = await S.aiGenerateCurrentWeek('thực đơn tháng 6');
+    expect(n).toBe(1);
+    expect(get(S.doc).weeks[0].cells['c_man:0']).toBe('Cá kho');
+    expect(B.dishesByCategory('man').some((d) => d.name === 'Cá kho')).toBe(true);
   });
 });

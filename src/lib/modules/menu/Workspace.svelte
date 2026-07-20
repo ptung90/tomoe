@@ -8,6 +8,7 @@
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import ImageDown from 'lucide-svelte/icons/image-down';
   import FileDown from 'lucide-svelte/icons/file-down';
+  import Sparkles from 'lucide-svelte/icons/sparkles';
   import * as S from './stores';
   import { cellKey } from './model';
   import { renderWeekTable } from './render';
@@ -15,11 +16,13 @@
   import { exportWeekPdf } from './export/exportPdf';
   import TemplateEditor from './TemplateEditor.svelte';
   import DishBankModal from './DishBankModal.svelte';
+  import AiWeekModal from './AiWeekModal.svelte';
 
   const doc = S.doc;
   const selectedWeekId = S.selectedWeekId;
   const templateEditorOpen = S.templateEditorOpen;
   const dishBankOpen = S.dishBankOpen;
+  const aiModalOpen = S.aiModalOpen;
 
   const current = $derived($doc.weeks.find((w) => w.id === $selectedWeekId) ?? null);
   const previewHtml = $derived(current ? renderWeekTable(current, $doc.template, $doc.settings) : '');
@@ -48,6 +51,7 @@
         <button onclick={() => S.fillCurrentWeek('empty-only')}><Dices size={14} /> Bốc ô trống</button>
         <button onclick={() => S.fillCurrentWeek('overwrite')}><Dices size={14} /> Bốc đè cả tuần</button>
         <button onclick={() => S.dishBankOpen.set(true)}><BookOpen size={14} /> Kho món</button>
+        <button onclick={() => S.aiModalOpen.set(true)}><Sparkles size={14} /> AI</button>
         <button onclick={() => current && exportWeekPng(current, $doc.template, $doc.settings)}><ImageDown size={14} /> Xuất PNG</button>
         <button onclick={() => current && exportWeekPdf(current, $doc.template, $doc.settings)}><FileDown size={14} /> Xuất PDF</button>
       </div>
@@ -79,6 +83,7 @@
 
 {#if $templateEditorOpen}<TemplateEditor />{/if}
 {#if $dishBankOpen}<DishBankModal />{/if}
+{#if $aiModalOpen}<AiWeekModal />{/if}
 
 <style>
   .menu-ws { flex:1; display:flex; min-height:0; background:var(--bg); color:var(--text); }
