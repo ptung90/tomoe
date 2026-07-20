@@ -20,9 +20,9 @@ describe('MenuWorkspace', () => {
   it('renders the week table with day headers once a week exists', async () => {
     S.addWeek();
     render(Workspace);
-    // The live preview table (Task 15) also renders day headers, so there are two "Thứ 2"
+    // Two "Thứ 2": one in the editable grid header, one in the live preview table (Task 15).
     // occurrences once a week exists — one in the editable grid, one in the preview.
-    expect((await screen.findAllByText('Thứ 2')).length).toBeGreaterThan(0);
+    expect(await screen.findAllByText('Thứ 2')).toHaveLength(2);
   });
   it('closes the template editor on Escape once it has focus', async () => {
     render(Workspace);
