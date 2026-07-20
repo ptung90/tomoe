@@ -6,8 +6,13 @@
   import Dices from 'lucide-svelte/icons/dices';
   import BookOpen from 'lucide-svelte/icons/book-open';
   import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+  import ImageDown from 'lucide-svelte/icons/image-down';
+  import FileDown from 'lucide-svelte/icons/file-down';
   import * as S from './stores';
   import { cellKey } from './model';
+  import { renderWeekTable } from './render';
+  import { exportWeekPng } from './export/exportImage';
+  import { exportWeekPdf } from './export/exportPdf';
   import TemplateEditor from './TemplateEditor.svelte';
   import DishBankModal from './DishBankModal.svelte';
 
@@ -17,6 +22,7 @@
   const dishBankOpen = S.dishBankOpen;
 
   const current = $derived($doc.weeks.find((w) => w.id === $selectedWeekId) ?? null);
+  const previewHtml = $derived(current ? renderWeekTable(current, $doc.template, $doc.settings) : '');
 </script>
 
 <div class="menu-ws">
@@ -42,6 +48,8 @@
         <button onclick={() => S.fillCurrentWeek('empty-only')}><Dices size={14} /> Bốc ô trống</button>
         <button onclick={() => S.fillCurrentWeek('overwrite')}><Dices size={14} /> Bốc đè cả tuần</button>
         <button onclick={() => S.dishBankOpen.set(true)}><BookOpen size={14} /> Kho món</button>
+        <button onclick={() => current && exportWeekPng(current, $doc.template, $doc.settings)}><ImageDown size={14} /> Xuất PNG</button>
+        <button onclick={() => current && exportWeekPdf(current, $doc.template, $doc.settings)}><FileDown size={14} /> Xuất PDF</button>
       </div>
       <div class="grid" style={`grid-template-columns: 120px 120px repeat(${$doc.template.days.length}, 1fr);`}>
         <div class="h"></div><div class="h"></div>
@@ -61,6 +69,8 @@
           {/each}
         {/each}
       </div>
+      <h3 class="pv-title">Xem trước</h3>
+      <div class="preview">{@html previewHtml}</div>
     {:else}
       <div class="empty">Chưa có tuần nào. Bấm <strong>Thêm tuần</strong> để bắt đầu.</div>
     {/if}
@@ -98,4 +108,6 @@
   .reroll { position:absolute; right:2px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:var(--text-muted); opacity:0; cursor:pointer; padding:2px; border-radius:4px; }
   .cellwrap:hover .reroll { opacity:1; }
   .reroll:hover { background:var(--accent-weak); color:var(--accent); }
+  .pv-title { margin:18px 0 6px; font-size:12px; color:var(--text-muted); text-transform:uppercase; }
+  .preview { overflow-x:auto; }
 </style>
