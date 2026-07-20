@@ -1,6 +1,9 @@
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
 import * as H from '../../history';
-import { newMenuDoc, parseMenuDoc, type MenuDoc, type MenuStyle } from './model';
+import {
+  newMenuDoc, parseMenuDoc, uid,
+  type MenuDoc, type MenuStyle, type MenuCategory, type MenuPeriod,
+} from './model';
 import { hashContent } from '../flashcards/lib/fileSync';
 
 const history = writable<H.History<MenuDoc>>(H.createHistory(newMenuDoc()));
@@ -50,4 +53,53 @@ export function setProjectName(name: string): void { commit({ ...get(doc), proje
 export function setSettings(patch: Partial<MenuStyle>): void {
   const p = get(doc);
   commit({ ...p, settings: { ...p.settings, ...patch } });
+}
+
+function mapPeriods(fn: (p: MenuPeriod) => MenuPeriod): void {
+  const p = get(doc);
+  commit({ ...p, template: { ...p.template, periods: p.template.periods.map(fn) } });
+}
+function mapCategory(catId: string, fn: (c: MenuCategory) => MenuCategory): void {
+  mapPeriods((p) => ({ ...p, categories: p.categories.map((c) => (c.id === catId ? fn(c) : c)) }));
+}
+
+export function addCategory(periodId: string): void {
+  mapPeriods((p) => p.id !== periodId ? p
+    : { ...p, categories: [...p.categories, { id: uid('c'), key: 'man', label: 'Nhóm mới' }] });
+}
+export function removeCategory(catId: string): void {
+  mapPeriods((p) => ({ ...p, categories: p.categories.filter((c) => c.id !== catId) }));
+}
+export function renameCategory(catId: string, label: string): void { mapCategory(catId, (c) => ({ ...c, label })); }
+export function setCategoryKey(catId: string, key: string): void { mapCategory(catId, (c) => ({ ...c, key })); }
+export function setCategoryFlag(
+  catId: string,
+  patch: Partial<Pick<MenuCategory, 'hideLabel' | 'defaultValue' | 'balanceByIngredient' | 'maxPerTypePerWeek'>>,
+): void { mapCategory(catId, (c) => ({ ...c, ...patch })); }
+export function moveCategory(catId: string, delta: number): void {
+  mapPeriods((p) => {
+    const i = p.categories.findIndex((c) => c.id === catId);
+    if (i === -1) return p;
+    const j = i + delta;
+    if (j < 0 || j >= p.categories.length) return p;
+    const cats = p.categories.slice();
+    [cats[i], cats[j]] = [cats[j], cats[i]];
+    return { ...p, categories: cats };
+  });
+}
+export function addPeriod(): void {
+  const p = get(doc);
+  const period: MenuPeriod = { id: uid('p'), label: 'Buổi mới', categories: [{ id: uid('c'), key: 'man', label: 'Nhóm' }] };
+  commit({ ...p, template: { ...p.template, periods: [...p.template.periods, period] } });
+}
+export function removePeriod(periodId: string): void {
+  const p = get(doc);
+  commit({ ...p, template: { ...p.template, periods: p.template.periods.filter((x) => x.id !== periodId) } });
+}
+export function renamePeriod(periodId: string, label: string): void {
+  mapPeriods((p) => (p.id === periodId ? { ...p, label } : p));
+}
+export function setDays(days: string[]): void {
+  const p = get(doc);
+  commit({ ...p, template: { ...p.template, days: days.slice() } });
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import * as S from '../src/lib/modules/menu/stores';
-import { newMenuDoc } from '../src/lib/modules/menu/model';
+import { newMenuDoc, uid } from '../src/lib/modules/menu/model';
 
 beforeEach(() => S.initDoc());
 
@@ -33,5 +33,33 @@ describe('menu stores', () => {
     S.loadDoc(d, '/tmp/x.menu.tomoe.json');
     expect(get(S.dirty)).toBe(false);
     expect(get(S.selectedWeekId)).toBe('w1');
+  });
+});
+
+describe('menu template actions', () => {
+  beforeEach(() => S.initDoc());
+  it('addCategory appends to a period', () => {
+    const pid = get(S.doc).template.periods[0].id;
+    S.addCategory(pid);
+    expect(get(S.doc).template.periods[0].categories.length).toBe(5);
+  });
+  it('renameCategory + setCategoryFlag update in place', () => {
+    const cat = get(S.doc).template.periods[0].categories[0];
+    S.renameCategory(cat.id, 'Mặn');
+    S.setCategoryFlag(cat.id, { balanceByIngredient: false, defaultValue: 'x' });
+    const after = get(S.doc).template.periods[0].categories[0];
+    expect(after.label).toBe('Mặn');
+    expect(after.balanceByIngredient).toBe(false);
+    expect(after.defaultValue).toBe('x');
+  });
+  it('moveCategory reorders within its period', () => {
+    const cats = get(S.doc).template.periods[0].categories;
+    const second = cats[1].id;
+    S.moveCategory(second, -1);
+    expect(get(S.doc).template.periods[0].categories[0].id).toBe(second);
+  });
+  it('setDays replaces the day columns', () => {
+    S.setDays(['T2', 'T3', 'T4', 'T5', 'T6', 'T7']);
+    expect(get(S.doc).template.days.length).toBe(6);
   });
 });
