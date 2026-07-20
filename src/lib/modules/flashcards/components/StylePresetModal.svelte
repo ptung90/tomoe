@@ -4,12 +4,13 @@
   import Upload from 'lucide-svelte/icons/upload';
   import Download from 'lucide-svelte/icons/download';
   import Trash2 from 'lucide-svelte/icons/trash-2';
+  import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import Wand from 'lucide-svelte/icons/wand-sparkles';
   import { open as openDialog, save as saveDialog, confirm } from '@tauri-apps/plugin-dialog';
   import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
   import {
     stylePresetLibrary, stylePresetOpen, saveStylePreset, deleteStylePreset,
-    renameStylePreset, importStylePresetText, applyStylePreset,
+    renameStylePreset, updateStylePreset, importStylePresetText, applyStylePreset,
   } from '../stores';
   import { serializeStylePreset, type StylePresetEntry } from '../io/stylePresetIO';
   import { showToast } from '../../../shell';
@@ -63,6 +64,11 @@
     }
   }
 
+  function onUpdate(entry: StylePresetEntry) {
+    updateStylePreset(entry.id);
+    showToast(`Updated '${entry.name}' from the current style`);
+  }
+
   async function onDelete(entry: StylePresetEntry) {
     if (await confirm(`Delete preset '${entry.name}'?`, { title: 'Delete preset', kind: 'warning' })) {
       if (applyingId === entry.id) applyingId = null;
@@ -103,6 +109,8 @@
                 </span>
                 <div class="entry-actions">
                   <button type="button" onclick={() => openApply(entry.id)}><Wand size={13} /> Apply</button>
+                  <button type="button" aria-label="update from current style" title="Update from current Global style"
+                    onclick={() => onUpdate(entry)}><RefreshCw size={13} /></button>
                   <button type="button" aria-label="export" title="Export…" onclick={() => onExport(entry)}><Download size={13} /></button>
                   <button type="button" class="danger" aria-label="delete" title="Delete" onclick={() => onDelete(entry)}><Trash2 size={13} /></button>
                 </div>
@@ -110,9 +118,9 @@
 
               {#if applyingId === entry.id}
                 <div class="apply-panel">
-                  <label class="opt"><input type="checkbox" bind:checked={syncViews} /> Đồng bộ cả View</label>
-                  <label class="opt"><input type="checkbox" bind:checked={clearCards} /> Xoá override từng thẻ</label>
-                  <p class="opt-hint">Ghi style vào Global; giữ nguyên border + layout + khổ giấy.</p>
+                  <label class="opt"><input type="checkbox" bind:checked={syncViews} /> Sync views</label>
+                  <label class="opt"><input type="checkbox" bind:checked={clearCards} /> Clear per-card overrides</label>
+                  <p class="opt-hint">Writes style to Global; keeps border, layout &amp; paper size.</p>
                   <div class="apply-foot">
                     <button type="button" class="ghost" onclick={() => (applyingId = null)}>Cancel</button>
                     <button type="button" class="primary" onclick={() => confirmApply(entry)}>Apply preset</button>

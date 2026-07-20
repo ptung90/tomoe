@@ -208,6 +208,12 @@ export function renameStylePreset(id: string, name: string): void {
   persistStylePresets(loadStylePresets().map((e) => (e.id === id ? { ...e, name } : e)));
   _stylePresetVersion.update((n) => n + 1);
 }
+/** Overwrite an existing preset's captured style with the CURRENT Global style (id + name kept). */
+export function updateStylePreset(id: string): void {
+  const preset = settingsToPreset(get(project).settings);
+  persistStylePresets(loadStylePresets().map((e) => (e.id === id ? { ...e, preset } : e)));
+  _stylePresetVersion.update((n) => n + 1);
+}
 /** Parse + add a portable `.tomoestyle.json` file's contents to the library. Never throws. */
 export function importStylePresetText(text: string): { ok: boolean; name?: string; error?: string } {
   try {

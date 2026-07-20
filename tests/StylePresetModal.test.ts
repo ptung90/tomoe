@@ -14,6 +14,15 @@ describe('StylePresetModal', () => {
     expect(get(S.stylePresetLibrary).map((e) => e.name)).toEqual(['Warm']);
   });
 
+  it('Update overwrites the preset with the current Global style', async () => {
+    S.setSettings({ margin: 5 });
+    const id = S.saveStylePreset('P');
+    S.setSettings({ margin: 40 });
+    render(StylePresetModal);
+    await fireEvent.click(screen.getByRole('button', { name: 'update from current style' }));
+    expect(get(S.stylePresetLibrary).find((e) => e.id === id)!.preset.margin).toBe(40);
+  });
+
   it('applies a preset with the chosen options and closes', async () => {
     S.saveStylePreset('Base');
     render(StylePresetModal);

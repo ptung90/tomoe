@@ -19,6 +19,15 @@ describe('style preset library store', () => {
     S.saveStylePreset('Base');
     expect(get(S.stylePresetLibrary)[0].preset.margin).toBe(33);
   });
+  it('updateStylePreset overwrites an existing preset with the current Global style (keeps id/name)', () => {
+    S.setSettings({ margin: 5 });
+    const id = S.saveStylePreset('P');
+    S.setSettings({ margin: 40 });
+    S.updateStylePreset(id);
+    const entry = get(S.stylePresetLibrary).find((e) => e.id === id)!;
+    expect(entry.name).toBe('P');
+    expect(entry.preset.margin).toBe(40);
+  });
 });
 
 describe('applyStylePreset', () => {
