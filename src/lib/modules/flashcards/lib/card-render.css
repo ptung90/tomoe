@@ -1,4 +1,6 @@
 /* Card render styles (global). Card interior = fixed white-paper colors, NOT app theme tokens. */
+/* Sheet clips to its fixed paper box — keeps overflow off the PDF/print capture (no scroll bleed). */
+.fc-sheet { overflow:hidden; }
 .fc-card { background:#fff; color:#1a1a1a; display:flex; flex-direction:column; overflow:hidden; position:relative; }
 .fc-image-area { flex-shrink:0; overflow:hidden; }
 .fc-text-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }

@@ -65,7 +65,13 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
       // <img> never fires onload/onerror). Cap each sheet so that surfaces as an actionable error
       // — naming the sheet and heap — instead of an infinite spinner. See lib/perf.ts.
       const canvas = await withTimeout(
-        toCanvas(page, { pixelRatio: scale, backgroundColor: '#ffffff', cacheBust: false }),
+        // Pin the capture box to the sheet's exact paper px + force overflow:hidden on the clone, so
+        // html-to-image can never grab overflow/scroll below the fold (it otherwise measures the node
+        // and would include content that spills past the fixed page height).
+        toCanvas(page, {
+          pixelRatio: scale, backgroundColor: '#ffffff', cacheBust: false,
+          width: px.w, height: px.h, style: { overflow: 'hidden' },
+        }),
         EXPORT_SHEET_TIMEOUT_MS,
         () => {
           const mb = heapMB();

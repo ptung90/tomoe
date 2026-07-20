@@ -16,6 +16,7 @@ export function resolveStyle(base: Settings, ...layers: (StyleOverrides | undefi
       ...(l.padding !== undefined ? { padding: l.padding } : {}),
       ...(l.imgPadding !== undefined ? { imgPadding: l.imgPadding } : {}),
       ...(l.paraGap !== undefined ? { paraGap: l.paraGap } : {}),
+      ...(l.imgTextGap !== undefined ? { imgTextGap: l.imgTextGap } : {}),
       ...(l.textVAlign !== undefined ? { textVAlign: l.textVAlign } : {}),
       ...(l.paperSize !== undefined ? { paperSize: l.paperSize } : {}),
       ...(l.orientation !== undefined ? { orientation: l.orientation } : {}),

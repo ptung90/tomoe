@@ -10,6 +10,8 @@ export interface Settings {
   margin: number; padding: number; imgPadding: number;
   /** Vertical gap (px) between content paragraphs; the last paragraph gets none. */
   paraGap: number;
+  /** Gap (mm) between the image block and the text block inside a card; 0 = they touch. */
+  imgTextGap: number;
   textVAlign: 'top'|'middle'|'bottom';
   border: { width: number; style: string; color: string; radius: number };
   /** backgroundSize/Position drive object-fit; borderRadius (px) rounds the image corners and
@@ -30,7 +32,7 @@ export interface StyleOverrides {
   image?: Partial<Settings['image']>;
   titleFont?: Partial<FontSpec>;
   contentFont?: Partial<FontSpec>;
-  margin?: number; padding?: number; imgPadding?: number; paraGap?: number;
+  margin?: number; padding?: number; imgPadding?: number; paraGap?: number; imgTextGap?: number;
   textVAlign?: 'top' | 'middle' | 'bottom';
   paperSize?: Settings['paperSize'];
   orientation?: Settings['orientation'];
@@ -49,6 +51,7 @@ export interface Project { version: number; projectName: string; projectIcon: st
 export const DEFAULT_SETTINGS: Settings = {
   paperSize: 'A5', orientation: 'portrait', margin: 9, padding: 2, imgPadding: 0,
   paraGap: 2,
+  imgTextGap: 0,
   textVAlign: 'middle',
   border: { width: 4, style: 'double', color: '#6B21A8', radius: 0 },
   image: { backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 0, backgroundColor: 'transparent',

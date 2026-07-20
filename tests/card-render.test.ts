@@ -451,3 +451,27 @@ describe('buildSheetHTML', () => {
     expect(html).toContain('justify-content:start;align-content:start;');
   });
 });
+
+describe('buildCardHTML — imgTextGap (space between image and text)', () => {
+  // Style of the .fc-text-area block (the text half that sits below the image).
+  const textAreaStyle = (html: string) => /class="fc-text-area" style="([^"]*)"/.exec(html)?.[1] ?? '';
+  const withImg = (extra: Partial<Card> = {}) => card({
+    layout: '1full', imageHeightPercent: 50, images: [{ slot: 0, url: 'a.png' }],
+    sections: [{ id: 's1', label: '', content: 'hi' }], ...extra,
+  });
+
+  it('adds margin-top (mm→px) on the text block when set', () => {
+    const gapMm = 4;
+    const gapPx = Math.round(mmToPx(gapMm));
+    const html = buildCardHTML(withImg(), { ...DEFAULT_SETTINGS, imgTextGap: gapMm }, 'en');
+    expect(textAreaStyle(html)).toContain(`margin-top:${gapPx}px`);
+  });
+  it('applies to the title-img-text layout too', () => {
+    const html = buildCardHTML(withImg({ layout: 'title-img-text', title: 'T' }), { ...DEFAULT_SETTINGS, imgTextGap: 4 }, 'en');
+    expect(textAreaStyle(html)).toContain(`margin-top:${Math.round(mmToPx(4))}px`);
+  });
+  it('no margin-top by default (imgTextGap 0)', () => {
+    const html = buildCardHTML(withImg(), DEFAULT_SETTINGS, 'en');
+    expect(textAreaStyle(html)).not.toContain('margin-top');
+  });
+});

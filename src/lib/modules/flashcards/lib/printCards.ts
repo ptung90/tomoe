@@ -67,7 +67,7 @@ function sheetsByView(project: Project, selection?: PrintSelection): Sheet[] {
  *  cell look, so they're deliberately excluded. Deterministic (plain JSON.stringify, fixed key order). */
 function styleSignature(s: Settings): string {
   return JSON.stringify({
-    margin: s.margin, padding: s.padding, imgPadding: s.imgPadding, paraGap: s.paraGap,
+    margin: s.margin, padding: s.padding, imgPadding: s.imgPadding, paraGap: s.paraGap, imgTextGap: s.imgTextGap,
     textVAlign: s.textVAlign, border: s.border, image: s.image,
     titleFont: s.titleFont, contentFont: s.contentFont,
   });

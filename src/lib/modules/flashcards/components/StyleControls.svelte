@@ -208,6 +208,9 @@
         <span class="tool" title="Image padding (mm)"><ImageIcon size={14} /><input aria-label="Image padding (mm)" type="number" min="0" value={eff.imgPadding}
           onchange={(e) => write({ imgPadding: num(e) })} /></span>
         {@render resetBtn('imgPadding')}
+        <span class="tool" title="Gap between image and text (mm)"><StretchVertical size={14} /><input aria-label="Image–text gap (mm)" type="number" min="0" value={eff.imgTextGap ?? 0}
+          onchange={(e) => write({ imgTextGap: num(e) })} /></span>
+        {@render resetBtn('imgTextGap')}
         <span class="tool" title="Vertical text align"><MoveVertical size={14} />
           <select aria-label="Vertical text align" value={eff.textVAlign} onchange={(e) => write({ textVAlign: str(e) as 'top'|'middle'|'bottom' })}>
             {#each ['top','middle','bottom'] as v (v)}<option value={v}>{v}</option>{/each}

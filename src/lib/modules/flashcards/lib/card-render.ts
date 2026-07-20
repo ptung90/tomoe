@@ -212,6 +212,9 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const imgAreaPad = imgPaddingPx ? 'box-sizing:border-box;padding:' + imgPaddingPx + 'px;' : '';
   const vAlign = s.textVAlign || 'top';
   const vAlignJustify = TEXT_VALIGN_MAP[vAlign] || 'flex-start';
+  // Gap (mm→px) between the image block above and the text block below (layouts that have both).
+  const imgTextGapPx = Math.round(mmToPx(s.imgTextGap ?? 0));
+  const textAreaGap = imgTextGapPx ? 'margin-top:' + imgTextGapPx + 'px;' : '';
   const textVAlignStyle = 'justify-content:' + vAlignJustify + ';';
   const sectionsFlexOverride = vAlign !== 'top' ? 'flex:none;' : '';
   const cardW = w - 2 * marginPx;
@@ -327,7 +330,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>' : '') +
       // Image auto-fills the empty middle between title and text; imageHeightPercent is the floor (min-height).
       '<div class="fc-image-area" style="min-height:' + imgH + 'px;position:relative;flex:1 1 auto;' + imgAreaPad + '">' + slots + handles + '</div>' +
-      '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
+      '<div class="fc-text-area" style="' + textAreaGap + textVAlignStyle + '">' +
       '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' + sectionsHtml + '</div>' +
       '</div></div>'
     );
@@ -367,7 +370,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     slots +
     handles +
     '</div>' +
-    '<div class="fc-text-area" style="' + textVAlignStyle + '">' +
+    '<div class="fc-text-area" style="' + textAreaGap + textVAlignStyle + '">' +
     (showTitle
       ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>'
       : '') +
