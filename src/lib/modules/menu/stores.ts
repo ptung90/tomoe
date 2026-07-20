@@ -5,6 +5,9 @@ import {
   type MenuDoc, type MenuStyle, type MenuCategory, type MenuPeriod, type MenuWeek,
 } from './model';
 import { hashContent } from '../flashcards/lib/fileSync';
+import { fillWeek } from './fillWeek';
+import { loadBank, harvestDishes, dishesByCategory } from './dishBank';
+import { showToast } from '../../shell';
 
 const history = writable<H.History<MenuDoc>>(H.createHistory(newMenuDoc()));
 export const doc: Readable<MenuDoc> = derived(history, (h) => h.present);
@@ -144,4 +147,54 @@ export function moveWeek(id: string, delta: number): void {
 export function setWeekTitle(id: string, title: string): void { mapWeek(id, (w) => ({ ...w, title })); }
 export function setCell(weekId: string, catId: string, dayIndex: number, value: string): void {
   mapWeek(weekId, (w) => ({ ...w, cells: { ...w.cells, [cellKey(catId, dayIndex)]: value } }));
+}
+
+/** Weeks positioned before the given week id, in document order. */
+function weeksBefore(weekId: string): MenuWeek[] {
+  const p = get(doc);
+  const i = p.weeks.findIndex((w) => w.id === weekId);
+  return i <= 0 ? [] : p.weeks.slice(0, i);
+}
+
+export function fillCurrentWeek(mode: 'empty-only' | 'overwrite'): void {
+  const id = get(selectedWeekId);
+  const p = get(doc);
+  const week = p.weeks.find((w) => w.id === id);
+  if (!week) return;
+  const { cells, warnings } = fillWeek(p.template, loadBank(), weeksBefore(week.id), week, { mode });
+  commit({ ...get(doc), weeks: get(doc).weeks.map((w) => (w.id === week.id ? { ...w, cells } : w)) });
+  if (warnings.length) showToast(warnings[0], 'error');
+}
+
+export function rerollCell(weekId: string, catId: string, dayIndex: number): void {
+  const p = get(doc);
+  const cat = p.template.periods.flatMap((pr) => pr.categories).find((c) => c.id === catId);
+  if (!cat) return;
+  const week = p.weeks.find((w) => w.id === weekId);
+  if (!week) return;
+  if (cat.defaultValue) { setCell(weekId, catId, dayIndex, cat.defaultValue); return; }
+  const current = week.cells[cellKey(catId, dayIndex)] ?? '';
+  const pool = dishesByCategory(cat.key).filter((d) => d.name !== current);
+  const src = pool.length ? pool : dishesByCategory(cat.key);
+  if (!src.length) { showToast(`Kho món chưa có nhóm "${cat.label}"`, 'error'); return; }
+  const chosen = src[Math.floor(Math.random() * src.length)];
+  setCell(weekId, catId, dayIndex, chosen.name);
+}
+
+export function harvestCurrentWeek(): number {
+  const id = get(selectedWeekId);
+  const p = get(doc);
+  const week = p.weeks.find((w) => w.id === id);
+  if (!week) return 0;
+  const entries: { name: string; categoryKey: string }[] = [];
+  for (const period of p.template.periods) for (const cat of period.categories) {
+    if (cat.defaultValue) continue;
+    for (let d = 0; d < p.template.days.length; d++) {
+      const v = week.cells[cellKey(cat.id, d)];
+      if (v) entries.push({ name: v, categoryKey: cat.key });
+    }
+  }
+  const added = harvestDishes(entries);
+  showToast(added ? `Đã thêm ${added} món vào kho` : 'Không có món mới để thêm');
+  return added;
 }

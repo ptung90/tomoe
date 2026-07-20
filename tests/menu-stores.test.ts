@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import * as S from '../src/lib/modules/menu/stores';
 import { newMenuDoc, uid, cellKey } from '../src/lib/modules/menu/model';
+import * as B from '../src/lib/modules/menu/dishBank';
 
 beforeEach(() => S.initDoc());
 
@@ -93,5 +94,36 @@ describe('menu week actions', () => {
     S.deleteWeek(id);
     expect(get(S.doc).weeks.length).toBe(0);
     expect(get(S.selectedWeekId)).toBe(null);
+  });
+});
+
+describe('menu fill/harvest actions', () => {
+  beforeEach(() => { S.initDoc(); localStorage.clear(); });
+  it('fillCurrentWeek fills default + bank-backed categories', () => {
+    B.addDish({ name: 'Cá kho', categoryKey: 'man' });
+    S.addWeek();
+    S.fillCurrentWeek('overwrite');
+    const w = get(S.doc).weeks[0];
+    const com = get(S.doc).template.periods[0].categories.find((c) => c.id === 'c_com')!;
+    const man = get(S.doc).template.periods[0].categories.find((c) => c.id === 'c_man')!;
+    expect(w.cells[`${com.id}:0`]).toBe('Cơm trắng');
+    expect(w.cells[`${man.id}:0`]).toBe('Cá kho');
+  });
+  it('rerollCell replaces one cell using the bank', () => {
+    B.addDish({ name: 'Tôm rim', categoryKey: 'man' });
+    S.addWeek();
+    const w = get(S.doc).weeks[0];
+    const man = get(S.doc).template.periods[0].categories.find((c) => c.id === 'c_man')!;
+    S.rerollCell(w.id, man.id, 0);
+    expect(get(S.doc).weeks[0].cells[`${man.id}:0`]).toBe('Tôm rim');
+  });
+  it('harvestCurrentWeek adds current cells into the bank', () => {
+    S.addWeek();
+    const w = get(S.doc).weeks[0];
+    const man = get(S.doc).template.periods[0].categories.find((c) => c.id === 'c_man')!;
+    S.setCell(w.id, man.id, 0, 'Gà kho sả');
+    const added = S.harvestCurrentWeek();
+    expect(added).toBeGreaterThanOrEqual(1);
+    expect(B.dishesByCategory('man').some((d) => d.name === 'Gà kho sả')).toBe(true);
   });
 });
