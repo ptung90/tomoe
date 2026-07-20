@@ -86,13 +86,31 @@ export function newMenuDoc(): MenuDoc {
 
 export function serializeMenuDoc(d: MenuDoc): string { return JSON.stringify(d, null, 2) + '\n'; }
 
+function sanitizeCat(c: any): MenuCategory {
+  return {
+    id: c?.id || uid('c'),
+    key: typeof c?.key === 'string' ? c.key : '',
+    label: typeof c?.label === 'string' ? c.label : '',
+    ...(c?.hideLabel !== undefined ? { hideLabel: !!c.hideLabel } : {}),
+    ...(typeof c?.defaultValue === 'string' ? { defaultValue: c.defaultValue } : {}),
+    ...(c?.balanceByIngredient !== undefined ? { balanceByIngredient: !!c.balanceByIngredient } : {}),
+    ...(typeof c?.maxPerTypePerWeek === 'number' ? { maxPerTypePerWeek: c.maxPerTypePerWeek } : {}),
+  };
+}
+
 export function parseMenuDoc(text: string): MenuDoc {
   const raw = JSON.parse(text) as any;
   const base = newMenuDoc();
   const t = raw?.template && typeof raw.template === 'object' ? raw.template : base.template;
   const template: MenuTemplate = {
     days: Array.isArray(t.days) && t.days.length ? t.days.map(String) : base.template.days,
-    periods: Array.isArray(t.periods) ? t.periods : base.template.periods,
+    periods: Array.isArray(t.periods) && t.periods.length
+      ? t.periods.map((p: any) => ({
+          id: p?.id || uid('p'),
+          label: typeof p?.label === 'string' ? p.label : 'Buổi',
+          categories: Array.isArray(p?.categories) ? p.categories.map(sanitizeCat) : [],
+        }))
+      : base.template.periods,
   };
   const s = raw?.settings || {};
   const settings: MenuStyle = {

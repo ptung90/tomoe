@@ -48,18 +48,17 @@ function pickForCategory(
   };
 
   for (let day = 0; day < nDays; day++) {
-    // Tiered candidate filters, from strict to relaxed. First non-empty tier wins.
     const notUsed = candidates.filter((d) => !usedNames.has(d.name));
-    const notRecent = notUsed.filter((d) => !recent.has(d.name));
     const withinCap = cat.balanceByIngredient
-      ? notRecent.filter((d) => (typeCount.get(d.ingredientType ?? '') ?? 0) < cap)
-      : notRecent;
+      ? notUsed.filter((d) => { const t = d.ingredientType ?? ''; return t === '' || (typeCount.get(t) ?? 0) < cap; })
+      : notUsed;
+    const strict = withinCap.filter((d) => !recent.has(d.name));
 
-    let pool = withinCap;
-    if (!pool.length) { pool = notRecent; }             // relax balance/cap
-    if (!pool.length) { pool = notUsed; relaxed = true; } // relax recent window
-    if (!pool.length) { pool = candidates; relaxed = true; } // relax in-week uniqueness
-    if (!pool.length) { values.push(''); continue; }      // truly empty bank for this category
+    let pool = strict;
+    if (!pool.length) { pool = withinCap; relaxed = true; }  // drop avoid-weeks window
+    if (!pool.length) { pool = notUsed;   relaxed = true; }  // drop ingredient cap
+    if (!pool.length) { pool = candidates; relaxed = true; } // drop in-week uniqueness
+    if (!pool.length) { values.push(''); continue; }
 
     const chosen = byBalance(pool)[0];
     values.push(chosen.name);

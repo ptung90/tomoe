@@ -6,7 +6,10 @@ import * as B from '../src/lib/modules/menu/dishBank';
 
 vi.mock('../src/lib/modules/menu/ai', () => ({
   loadAiConfig: () => ({ apiKey: 'k', model: 'm' }),
-  generateWeek: vi.fn(async () => ({ cells: { 'c_man:0': 'Cá kho' }, newDishes: [{ name: 'Cá kho', categoryKey: 'man' }] })),
+  generateWeek: vi.fn(async () => ({
+    cells: { 'c_man:0': 'Cá kho', 'bogus_cat:0': 'X', 'c_man:99': 'Y', 'c_man:abc': 'Z' },
+    newDishes: [{ name: 'Cá kho', categoryKey: 'man' }],
+  })),
 }));
 
 beforeEach(() => S.initDoc());
@@ -122,6 +125,17 @@ describe('menu fill/harvest actions', () => {
     S.rerollCell(w.id, man.id, 0);
     expect(get(S.doc).weeks[0].cells[`${man.id}:0`]).toBe('Tôm rim');
   });
+  it('rerollCell avoids a dish already used elsewhere in the week when an alternative exists', () => {
+    B.addDish({ name: 'Dish A', categoryKey: 'man' });
+    B.addDish({ name: 'Dish B', categoryKey: 'man' });
+    S.addWeek();
+    const w = get(S.doc).weeks[0];
+    const man = get(S.doc).template.periods[0].categories.find((c) => c.id === 'c_man')!;
+    S.setCell(w.id, man.id, 0, 'Dish A');
+    S.setCell(w.id, man.id, 1, 'Dish A');
+    S.rerollCell(w.id, man.id, 1);
+    expect(get(S.doc).weeks[0].cells[`${man.id}:1`]).toBe('Dish B');
+  });
   it('harvestCurrentWeek adds current cells into the bank', () => {
     S.addWeek();
     const w = get(S.doc).weeks[0];
@@ -141,5 +155,13 @@ describe('menu AI action', () => {
     expect(n).toBe(1);
     expect(get(S.doc).weeks[0].cells['c_man:0']).toBe('Cá kho');
     expect(B.dishesByCategory('man').some((d) => d.name === 'Cá kho')).toBe(true);
+  });
+  it('aiGenerateCurrentWeek drops orphan cells with unknown category id or out-of-range day index', async () => {
+    S.addWeek();
+    await S.aiGenerateCurrentWeek('thực đơn tháng 6');
+    const cells = get(S.doc).weeks[0].cells;
+    expect(cells['bogus_cat:0']).toBeUndefined();
+    expect(cells['c_man:99']).toBeUndefined();
+    expect(cells['c_man:abc']).toBeUndefined();
   });
 });

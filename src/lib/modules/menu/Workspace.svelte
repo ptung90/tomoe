@@ -112,6 +112,7 @@
   .cellwrap .cell { flex:1; }
   .reroll { position:absolute; right:2px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:var(--text-muted); opacity:0; cursor:pointer; padding:2px; border-radius:4px; }
   .cellwrap:hover .reroll { opacity:1; }
+  .cellwrap:focus-within .reroll { opacity:1; }
   .reroll:hover { background:var(--accent-weak); color:var(--accent); }
   .pv-title { margin:18px 0 6px; font-size:12px; color:var(--text-muted); text-transform:uppercase; }
   .preview { overflow-x:auto; }

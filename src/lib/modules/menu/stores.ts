@@ -175,8 +175,15 @@ export function rerollCell(weekId: string, catId: string, dayIndex: number): voi
   if (!week) return;
   if (cat.defaultValue) { setCell(weekId, catId, dayIndex, cat.defaultValue); return; }
   const current = week.cells[cellKey(catId, dayIndex)] ?? '';
-  const pool = dishesByCategory(cat.key).filter((d) => d.name !== current);
-  const src = pool.length ? pool : dishesByCategory(cat.key);
+  const usedElsewhere = new Set<string>();
+  for (let d = 0; d < p.template.days.length; d++) {
+    if (d === dayIndex) continue;
+    const v = week.cells[cellKey(catId, d)];
+    if (v) usedElsewhere.add(v);
+  }
+  const bankForCat = dishesByCategory(cat.key);
+  const pool = bankForCat.filter((d) => d.name !== current && !usedElsewhere.has(d.name));
+  const src = pool.length ? pool : bankForCat;
   if (!src.length) { showToast(`Kho món chưa có nhóm "${cat.label}"`, 'error'); return; }
   const chosen = src[Math.floor(Math.random() * src.length)];
   setCell(weekId, catId, dayIndex, chosen.name);
@@ -206,9 +213,21 @@ export async function aiGenerateCurrentWeek(instruction: string): Promise<number
   const week = p.weeks.find((w) => w.id === id);
   if (!week) return 0;
   const { cells, newDishes } = await generateWeek(loadAiConfig(), p.template, instruction);
-  const n = Object.keys(cells).length;
+  const validCatIds = new Set(p.template.periods.flatMap((pr) => pr.categories.map((c) => c.id)));
+  const nDays = p.template.days.length;
+  const validCells: Record<string, string> = {};
+  for (const [key, value] of Object.entries(cells)) {
+    const sep = key.lastIndexOf(':');
+    if (sep === -1) continue;
+    const catId = key.slice(0, sep);
+    const dayIndex = Number(key.slice(sep + 1));
+    if (!validCatIds.has(catId)) continue;
+    if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= nDays) continue;
+    validCells[key] = value;
+  }
+  const n = Object.keys(validCells).length;
   if (n) {
-    commit({ ...get(doc), weeks: get(doc).weeks.map((w) => (w.id === week.id ? { ...w, cells: { ...w.cells, ...cells } } : w)) });
+    commit({ ...get(doc), weeks: get(doc).weeks.map((w) => (w.id === week.id ? { ...w, cells: { ...w.cells, ...validCells } } : w)) });
   }
   if (newDishes.length) harvestDishes(newDishes);
   showToast(n ? `AI đã điền ${n} ô` : 'AI không trả về kết quả', n ? 'success' : 'error');

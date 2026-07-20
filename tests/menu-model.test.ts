@@ -34,6 +34,21 @@ describe('menu model', () => {
     expect(back.settings.headerColor).toBeTruthy();
   });
 
+  it('parse sanitizes malformed periods/categories instead of crashing', () => {
+    const back = parseMenuDoc(JSON.stringify({ template: { days: ['a'], periods: [{ label: 'X' }] }, weeks: [] }));
+    expect(back.template.periods[0].categories).toEqual([]);
+    expect(back.template.periods[0].label).toBe('X');
+    expect(back.template.periods[0].id).toBeTruthy();
+
+    const withCat = parseMenuDoc(JSON.stringify({
+      template: { days: ['a'], periods: [{ label: 'Y', categories: [{}] }] }, weeks: [],
+    }));
+    const cat = withCat.template.periods[0].categories[0];
+    expect(cat.id).toBeTruthy();
+    expect(cat.key).toBe('');
+    expect(cat.label).toBe('');
+  });
+
   it('looksLikeMenu: true only for objects with a template.periods + weeks array', () => {
     expect(looksLikeMenu(serializeMenuDoc(newMenuDoc()))).toBe(true);
     expect(looksLikeMenu(JSON.stringify({ schemas: [], records: [] }))).toBe(false);

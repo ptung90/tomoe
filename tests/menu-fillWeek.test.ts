@@ -47,4 +47,29 @@ describe('fillWeek', () => {
     expect(cells[cellKey(man.id, 0)]).toBe('Only');
     expect(warnings.some((w) => w.includes('Món mặn'))).toBe(true);
   });
+
+  it('warns when a real ingredient type overflows its cap (all 5 dishes share ingredientType "thit")', () => {
+    const bank: Dish[] = Array.from({ length: 5 }, (_, i) => (
+      { id: `t${i}`, name: `Thit${i}`, categoryKey: 'man', ingredientType: 'thit' }
+    ));
+    const catThit = { ...man, balanceByIngredient: true, maxPerTypePerWeek: 2 };
+    const templateThit = {
+      ...template,
+      periods: template.periods.map((p) => ({
+        ...p, categories: p.categories.map((c) => (c.id === man.id ? catThit : c)),
+      })),
+    };
+    const { warnings } = fillWeek(templateThit, bank, [], emptyWeek, { mode: 'overwrite', rng: () => 0 });
+    expect(warnings.length).toBeGreaterThan(0);
+  });
+
+  it('does not false-alarm when 5 typeless dishes fill 5 distinct days under balanceByIngredient', () => {
+    const bank: Dish[] = Array.from({ length: 5 }, (_, i) => (
+      { id: `d${i}`, name: `Man${i}`, categoryKey: 'man' }
+    ));
+    const catBal = { ...man, balanceByIngredient: true, maxPerTypePerWeek: 2 };
+    const templateBal = { days: template.days, periods: [{ id: 'p1', label: 'P', categories: [catBal] }] };
+    const { warnings } = fillWeek(templateBal, bank, [], emptyWeek, { mode: 'overwrite', rng: () => 0 });
+    expect(warnings).toEqual([]);
+  });
 });
