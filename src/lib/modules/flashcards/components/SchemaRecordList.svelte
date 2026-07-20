@@ -8,6 +8,7 @@
   import WandSparkles from 'lucide-svelte/icons/wand-sparkles';
   import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
   import Braces from 'lucide-svelte/icons/braces';
+  import Download from 'lucide-svelte/icons/download';
   import { confirm } from '@tauri-apps/plugin-dialog';
   import {
     project, selectedRecordId, selectRecord, addRecord,
@@ -20,10 +21,13 @@
   import EmptyState from './EmptyState.svelte';
   import AiGenerateModal from './AiGenerateModal.svelte';
   import AutofillImagesModal from './AutofillImagesModal.svelte';
+  import EmbedImagesModal from './EmbedImagesModal.svelte';
   import RecordsJsonModal from './RecordsJsonModal.svelte';
+  import { remoteImageRefs } from '../lib/embedImages';
 
   let aiSchemaId = $state<string | null>(null);
   let autofillSchemaId = $state<string | null>(null);
+  let embedSchemaId = $state<string | null>(null);
   let jsonSchemaId = $state<string | null>(null);
   let menuFor = $state<string | null>(null);
   function act(fn: () => void): void { menuFor = null; fn(); }
@@ -44,6 +48,9 @@
   const recordsBySchema = $derived((id: string) => $project.records.filter((r) => r.schemaId === id));
   const canAutofill = $derived((schema: Schema) =>
     schema.fields.some((f) => f.type === 'image') && schema.fields.some((f) => f.type !== 'image'));
+  // Show "Embed image URLs" only when at least one record has a remote http(s) URL to download.
+  const canEmbed = $derived((schema: Schema) =>
+    remoteImageRefs(recordsBySchema(schema.id), schema.fields.filter((f) => f.type === 'image').map((f) => f.key)).length > 0);
 
   async function copyJson(schemaId: string) {
     const schema = $project.schemas.find((s) => s.id === schemaId);
@@ -117,6 +124,9 @@
                 {#if canAutofill(schema)}
                   <button type="button" role="menuitem" onclick={() => act(() => (autofillSchemaId = schema.id))}><WandSparkles size={13} /> Auto-fill images</button>
                 {/if}
+                {#if canEmbed(schema)}
+                  <button type="button" role="menuitem" onclick={() => act(() => (embedSchemaId = schema.id))}><Download size={13} /> Embed image URLs</button>
+                {/if}
                 <button type="button" role="menuitem" onclick={() => act(() => (aiSchemaId = schema.id))}><Sparkles size={13} /> Generate with AI</button>
               </div>
             {/if}
@@ -156,6 +166,16 @@
         schema={s}
         records={$project.records.filter((r) => r.schemaId === autofillSchemaId)}
         onClose={() => (autofillSchemaId = null)} />
+    {/if}
+  {/if}
+
+  {#if embedSchemaId}
+    {@const s = $project.schemas.find((x) => x.id === embedSchemaId)}
+    {#if s}
+      <EmbedImagesModal
+        schema={s}
+        records={$project.records.filter((r) => r.schemaId === embedSchemaId)}
+        onClose={() => (embedSchemaId = null)} />
     {/if}
   {/if}
 </div>
