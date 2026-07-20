@@ -3,6 +3,7 @@ import { render, fireEvent, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import Workspace from '../src/lib/modules/menu/Workspace.svelte';
 import * as S from '../src/lib/modules/menu/stores';
+import * as B2 from '../src/lib/modules/menu/dishBank';
 
 beforeEach(() => S.initDoc());
 
@@ -24,5 +25,16 @@ describe('MenuWorkspace', () => {
     expect(dialog).toHaveFocus();
     await fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(get(S.templateEditorOpen)).toBe(false);
+  });
+});
+
+describe('MenuWorkspace fill', () => {
+  beforeEach(() => { S.initDoc(); localStorage.clear(); });
+  it('"Tự bốc cả tuần (đè)" fills default cells', async () => {
+    S.addWeek();
+    render(Workspace);
+    await fireEvent.click(screen.getByRole('button', { name: /bốc đè/i }));
+    const com = get(S.doc).template.periods[0].categories.find((c) => c.id === 'c_com')!;
+    expect(get(S.doc).weeks[0].cells[`${com.id}:0`]).toBe('Cơm trắng');
   });
 });

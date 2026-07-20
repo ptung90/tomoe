@@ -3,13 +3,18 @@
   import Copy from 'lucide-svelte/icons/copy';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import Settings2 from 'lucide-svelte/icons/settings-2';
+  import Dices from 'lucide-svelte/icons/dices';
+  import BookOpen from 'lucide-svelte/icons/book-open';
+  import RefreshCw from 'lucide-svelte/icons/refresh-cw';
   import * as S from './stores';
   import { cellKey } from './model';
   import TemplateEditor from './TemplateEditor.svelte';
+  import DishBankModal from './DishBankModal.svelte';
 
   const doc = S.doc;
   const selectedWeekId = S.selectedWeekId;
   const templateEditorOpen = S.templateEditorOpen;
+  const dishBankOpen = S.dishBankOpen;
 
   const current = $derived($doc.weeks.find((w) => w.id === $selectedWeekId) ?? null);
 </script>
@@ -33,6 +38,11 @@
     {#if current}
       <input class="title" value={current.title}
         onchange={(e) => S.setWeekTitle(current.id, (e.currentTarget as HTMLInputElement).value)} />
+      <div class="actions">
+        <button onclick={() => S.fillCurrentWeek('empty-only')}><Dices size={14} /> Bốc ô trống</button>
+        <button onclick={() => S.fillCurrentWeek('overwrite')}><Dices size={14} /> Bốc đè cả tuần</button>
+        <button onclick={() => S.dishBankOpen.set(true)}><BookOpen size={14} /> Kho món</button>
+      </div>
       <div class="grid" style={`grid-template-columns: 120px 120px repeat(${$doc.template.days.length}, 1fr);`}>
         <div class="h"></div><div class="h"></div>
         {#each $doc.template.days as d}<div class="h">{d}</div>{/each}
@@ -41,8 +51,12 @@
             <div class="h period">{i === 0 ? period.label : ''}</div>
             <div class="h">{cat.hideLabel ? '' : cat.label}</div>
             {#each $doc.template.days as _d, day}
-              <input class="cell" value={current.cells[cellKey(cat.id, day)] ?? ''}
-                oninput={(e) => S.setCell(current.id, cat.id, day, (e.currentTarget as HTMLInputElement).value)} />
+              <div class="cellwrap">
+                <input class="cell" value={current.cells[cellKey(cat.id, day)] ?? ''}
+                  oninput={(e) => S.setCell(current.id, cat.id, day, (e.currentTarget as HTMLInputElement).value)} />
+                <button class="reroll" aria-label="Bốc lại ô" title="Bốc lại"
+                  onclick={() => S.rerollCell(current.id, cat.id, day)}><RefreshCw size={12} /></button>
+              </div>
             {/each}
           {/each}
         {/each}
@@ -54,6 +68,7 @@
 </div>
 
 {#if $templateEditorOpen}<TemplateEditor />{/if}
+{#if $dishBankOpen}<DishBankModal />{/if}
 
 <style>
   .menu-ws { flex:1; display:flex; min-height:0; background:var(--bg); color:var(--text); }
@@ -75,4 +90,12 @@
   .cell { border:none; background:var(--bg); color:var(--text); padding:6px 8px; font:inherit; font-size:13px; }
   .cell:focus { outline:2px solid var(--accent); outline-offset:-2px; }
   .empty { color:var(--text-muted); margin-top:40px; text-align:center; }
+  .actions { display:flex; gap:8px; margin-top:8px; }
+  .actions button { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:transparent; color:var(--text); border-radius:8px; padding:6px 10px; cursor:pointer; font:inherit; }
+  .actions button:hover { background:var(--accent-weak); color:var(--accent); }
+  .cellwrap { position:relative; display:flex; }
+  .cellwrap .cell { flex:1; }
+  .reroll { position:absolute; right:2px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:var(--text-muted); opacity:0; cursor:pointer; padding:2px; border-radius:4px; }
+  .cellwrap:hover .reroll { opacity:1; }
+  .reroll:hover { background:var(--accent-weak); color:var(--accent); }
 </style>
