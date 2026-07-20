@@ -1,8 +1,8 @@
 import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
 import * as H from '../../history';
 import {
-  newMenuDoc, parseMenuDoc, uid,
-  type MenuDoc, type MenuStyle, type MenuCategory, type MenuPeriod,
+  newMenuDoc, parseMenuDoc, uid, cellKey,
+  type MenuDoc, type MenuStyle, type MenuCategory, type MenuPeriod, type MenuWeek,
 } from './model';
 import { hashContent } from '../flashcards/lib/fileSync';
 
@@ -102,4 +102,46 @@ export function renamePeriod(periodId: string, label: string): void {
 export function setDays(days: string[]): void {
   const p = get(doc);
   commit({ ...p, template: { ...p.template, days: days.slice() } });
+}
+
+function mapWeek(weekId: string, fn: (w: MenuWeek) => MenuWeek): void {
+  const p = get(doc);
+  commit({ ...p, weeks: p.weeks.map((w) => (w.id === weekId ? fn(w) : w)) });
+}
+
+export function addWeek(): void {
+  const p = get(doc);
+  const n = p.weeks.length + 1;
+  const week: MenuWeek = { id: uid('w'), title: `Tuần ${n}`, cells: {} };
+  commit({ ...p, weeks: [...p.weeks, week] });
+  selectedWeekId.set(week.id);
+}
+export function duplicateWeek(id: string): void {
+  const p = get(doc);
+  const src = p.weeks.find((w) => w.id === id);
+  if (!src) return;
+  const copy: MenuWeek = { ...structuredClone(src), id: uid('w'), title: `${src.title} (bản sao)` };
+  const i = p.weeks.findIndex((w) => w.id === id);
+  const weeks = p.weeks.slice(); weeks.splice(i + 1, 0, copy);
+  commit({ ...p, weeks });
+  selectedWeekId.set(copy.id);
+}
+export function deleteWeek(id: string): void {
+  const p = get(doc);
+  commit({ ...p, weeks: p.weeks.filter((w) => w.id !== id) });
+  if (get(selectedWeekId) === id) selectedWeekId.set(get(doc).weeks[0]?.id ?? null);
+}
+export function moveWeek(id: string, delta: number): void {
+  const p = get(doc);
+  const i = p.weeks.findIndex((w) => w.id === id);
+  if (i === -1) return;
+  const j = i + delta;
+  if (j < 0 || j >= p.weeks.length) return;
+  const weeks = p.weeks.slice();
+  [weeks[i], weeks[j]] = [weeks[j], weeks[i]];
+  commit({ ...p, weeks });
+}
+export function setWeekTitle(id: string, title: string): void { mapWeek(id, (w) => ({ ...w, title })); }
+export function setCell(weekId: string, catId: string, dayIndex: number, value: string): void {
+  mapWeek(weekId, (w) => ({ ...w, cells: { ...w.cells, [cellKey(catId, dayIndex)]: value } }));
 }
