@@ -5,6 +5,7 @@
   import RecordDetail from './components/RecordDetail.svelte';
   import SchemaEditorModal from './components/SchemaEditorModal.svelte';
   import SchemaLibraryModal from './components/SchemaLibraryModal.svelte';
+  import StylePresetModal from './components/StylePresetModal.svelte';
   import CardEditorModal from './components/CardEditorModal.svelte';
   import SaveConflictModal from './components/SaveConflictModal.svelte';
   import EditHistoryModal from './components/EditHistoryModal.svelte';
@@ -129,6 +130,7 @@
   {/if}
   <SchemaEditorModal />
   <SchemaLibraryModal />
+  <StylePresetModal />
   <CardEditorModal />
   <SaveConflictModal />
   <EditHistoryModal open={showHistory} onClose={() => (showHistory = false)} />

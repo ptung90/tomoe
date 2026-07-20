@@ -23,9 +23,11 @@
   import Globe from 'lucide-svelte/icons/globe';
   import Layers from 'lucide-svelte/icons/layers';
   import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
+  import Bookmark from 'lucide-svelte/icons/bookmark';
   import {
     project, selectedRecordId, activeViewId, setSettings, setTemplateLayout,
     setTemplateStyle, setCardStyle, clearStyleOverride, resetScopeStyle, setViewFields,
+    stylePresetOpen,
   } from '../stores';
   import { deriveAutoTemplate, viewLabel } from '../cardMapping';
   import { sheetLayout, sheetGrid, resolveLabel } from '../lib/card-render';
@@ -155,6 +157,8 @@
       <button type="button" role="tab" aria-selected={scope === 'card'} class:on={scope === 'card'}
         disabled={!card} onclick={() => (scope = 'card')}><Square size={13} />This card</button>
     </div>
+    <button type="button" class="presets-btn" title="Style presets — save/apply a look across cards"
+      onclick={() => stylePresetOpen.set(true)}><Bookmark size={13} />Presets</button>
   </div>
   <div class="scope-hint">
     <span class="scope-hint-text">{scopeHint}</span>
@@ -382,6 +386,11 @@
   /* Scope switcher — the "level" selector: which of Global / This view / This card the edits below target. */
   .scope-row { display:flex; align-items:center; gap:8px; padding:7px 10px 0; flex:none; }
   .scope-label { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); flex:none; }
+  .presets-btn { flex:none; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border);
+    border-radius:7px; background:var(--bg); color:var(--text-muted); font:inherit; font-size:11px; font-weight:600;
+    padding:5px 9px; cursor:pointer; transition:background .12s ease, color .12s ease, border-color .12s ease; }
+  .presets-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-weak); }
+  .presets-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .scope-switch { display:flex; flex:1; border:1px solid var(--border); border-radius:7px; overflow:hidden; background:var(--bg); }
   .scope-switch button { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:4px;
     border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:11px; font-weight:600;

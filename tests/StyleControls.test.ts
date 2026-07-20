@@ -41,11 +41,38 @@ describe('StyleControls (tabbed)', () => {
     expect(get(S.project).settings.textVAlign).toBe('middle');
   });
 
+  it('Presets button opens the style-preset modal', async () => {
+    render(StyleControls);
+    await fireEvent.click(screen.getByRole('button', { name: /Presets/ }));
+    expect(get(S.stylePresetOpen)).toBe(true);
+  });
+
   it('Image: fit commit', async () => {
     render(StyleControls);
     await tab('Image');
     await fireEvent.change(screen.getByLabelText('Fit'), { target: { value: 'contain' } });
     expect(get(S.project).settings.image.backgroundSize).toBe('contain');
+  });
+
+  it('Image: corner radius commits', async () => {
+    render(StyleControls);
+    await tab('Image');
+    await fireEvent.change(screen.getByLabelText('Image corner radius'), { target: { value: '16' } });
+    expect(get(S.project).settings.image.borderRadius).toBe(16);
+  });
+
+  it('Image: background fill toggles transparent ↔ white, colour input commits when on', async () => {
+    render(StyleControls);
+    await tab('Image');
+    // off by default → toggling on seeds white
+    await fireEvent.click(screen.getByLabelText('Fill image background'));
+    expect(get(S.project).settings.image.backgroundColor).toBe('#ffffff');
+    // colour picker commits a chosen colour
+    await fireEvent.input(screen.getByLabelText('Image background color'), { target: { value: '#ffcc00' } });
+    expect(get(S.project).settings.image.backgroundColor).toBe('#ffcc00');
+    // toggling off resets to transparent
+    await fireEvent.click(screen.getByLabelText('Fill image background'));
+    expect(get(S.project).settings.image.backgroundColor).toBe('transparent');
   });
 
   it('Image: image-height control (image layout) sets template.imageHeightPercent', async () => {
