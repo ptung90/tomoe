@@ -29,6 +29,9 @@ export async function exportWeekPng(
   host.innerHTML = renderWeekTable(week, template, settings);
   document.body.appendChild(host);
   try {
+    // Wait for webfonts (Lexend) to be ready before rasterizing, else the PNG can capture a
+    // fallback font — the same gotcha the flashcards pdfExport path already handles.
+    await document.fonts?.ready;
     const dataUrl = await toPng(host, { pixelRatio: opts?.pixelRatio ?? 2, backgroundColor: '#ffffff' });
     const path = await saveDialog({ defaultPath: `${slugifyTitle(week.title)}.png`, filters: [{ name: 'PNG', extensions: ['png'] }] });
     if (!path) return;
