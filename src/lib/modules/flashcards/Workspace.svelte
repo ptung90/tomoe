@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen } from './stores';
+  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen, setProjectCategory } from './stores';
+  import { CONTINENT_COLORS } from './lib/palette';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
   import RecordDetail from './components/RecordDetail.svelte';
@@ -61,6 +62,14 @@
       value={$project.projectName}
       onchange={(e) => setProjectName((e.target as HTMLInputElement).value.trim() || 'Untitled')}
     />
+    <select class="continent-select" aria-label="Continent" title="Continent — sets the project's signature border colour"
+      value={$project.category ?? ''}
+      onchange={(e) => setProjectCategory((e.target as HTMLSelectElement).value || null)}>
+      <option value="">— No continent —</option>
+      {#each CONTINENT_COLORS as c (c.key)}
+        <option value={c.key}>{$project.activeLocale === 'vi' ? c.vi : c.en}</option>
+      {/each}
+    </select>
     <span class="filename" class:unsaved={!fileName} title={$filePath ?? 'Not saved to a file yet'}>
       {fileName ?? 'Unsaved'}
     </span>
@@ -147,6 +156,10 @@
     border:1px solid transparent; border-radius:6px; padding:3px 7px; min-width:8ch; }
   .project-name:hover { border-color:var(--border); }
   .project-name:focus { outline:none; border-color:var(--accent); background:var(--bg); }
+  .continent-select { flex:none; font:inherit; font-size:12px; color:var(--text); background:var(--bg);
+    border:1px solid var(--border); border-radius:6px; padding:3px 6px; cursor:pointer; }
+  .continent-select:hover { border-color:var(--accent); }
+  .continent-select:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .counts { color:var(--text-muted); font-size:12px; }
   .filename { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     font-size:12px; color:var(--text); font-family:ui-monospace,"Cascadia Code",Consolas,monospace; }
