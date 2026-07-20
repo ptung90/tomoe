@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen, setProjectCategory } from './stores';
+  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen, setProjectCategory, continentColors } from './stores';
   import { CONTINENT_COLORS } from './lib/palette';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
@@ -48,6 +48,8 @@
   });
   // Basename of the open file (everything after the last slash/backslash), or null when unsaved.
   const fileName = $derived($filePath ? $filePath.replace(/^.*[\\/]/, '') : null);
+  // Colour dot for the continent picker: the selected continent's palette colour, or null = none.
+  const catColor = $derived($project.category ? ($continentColors[$project.category] ?? null) : null);
 
   const cols = $derived(
     `${leftHidden ? 0 : leftWidth}px ${leftHidden ? 0 : 6}px 1fr ${rightHidden ? 0 : 6}px ${rightHidden ? 0 : rightWidth}px`,
@@ -62,27 +64,20 @@
       value={$project.projectName}
       onchange={(e) => setProjectName((e.target as HTMLInputElement).value.trim() || 'Untitled')}
     />
-    <select class="continent-select" aria-label="Continent" title="Continent — sets the project's signature border colour"
-      value={$project.category ?? ''}
-      onchange={(e) => setProjectCategory((e.target as HTMLSelectElement).value || null)}>
-      <option value="">— No continent —</option>
-      {#each CONTINENT_COLORS as c (c.key)}
-        <option value={c.key}>{$project.activeLocale === 'vi' ? c.vi : c.en}</option>
-      {/each}
-    </select>
-    <span class="filename" class:unsaved={!fileName} title={$filePath ?? 'Not saved to a file yet'}>
-      {fileName ?? 'Unsaved'}
+    <span class="continent" title="Continent — sets the project's signature border colour">
+      <span class="cont-dot" class:none={!catColor} style={catColor ? `background:${catColor}` : ''}></span>
+      <select class="continent-select" aria-label="Continent"
+        value={$project.category ?? ''}
+        onchange={(e) => setProjectCategory((e.target as HTMLSelectElement).value || null)}>
+        <option value="">No continent</option>
+        {#each CONTINENT_COLORS as c (c.key)}
+          <option value={c.key}>{$project.activeLocale === 'vi' ? c.vi : c.en}</option>
+        {/each}
+      </select>
     </span>
-    <span class="counts">
-      {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
-      {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
-    </span>
-    {#if lastEditEntry}
-      <button type="button" class="last-edited" title="Show edit history"
-        onclick={() => (showHistory = true)}>
-        edited by {lastEditEntry.by} · {relativeTime(lastEditEntry.at, Date.now())}
-      </button>
-    {/if}
+
+    <span class="spacer"></span>
+
     {#if view === 'records'}
       <div class="panel-toggles" aria-label="panels">
         <button type="button" class="panel-btn" class:off={leftHidden} aria-pressed={!leftHidden}
@@ -101,16 +96,14 @@
       <button type="button" aria-pressed={view === 'cards'} class:on={view === 'cards'}
         onclick={() => (view = 'cards')}>Cards</button>
     </div>
-    <button type="button" class="print-btn" onclick={() => (showBackups = true)} title="Backups">
-      <Archive size={14} /> Backups
-    </button>
-    <button type="button" class="print-btn" onclick={() => schemaLibraryOpen.set(true)} title="Schema library">
-      <Library size={14} /> Library
-    </button>
-    <button type="button" class="print-btn" disabled={printCount === 0}
-      onclick={() => (showExport = true)} title="Export / print — pick views & records">
-      <FileDown size={14} /> Export…
-    </button>
+    <div class="actions" aria-label="actions">
+      <button type="button" class="icon-btn" aria-label="Backups" title="Backups"
+        onclick={() => (showBackups = true)}><Archive size={15} /></button>
+      <button type="button" class="icon-btn" aria-label="Schema library" title="Schema library"
+        onclick={() => schemaLibraryOpen.set(true)}><Library size={15} /></button>
+      <button type="button" class="icon-btn" aria-label="Export…" title="Export / print — pick views & records"
+        disabled={printCount === 0} onclick={() => (showExport = true)}><FileDown size={15} /></button>
+    </div>
   </header>
   {#if view === 'records'}
     <div class="body" style={`grid-template-columns:${cols}`}>
@@ -137,6 +130,23 @@
   {:else}
     <div class="cards-body"><CardGallery onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
   {/if}
+  <footer class="statusbar">
+    <span class="filename" class:unsaved={!fileName} title={$filePath ?? 'Not saved to a file yet'}>
+      {fileName ?? 'Unsaved'}
+    </span>
+    <span class="sb-sep">·</span>
+    <span class="counts">
+      {$project.schemas.length} schema{$project.schemas.length === 1 ? '' : 's'} ·
+      {$project.records.length} record{$project.records.length === 1 ? '' : 's'}
+    </span>
+    {#if lastEditEntry}
+      <span class="sb-sep">·</span>
+      <button type="button" class="last-edited" title="Show edit history"
+        onclick={() => (showHistory = true)}>
+        edited by {lastEditEntry.by} · {relativeTime(lastEditEntry.at, Date.now())}
+      </button>
+    {/if}
+  </footer>
   <SchemaEditorModal />
   <SchemaLibraryModal />
   <StylePresetModal />
@@ -167,24 +177,36 @@
   .last-edited { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px;
     cursor:pointer; padding:0; text-decoration:underline dotted; text-underline-offset:2px; }
   .last-edited:hover { color:var(--text); }
-  .view-toggle { margin-left:auto; display:inline-flex; gap:2px; border:1px solid var(--border); border-radius:8px; padding:2px; }
+  .spacer { flex:1; }
+  .continent { display:inline-flex; align-items:center; gap:6px; }
+  .cont-dot { width:12px; height:12px; border-radius:50%; border:1px solid var(--border); flex:none;
+    background:var(--bg); }
+  .cont-dot.none { background:
+    repeating-conic-gradient(var(--text-muted) 0 25%, transparent 0 50%) 50% / 6px 6px; opacity:.5; }
+  .view-toggle { display:inline-flex; gap:2px; border:1px solid var(--border); border-radius:8px; padding:2px; }
   .view-toggle button { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px;
     padding:3px 12px; border-radius:6px; cursor:pointer; transition:background .12s ease, color .12s ease; }
   .view-toggle button:hover:not(.on) { color:var(--accent); }
   .view-toggle button.on { background:var(--accent); color:#fff; font-weight:600; }
   .view-toggle button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .panel-toggles { margin-left:auto; display:inline-flex; gap:2px; }
+  .panel-toggles { display:inline-flex; gap:2px; }
   .panel-btn { display:inline-flex; align-items:center; border:1px solid var(--border); background:transparent;
     color:var(--text); border-radius:6px; padding:4px 7px; cursor:pointer; transition:background .12s ease, color .12s ease; }
   .panel-btn:hover { background:var(--accent-weak); color:var(--accent); }
   .panel-btn.off { color:var(--text-muted); }
   .panel-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .print-btn { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border);
-    background:transparent; color:var(--text); border-radius:6px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer;
+  .actions { display:inline-flex; gap:4px; }
+  .icon-btn { display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border);
+    background:transparent; color:var(--text); border-radius:6px; padding:5px 7px; cursor:pointer;
     transition:background .12s ease, color .12s ease; }
-  .print-btn:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
-  .print-btn:disabled { opacity:.5; cursor:default; }
-  .print-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .icon-btn:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
+  .icon-btn:disabled { opacity:.5; cursor:default; }
+  .icon-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
+  /* Slim status bar at the bottom: file + counts + last-edited (moved out of the header). */
+  .statusbar { display:flex; align-items:center; gap:8px; flex:none; padding:3px 12px;
+    background:var(--surface); border-top:1px solid var(--border); font-size:11px; color:var(--text-muted); }
+  .sb-sep { color:var(--border); }
   .cards-body { flex:1; min-height:0; }
   .body { flex:1; display:grid; min-height:0; }
   .left, .right, .preview-pane { min-height:0; min-width:0; }
