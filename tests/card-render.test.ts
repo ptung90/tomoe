@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPaperPx, mmToPx, esc, resolveLocale, resolveLabel, labelLocaleValue, setLabelLocale } from '../src/lib/modules/flashcards/lib/card-render';
+import { getPaperPx, mmToPx, esc, resolveLocale, resolveLabel, labelLocaleValue, setLabelLocale, mutedHex } from '../src/lib/modules/flashcards/lib/card-render';
 import { buildCardHTML, sheetGrid, sheetLayout, buildSheetHTML } from '../src/lib/modules/flashcards/lib/card-render';
 import { LAYOUT_SLOTS } from '../src/lib/modules/flashcards/lib/layouts';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
@@ -77,6 +77,63 @@ describe('labelLocaleValue / setLabelLocale', () => {
 function card(partial: Partial<Card>): Card {
   return { id: 'c1', layout: '1top-1bot', imageHeightPercent: 50, images: [], title: '', sections: [], ...partial };
 }
+
+// Style of the inner `.img-bg` div (isolates the image element from the card border).
+function imgBgStyle(html: string): string {
+  return /img-bg" style="([^"]*)"/.exec(html)?.[1] ?? '';
+}
+
+describe('buildCardHTML — image frame (border-radius + background fill)', () => {
+  const withImg = () => card({ layout: '1top-1bot', images: [{ slot: 0, url: 'a.png' }], sections: [{ id: 's1', label: '', content: 'hi' }] });
+
+  it('applies image border-radius and background-color to the image div when set', () => {
+    const html = buildCardHTML(withImg(), {
+      ...DEFAULT_SETTINGS,
+      image: { ...DEFAULT_SETTINGS.image, borderRadius: 14, backgroundColor: '#eef' },
+    }, 'en');
+    const style = imgBgStyle(html);
+    expect(style).toContain('border-radius:14px');
+    expect(style).toContain('background-color:#eef');
+  });
+
+  it('omits border-radius (0) and background-color (transparent) by default', () => {
+    const html = buildCardHTML(withImg(), DEFAULT_SETTINGS, 'en');
+    const style = imgBgStyle(html);
+    expect(style).not.toContain('border-radius');
+    expect(style).not.toContain('background-color');
+  });
+});
+
+describe('mutedHex', () => {
+  it('blends a colour toward white at the given alpha (default 0.7)', () => {
+    expect(mutedHex('#000000')).toBe('#4d4d4d');   // round(0*.7 + 255*.3) = 77 = 0x4d
+    expect(mutedHex('#1a1a1a')).toBe('#5f5f5f');    // round(26*.7 + 255*.3) = 95 = 0x5f
+    expect(mutedHex('#ffffff')).toBe('#ffffff');    // white stays white
+  });
+  it('expands 3-digit hex', () => {
+    expect(mutedHex('#000')).toBe('#4d4d4d');
+  });
+  it('falls back to a neutral muted grey for a non-hex/empty colour', () => {
+    expect(mutedHex('')).toBe('#6b7280');
+    expect(mutedHex('rebeccapurple')).toBe('#6b7280');
+  });
+});
+
+describe('h5/h6 subtitle colour is a solid hex (print-safe), not opacity', () => {
+  it('emits a solid color: on h5/h6 rules and no opacity (html2canvas renders opacity wrong)', () => {
+    const html = buildCardHTML(card({
+      layout: 'fulltext', title: 'T',
+      sections: [{ id: 's1', label: '', content: '##### sub' }],
+    }), DEFAULT_SETTINGS, 'en');
+    const h5 = /\.fc-section__content h5\{([^}]*)\}/.exec(html)?.[1] ?? '';
+    const h6 = /\.fc-section__content h6\{([^}]*)\}/.exec(html)?.[1] ?? '';
+    const titleH6 = /\.fc-title h6\{([^}]*)\}/.exec(html)?.[1] ?? '';
+    for (const rule of [h5, h6, titleH6]) {
+      expect(rule).toMatch(/color:#[0-9a-f]{6}/i);
+      expect(rule).not.toContain('opacity');
+    }
+  });
+});
 
 describe('buildCardHTML grid/fulltext/fullimage', () => {
   it('renders a fulltext card with title + section content (markdown)', () => {

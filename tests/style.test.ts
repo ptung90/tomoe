@@ -39,6 +39,17 @@ describe('resolveStyle', () => {
     expect(out.border.width).toBe(8);
   });
 
+  it('image merges field-by-field: overriding borderRadius keeps backgroundSize', () => {
+    const out = resolveStyle(DEFAULT_SETTINGS, { image: { borderRadius: 12 } });
+    expect(out.image.borderRadius).toBe(12);
+    expect(out.image.backgroundSize).toBe(DEFAULT_SETTINGS.image.backgroundSize);
+  });
+
+  it('image.backgroundColor from a card layer wins over a schema layer', () => {
+    const out = resolveStyle(DEFAULT_SETTINGS, { image: { backgroundColor: '#111' } }, { image: { backgroundColor: '#eee' } });
+    expect(out.image.backgroundColor).toBe('#eee');
+  });
+
   it('is pure — never mutates the base Settings', () => {
     resolveStyle(DEFAULT_SETTINGS, { border: { width: 8 } });
     expect(DEFAULT_SETTINGS.border.width).not.toBe(8);

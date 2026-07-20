@@ -1,6 +1,6 @@
 import type { Card, Settings, CardSection, CardImage } from '../model';
 import type { FlowLayoutDef } from './flow-layouts';
-import { esc, mdBlock, resolveLocale, getPaperPx, mmToPx } from './card-render';
+import { esc, mdBlock, resolveLocale, getPaperPx, mmToPx, imageFrameStyle } from './card-render';
 
 /** Uniform scale so `naturalH` fits `pageInnerH`; clamped to [0.5, 1]. Pure. */
 export function fitFlowScale(naturalH: number, pageInnerH: number): number {
@@ -27,9 +27,9 @@ export function applyFlowFit(root: ParentNode): void {
   }
 }
 
-function imgBox(url: string, side: 'left' | 'right', width: string): string {
+function imgBox(url: string, side: 'left' | 'right', width: string, frameStyle: string): string {
   return `<div class="fc-flow-img" style="float:${side};width:${width};margin:${side === 'right' ? '0 0 8px 12px' : '0 12px 8px 0'};">` +
-    `<div style="width:100%;padding-top:66%;background-image:url('${esc(url)}');background-size:contain;background-position:center;background-repeat:no-repeat;"></div></div>`;
+    `<div style="width:100%;padding-top:66%;background-image:url('${esc(url)}');background-size:contain;background-position:center;background-repeat:no-repeat;${frameStyle}"></div></div>`;
 }
 
 function sideFor(def: FlowLayoutDef, i: number): 'left' | 'right' {
@@ -50,6 +50,7 @@ export function buildFlowCardHTML(
   const cardW = w - 2 * marginPx, cardH = h - 2 * marginPx;
   const b = settings.border;
   const borderStyle = b.width ? `border:${b.width}px ${b.style} ${b.color};border-radius:${b.radius}px;` : '';
+  const frameStyle = imageFrameStyle(settings.image);
   const cf = settings.contentFont, tf = settings.titleFont;
   const baseFont = `font-family:${cf.family};font-size:${cf.size}px;color:${cf.color};line-height:${cf.lineHeight};`;
   const shell = `width:${cardW}px;height:${cardH}px;margin:${marginPx}px auto;background:white;box-sizing:border-box;padding:${mmToPx(settings.padding)}px;overflow:hidden;`;
@@ -62,7 +63,7 @@ export function buildFlowCardHTML(
   if (def.mode === 'collage') {
     const cols = def.collageColumns ?? 3;
     const tiles = card.images.map((im) =>
-      `<div class="fc-flow-tile" style="width:100%;padding-top:100%;background-image:url('${esc(im.url)}');background-size:contain;background-position:center;background-repeat:no-repeat;"></div>`).join('');
+      `<div class="fc-flow-tile" style="width:100%;padding-top:100%;background-image:url('${esc(im.url)}');background-size:contain;background-position:center;background-repeat:no-repeat;${frameStyle}"></div>`).join('');
     const titleHtml = def.titleStyle === 'outline'
       ? `<div class="fc-flow-cover-title" style="font-family:${tf.family};font-size:${tf.size * 3}px;font-weight:800;-webkit-text-stroke:2px ${tf.color};color:transparent;text-align:center;margin:12px 0;">${esc(title.replace(/<[^>]+>/g, ''))}</div>`
       : `<div class="fc-flow-cover-title" style="font-family:${tf.family};font-size:${tf.size * 3}px;text-align:center;margin:12px 0;">${title}</div>`;
@@ -83,12 +84,12 @@ export function buildFlowCardHTML(
     .map((m) => `<div class="fc-flow-meta">${esc(resolveLocale(m.label, locale))}- ${esc(resolveLocale(m.value, locale))}</div>`).join('');
   const header = hasHeader
     ? `<div class="fc-flow-header" style="overflow:hidden;margin-bottom:12px;">` +
-      (card.headerImage ? `<div class="fc-flow-flag" style="float:right;width:32%;"><div style="width:100%;padding-top:66%;background-image:url('${esc(card.headerImage.url)}');background-size:contain;background-position:center;background-repeat:no-repeat;"></div></div>` : '') +
+      (card.headerImage ? `<div class="fc-flow-flag" style="float:right;width:32%;"><div style="width:100%;padding-top:66%;background-image:url('${esc(card.headerImage.url)}');background-size:contain;background-position:center;background-repeat:no-repeat;${frameStyle}"></div></div>` : '') +
       (title ? `<div class="fc-flow-title">${title}</div>` : '') + metaLines +
       `</div>`
     : '';
   const sections = card.sections.map((sec: CardSection, i: number) => {
-    const img = sec.image ? imgBox(sec.image.url, sideFor(def, i), def.imageWidth ?? '40%') : '';
+    const img = sec.image ? imgBox(sec.image.url, sideFor(def, i), def.imageWidth ?? '40%', frameStyle) : '';
     const label = resolveLocale(sec.label, locale);
     return `<div class="fc-flow-section" style="overflow:hidden;margin-bottom:12px;">` +
       img +

@@ -14,6 +14,19 @@ export const PAPER_MM: Record<string, { w: number; h: number }> = {
   A7: { w: 74, h: 105 }, A8: { w: 52, h: 74 }, Letter: { w: 216, h: 279 },
 };
 
+/** Blend a hex colour toward white at `alpha` (0.7 = 70% colour, 30% white) and return a solid
+ *  hex. Used for the muted h5/h6 subtitle colour: html2canvas (PDF/print) renders CSS `opacity`
+ *  on text unreliably, so the muted look is baked into an opaque colour instead. Non-hex/empty
+ *  input falls back to a neutral muted grey. Pure. */
+export function mutedHex(color: string, alpha = 0.7): string {
+  let h = (color || '').trim().replace(/^#/, '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return '#6b7280';
+  const mix = (c: number) => Math.round(c * alpha + 255 * (1 - alpha));
+  const hx = (n: number) => n.toString(16).padStart(2, '0');
+  return '#' + hx(mix(parseInt(h.slice(0, 2), 16))) + hx(mix(parseInt(h.slice(2, 4), 16))) + hx(mix(parseInt(h.slice(4, 6), 16)));
+}
+
 export function getPaperPx(paperSize: string, orientation: string): { w: number; h: number } {
   let { w, h } = PAPER_MM[paperSize] || PAPER_MM.A4;
   if (orientation === 'landscape') [w, h] = [h, w];
@@ -251,14 +264,16 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     `${_cs} .fc-section__content h2{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.85)}px;}` +
     `${_cs} .fc-section__content h3{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.75)}px;}` +
     `${_cs} .fc-section__content h4{margin:0;padding:0;${titleStyle}font-size:${Math.round((titleF.size || 14) * 0.68)}px;}` +
-    // h5 and h6 are "Subtitle" lines: muted, not bold headings — h5 the larger of the two.
-    `${_cs} .fc-section__content h5{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 1.05)}px;}` +
-    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((contentF.size || 12) * 0.9)}px;}` +
+    // h5 and h6 are "Subtitle" lines: muted, not bold headings — h5 the larger of the two. The
+    // muted look is baked into a solid colour (mutedHex over white) rather than `opacity`, which
+    // html2canvas renders unreliably on text — so print/PDF match the on-screen preview.
+    `${_cs} .fc-section__content h5{margin:1px 0 0;padding:0;font-weight:400;color:${mutedHex(contentF.color)};font-size:${Math.round((contentF.size || 12) * 1.05)}px;}` +
+    `${_cs} .fc-section__content h6{margin:1px 0 0;padding:0;font-weight:400;color:${mutedHex(contentF.color)};font-size:${Math.round((contentF.size || 12) * 0.9)}px;}` +
     // Title is markdown-rendered too: reset bold-heading margins; h5/h6 in the title are muted
     // subtitle lines sized off the title font (h5 larger than h6).
     `${_cs} .fc-title p,${_cs} .fc-title h1,${_cs} .fc-title h2,${_cs} .fc-title h3,${_cs} .fc-title h4{margin:0;padding:0;}` +
-    `${_cs} .fc-title h5{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((titleF.size || 14) * 0.82)}px;}` +
-    `${_cs} .fc-title h6{margin:1px 0 0;padding:0;font-weight:400;opacity:0.7;font-size:${Math.round((titleF.size || 14) * 0.72)}px;}`;
+    `${_cs} .fc-title h5{margin:1px 0 0;padding:0;font-weight:400;color:${mutedHex(titleF.color)};font-size:${Math.round((titleF.size || 14) * 0.82)}px;}` +
+    `${_cs} .fc-title h6{margin:1px 0 0;padding:0;font-weight:400;color:${mutedHex(titleF.color)};font-size:${Math.round((titleF.size || 14) * 0.72)}px;}`;
   const _labelSizeRule = card.labelSize
     ? `${_cs} .fc-section__label{font-size:${card.labelSize}px}${_cs} .fc-img-label{font-size:${card.labelSize}px}`
     : '';

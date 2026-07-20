@@ -17,6 +17,37 @@ const cover: Card = { id: 'c0', layout: 'country-cover', imageHeightPercent: 50,
   images: [{ slot: 0, url: 'flag.png' }, { slot: 1, url: 'halong.png' }, { slot: 2, url: 'pho.png' }],
   title: '<h1>Vietnam</h1>', meta: [], sections: [] };
 
+describe('buildFlowCardHTML — image frame (border-radius + background fill)', () => {
+  const framed = { ...DEFAULT_SETTINGS, image: { ...DEFAULT_SETTINGS.image, borderRadius: 10, backgroundColor: '#f5f5f5' } };
+
+  it('applies border-radius + background-color to the header flag and section images', () => {
+    const html = buildFlowCardHTML(page, framed, 'en', getFlowLayout('country-page')!);
+    // every rendered image inner-div carries the frame styles
+    const imgDivs = html.match(/background-image:url\('[^']*'\);[^"]*/g) ?? [];
+    expect(imgDivs.length).toBeGreaterThan(0);
+    for (const d of imgDivs) {
+      expect(d).toContain('border-radius:10px');
+      expect(d).toContain('background-color:#f5f5f5');
+    }
+  });
+
+  it('applies border-radius + background-color to collage tiles', () => {
+    const html = buildFlowCardHTML(cover, framed, 'en', getFlowLayout('country-cover')!);
+    const tiles = html.match(/fc-flow-tile[^>]*/g) ?? [];
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const t of tiles) {
+      expect(t).toContain('border-radius:10px');
+      expect(t).toContain('background-color:#f5f5f5');
+    }
+  });
+
+  it('omits the frame styles by default (radius 0, transparent)', () => {
+    const html = buildFlowCardHTML(page, DEFAULT_SETTINGS, 'en', getFlowLayout('country-page')!);
+    expect(html).not.toContain('border-radius:0px;background-color');
+    expect(html).not.toContain('background-color:transparent');
+  });
+});
+
 describe('buildFlowCardHTML — page', () => {
   const html = buildFlowCardHTML(page, DEFAULT_SETTINGS, 'en', getFlowLayout('country-page')!);
   it('renders a header with title, meta lines and floated flag', () => {
