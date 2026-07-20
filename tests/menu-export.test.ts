@@ -3,14 +3,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const toPng = vi.fn(async () => 'data:image/png;base64,iVBORw0KGgo=');
 const saveDialog = vi.fn(async (): Promise<string | null> => '/tmp/tuan-2.png');
 const writeFile = vi.fn(async () => {});
+const addImage = vi.fn();
+const pdfSave = vi.fn();
+const output = vi.fn(() => new ArrayBuffer(8));
 vi.mock('html-to-image', () => ({ toPng: (...a: unknown[]) => (toPng as (...x: unknown[]) => unknown)(...a) }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ save: (...a: unknown[]) => (saveDialog as (...x: unknown[]) => unknown)(...a) }));
 vi.mock('@tauri-apps/plugin-fs', () => ({ writeFile: (...a: unknown[]) => (writeFile as (...x: unknown[]) => unknown)(...a) }));
+vi.mock('jspdf', () => ({ default: vi.fn().mockImplementation(() => ({
+  addImage, save: pdfSave, output,
+  internal: { pageSize: { getWidth: () => 297, getHeight: () => 210 } },
+})) }));
 
 import { exportWeekPng, slugifyTitle } from '../src/lib/modules/menu/export/exportImage';
+import { exportWeekPdf } from '../src/lib/modules/menu/export/exportPdf';
 import { newMenuDoc } from '../src/lib/modules/menu/model';
 
-beforeEach(() => { toPng.mockClear(); saveDialog.mockClear(); writeFile.mockClear(); });
+beforeEach(() => { toPng.mockClear(); saveDialog.mockClear(); writeFile.mockClear(); addImage.mockClear(); pdfSave.mockClear(); output.mockClear(); });
 
 describe('menu PNG export', () => {
   it('slugifyTitle strips Vietnamese diacritics + punctuation', () => {
@@ -28,5 +36,14 @@ describe('menu PNG export', () => {
     const { template, settings } = newMenuDoc();
     await exportWeekPng({ id: 'w', title: 'T', cells: {} }, template, settings);
     expect(writeFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('menu PDF export', () => {
+  it('rasterizes then places the image into a jsPDF doc and writes it', async () => {
+    const { template, settings } = newMenuDoc();
+    await exportWeekPdf({ id: 'w', title: 'Tuần 2', cells: {} }, template, settings);
+    expect(addImage).toHaveBeenCalledOnce();
+    expect(writeFile).toHaveBeenCalled();
   });
 });
