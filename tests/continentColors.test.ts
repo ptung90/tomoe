@@ -19,7 +19,7 @@ describe('continentColors config', () => {
   it('resetContinentColors restores defaults and clears storage', () => {
     setContinentColor('asia', '#123456');
     resetContinentColors();
-    expect(get(continentColors).asia).toBe('#E0A400');
+    expect(get(continentColors).asia).toBe('#E6E60A');
     expect(localStorage.getItem('tomoe.continentColors')).toBeNull();
   });
 });

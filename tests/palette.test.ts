@@ -9,7 +9,7 @@ describe('continent palette', () => {
     expect(byKey.southAmerica).toBe('#E0619B');
     expect(byKey.europe).toBe('#E00000');
     expect(byKey.africa).toBe('#1E7A45');
-    expect(byKey.asia).toBe('#E0A400');
+    expect(byKey.asia).toBe('#E6E60A');
     expect(byKey.oceania).toBe('#7A4A22');
     expect(byKey.antarctica).toBe('#2E86C1');
   });
