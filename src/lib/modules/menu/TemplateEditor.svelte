@@ -7,10 +7,12 @@
   import * as S from './stores';
   const doc = S.doc;
   function close() { S.templateEditorOpen.set(false); }
+  let panel = $state<HTMLElement>();
+  $effect(() => { panel?.focus(); });
 </script>
 
 <div class="backdrop" role="presentation" onclick={close}>
-  <div class="panel" role="dialog" aria-label="Sửa cấu trúc" tabindex="-1"
+  <div class="panel" bind:this={panel} role="dialog" aria-modal="true" aria-label="Sửa cấu trúc" tabindex="-1"
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.key === 'Escape' && close()}>
     <header><h2>Cấu trúc thực đơn</h2><button class="icon" aria-label="Đóng" onclick={close}><X size={18} /></button></header>

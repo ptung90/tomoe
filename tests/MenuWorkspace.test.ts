@@ -17,4 +17,12 @@ describe('MenuWorkspace', () => {
     render(Workspace);
     expect(await screen.findByText('Thứ 2')).toBeInTheDocument();
   });
+  it('closes the template editor on Escape once it has focus', async () => {
+    render(Workspace);
+    await fireEvent.click(screen.getByRole('button', { name: /cấu trúc/i }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveFocus();
+    await fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(get(S.templateEditorOpen)).toBe(false);
+  });
 });
