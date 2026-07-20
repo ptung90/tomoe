@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { render, fireEvent, screen } from '@testing-library/svelte';
+import { render, fireEvent, screen, within } from '@testing-library/svelte';
 import Workspace from '../src/lib/modules/flashcards/Workspace.svelte';
 import * as S from '../src/lib/modules/flashcards/stores';
 
@@ -26,6 +26,19 @@ describe('Flashcards Workspace', () => {
     const { container } = render(Workspace);
     // record auto-selected in beforeEach → a card renders
     expect(container.querySelector('.fc-card')).toBeInTheDocument();
+  });
+  it('merges the status bars: preview controls in the single footer (records), gallery controls after switching to cards', async () => {
+    const { container } = render(Workspace);
+    // records view: the delegated preview controls live in the one workspace footer — exactly one bar
+    expect(container.querySelectorAll('.statusbar').length).toBe(1);
+    expect(container.querySelector('.preview-statusbar')).toBeNull();     // no separate preview footer
+    const footer = container.querySelector('.statusbar') as HTMLElement;
+    expect(footer.querySelector('.filename')).toBeInTheDocument();        // project info…
+    expect(within(footer).getByRole('tab', { name: 'Sheet' })).toBeInTheDocument(); // …+ delegated preview controls
+    // switch to cards view → footer now hosts the gallery controls (Gallery/Sheets), not preview's
+    await fireEvent.click(screen.getByRole('button', { name: /cards/i }));
+    expect(container.querySelector('.gallery-statusbar')).toBeNull();
+    expect(within(footer).getByRole('tab', { name: 'Gallery' })).toBeInTheDocument();
   });
   it('shows the project name in an editable header field', () => {
     render(Workspace);

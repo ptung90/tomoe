@@ -8,7 +8,7 @@
   import Pencil from 'lucide-svelte/icons/pencil';
   import Upload from 'lucide-svelte/icons/upload';
   import { confirm } from '@tauri-apps/plugin-dialog';
-  import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords } from '../stores';
+  import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords, galleryStatusbar } from '../stores';
   import { deriveAutoTemplate, recordToCard, viewLabel } from '../cardMapping';
   import { isCardStale } from '../cardOps';
   import { buildCardHTML, buildSheetHTML, sheetLayout } from '../lib/card-render';
@@ -18,7 +18,16 @@
   import type { RecordItem, Schema, CardTemplate, Card } from '../model';
   import EmptyState from './EmptyState.svelte';
 
-  let { onOpen }: { onOpen: (recordId: string) => void } = $props();
+  let { onOpen, hostStatusbar = false }: { onOpen: (recordId: string) => void; hostStatusbar?: boolean } = $props();
+
+  // Delegate the status-bar controls up to the Workspace footer while hosted + a schema exists.
+  $effect(() => {
+    if (hostStatusbar && $project.schemas.length > 0) {
+      galleryStatusbar.set(galleryControls);
+      return () => galleryStatusbar.set(null);
+    }
+    galleryStatusbar.set(null);
+  });
 
   const THUMB_W = 190;
   const SHEET_THUMB_W = 260;
@@ -192,26 +201,30 @@
     {/each}
     {/if}
   </div>
-    <footer class="gallery-statusbar">
-      <div class="seg" role="tablist" aria-label="Cards view mode">
-        <button type="button" role="tab" aria-selected={gview === 'gallery'} class:on={gview === 'gallery'}
-          onclick={() => (gview = 'gallery')}>Gallery</button>
-        <button type="button" role="tab" aria-selected={gview === 'sheets'} class:on={gview === 'sheets'}
-          onclick={() => (gview = 'sheets')}>Sheets</button>
-      </div>
-      <span class="sb-info">
-        {#if gview === 'sheets'}{sheetItems.length} sheet{sheetItems.length === 1 ? '' : 's'} · same layout as Print / PDF
-        {:else}{totalRecords} card{totalRecords === 1 ? '' : 's'}{/if}
-      </span>
-      <div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Zoom out" onclick={() => (zoom = zoomStep(zoom, 1))}>−</button>
-        <button type="button" class="zoom-pct" class:auto={zoom === 1} title="Reset to 100%"
-          aria-label="Reset zoom" onclick={() => (zoom = 1)}>{Math.round(zoom * 100)}%</button>
-        <button type="button" aria-label="Zoom in" onclick={() => (zoom = zoomStep(zoom, -1))}>+</button>
-      </div>
-    </footer>
+    {#if !hostStatusbar}
+      <footer class="gallery-statusbar sb-cluster">{@render galleryControls()}</footer>
+    {/if}
   </div>
 {/if}
+
+{#snippet galleryControls()}
+  <div class="seg" role="tablist" aria-label="Cards view mode">
+    <button type="button" role="tab" aria-selected={gview === 'gallery'} class:on={gview === 'gallery'}
+      onclick={() => (gview = 'gallery')}>Gallery</button>
+    <button type="button" role="tab" aria-selected={gview === 'sheets'} class:on={gview === 'sheets'}
+      onclick={() => (gview = 'sheets')}>Sheets</button>
+  </div>
+  <span class="sb-info">
+    {#if gview === 'sheets'}{sheetItems.length} sheet{sheetItems.length === 1 ? '' : 's'} · same layout as Print / PDF
+    {:else}{totalRecords} card{totalRecords === 1 ? '' : 's'}{/if}
+  </span>
+  <div class="zoom-controls" role="group" aria-label="Zoom">
+    <button type="button" aria-label="Zoom out" onclick={() => (zoom = zoomStep(zoom, 1))}>−</button>
+    <button type="button" class="zoom-pct" class:auto={zoom === 1} title="Reset to 100%"
+      aria-label="Reset zoom" onclick={() => (zoom = 1)}>{Math.round(zoom * 100)}%</button>
+    <button type="button" aria-label="Zoom in" onclick={() => (zoom = zoomStep(zoom, -1))}>+</button>
+  </div>
+{/snippet}
 
 <style>
   .cards-view { height:100%; min-height:0; display:flex; flex-direction:column; background:var(--sidebar); }

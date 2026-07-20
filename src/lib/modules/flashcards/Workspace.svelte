@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen, setProjectCategory, continentColors } from './stores';
+  import { project, filePath, setProjectName, selectRecord, schemaLibraryOpen, setProjectCategory, continentColors, previewStatusbar, galleryStatusbar } from './stores';
   import { CONTINENT_COLORS } from './lib/palette';
   import { dragX } from '../../actions/resize';
   import SchemaRecordList from './components/SchemaRecordList.svelte';
@@ -125,10 +125,10 @@
         aria-label="resize preview"
         use:dragX={(dx) => (rightWidth = Math.max(430, Math.min(860, rightWidth - dx)))}
       ></div>
-      <div class="preview-pane">{#if !rightHidden}<CardPreview />{/if}</div>
+      <div class="preview-pane">{#if !rightHidden}<CardPreview hostStatusbar />{/if}</div>
     </div>
   {:else}
-    <div class="cards-body"><CardGallery onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
+    <div class="cards-body"><CardGallery hostStatusbar onOpen={(id) => { selectRecord(id); view = 'records'; }} /></div>
   {/if}
   <footer class="statusbar">
     <span class="filename" class:unsaved={!fileName} title={$filePath ?? 'Not saved to a file yet'}>
@@ -146,6 +146,10 @@
         edited by {lastEditEntry.by} · {relativeTime(lastEditEntry.at, Date.now())}
       </button>
     {/if}
+    <span class="spacer"></span>
+    <div class="sb-controls">
+      {#if view === 'records'}{@render $previewStatusbar?.()}{:else}{@render $galleryStatusbar?.()}{/if}
+    </div>
   </footer>
   <SchemaEditorModal />
   <SchemaLibraryModal />
@@ -207,6 +211,12 @@
   .statusbar { display:flex; align-items:center; gap:8px; flex:none; padding:3px 12px;
     background:var(--surface); border-top:1px solid var(--border); font-size:11px; color:var(--text-muted); }
   .sb-sep { color:var(--border); }
+  /* Right region: the preview/gallery control cluster delegated up from the active pane. Its inner
+     elements keep their own (foreign-scoped) styles; we only tame layout so it sits compactly. */
+  .sb-controls { display:inline-flex; align-items:center; gap:10px; flex:none; }
+  .sb-controls :global(.sb-info) { flex:0 1 auto; }
+  .sb-controls :global(.seg),
+  .sb-controls :global(.zoom-controls) { flex:none; }
   .cards-body { flex:1; min-height:0; }
   .body { flex:1; display:grid; min-height:0; }
   .left, .right, .preview-pane { min-height:0; min-width:0; }

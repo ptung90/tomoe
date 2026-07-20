@@ -25,6 +25,11 @@ export const diskBaselineHash: Writable<string | null> = writable(null);
 // Set when a save is blocked because the file changed externally; drives SaveConflictModal.
 // null = no pending conflict.
 export const saveConflict: Writable<{ path: string; diskText: string } | null> = writable(null);
+// Status-bar control clusters delegated UP from the preview / gallery panes into the single
+// Workspace footer (see CardPreview/CardGallery `hostStatusbar`). Each pane registers its own
+// controls snippet while mounted+hosted; the Workspace footer renders the one for the active view.
+export const previewStatusbar: Writable<import('svelte').Snippet | null> = writable(null);
+export const galleryStatusbar: Writable<import('svelte').Snippet | null> = writable(null);
 // Transient export filter for the print flow: set before window.print(), read by PrintView, then
 // cleared. null = print everything (default). PDF export passes its selection directly instead.
 export const printSelection: Writable<PrintSelection | null> = writable(null);

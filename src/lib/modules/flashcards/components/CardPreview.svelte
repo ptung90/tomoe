@@ -6,7 +6,7 @@
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Pencil from 'lucide-svelte/icons/pencil';
   import Trash2 from 'lucide-svelte/icons/trash-2';
-  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, renameView, deleteView } from '../stores';
+  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, renameView, deleteView, previewStatusbar } from '../stores';
   import { deriveAutoTemplate, recordToCard, chunkRecords, viewLabel } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
   import { applyFlowFit } from '../lib/flow-render';
@@ -17,6 +17,10 @@
   import StyleControls from './StyleControls.svelte';
   import EmptyState from './EmptyState.svelte';
   import type { Card } from '../model';
+
+  // When hosted by the Workspace, this pane's status-bar controls are delegated up to the single
+  // shared footer instead of rendered locally. Standalone (tests) → renders its own footer.
+  let { hostStatusbar = false }: { hostStatusbar?: boolean } = $props();
 
   let paneW = $state(440);
   let previewEl = $state<HTMLDivElement | undefined>(undefined);
@@ -190,6 +194,15 @@
     // (pdfExport awaits document.fonts.ready before capturing).
     document.fonts?.ready?.then(() => { if (previewEl) applyFlowFit(previewEl); });
   });
+
+  // Delegate the status-bar controls up to the Workspace footer while hosted + a card is shown.
+  $effect(() => {
+    if (hostStatusbar && record && schema) {
+      previewStatusbar.set(previewControls);
+      return () => previewStatusbar.set(null);
+    }
+    previewStatusbar.set(null);
+  });
 </script>
 
 <div class="preview" bind:clientWidth={paneW} bind:this={previewEl}>
@@ -285,26 +298,30 @@
         </div>
       </div>
     {/if}
-    <footer class="preview-statusbar">
-      <div class="seg" role="tablist" aria-label="Preview mode">
-        <button type="button" role="tab" aria-selected={mode === 'card'} class:on={mode === 'card'} onclick={() => (mode = 'card')}>Card</button>
-        <button type="button" role="tab" aria-selected={mode === 'sheet'} class:on={mode === 'sheet'} onclick={() => (mode = 'sheet')}>Sheet</button>
-      </div>
-      <span class="sb-info" title="{mode === 'sheet' ? 'Sheet' : 'Card'} size at 100%">
-        {eff.paperSize} · {orient === 'landscape' ? 'landscape' : 'portrait'} · {paper.w}×{paper.h}px
-      </span>
-      <div class="zoom-controls" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(displayScale, 1))}>−</button>
-        <button type="button" class="zoom-pct" class:auto={userZoom === null}
-          title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(displayScale * 100)}%</button>
-        <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(displayScale, -1))}>+</button>
-      </div>
-    </footer>
+    {#if !hostStatusbar}
+      <footer class="preview-statusbar sb-cluster">{@render previewControls()}</footer>
+    {/if}
   {:else}
     <EmptyState icon={ImageIcon} title="No card to preview"
       hint="Select a record on the left to see its card here." />
   {/if}
 </div>
+
+{#snippet previewControls()}
+  <div class="seg" role="tablist" aria-label="Preview mode">
+    <button type="button" role="tab" aria-selected={mode === 'card'} class:on={mode === 'card'} onclick={() => (mode = 'card')}>Card</button>
+    <button type="button" role="tab" aria-selected={mode === 'sheet'} class:on={mode === 'sheet'} onclick={() => (mode = 'sheet')}>Sheet</button>
+  </div>
+  <span class="sb-info" title="{mode === 'sheet' ? 'Sheet' : 'Card'} size at 100%">
+    {eff.paperSize} · {orient === 'landscape' ? 'landscape' : 'portrait'} · {paper.w}×{paper.h}px
+  </span>
+  <div class="zoom-controls" role="group" aria-label="Zoom">
+    <button type="button" aria-label="Zoom out" onclick={() => (userZoom = zoomStep(displayScale, 1))}>−</button>
+    <button type="button" class="zoom-pct" class:auto={userZoom === null}
+      title="Fit to pane" aria-label="Fit to pane" onclick={() => (userZoom = null)}>{Math.round(displayScale * 100)}%</button>
+    <button type="button" aria-label="Zoom in" onclick={() => (userZoom = zoomStep(displayScale, -1))}>+</button>
+  </div>
+{/snippet}
 
 <style>
   .preview { height:100%; min-width:0; display:flex; flex-direction:column; background:var(--bg); }
