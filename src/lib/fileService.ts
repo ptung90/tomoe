@@ -61,7 +61,7 @@ export async function openPath(path: string): Promise<void> {
 }
 
 export async function pickOpen(): Promise<void> {
-  const sel = await open({ multiple: false, filters: [{ name: 'Tomoe / JSON', extensions: ['tomoe.json', 'schema.json', 'json'] }] });
+  const sel = await open({ multiple: false, filters: [{ name: 'Tomoe / JSON', extensions: ['menu.tomoe.json', 'tomoe.json', 'schema.json', 'json'] }] });
   if (typeof sel === 'string') await openPath(sel);
 }
 

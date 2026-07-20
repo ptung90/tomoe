@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const writeFile = vi.fn(async () => {});
-const saveDialog = vi.fn(async () => '/tmp/new.menu.tomoe.json');
-vi.mock('@tauri-apps/plugin-fs', () => ({ writeFile: (...a: any[]) => writeFile(...a), readTextFile: vi.fn() }));
-vi.mock('@tauri-apps/plugin-dialog', () => ({ save: (...a: any[]) => saveDialog(...a) }));
+const writeFile = vi.fn(async (_p: string, _t: unknown) => {});
+const saveDialog = vi.fn(async (): Promise<string | null> => '/tmp/new.menu.tomoe.json');
+vi.mock('@tauri-apps/plugin-fs', () => ({
+  writeFile: (...a: unknown[]) => (writeFile as (...x: unknown[]) => unknown)(...a),
+}));
+vi.mock('@tauri-apps/plugin-dialog', () => ({ save: (...a: unknown[]) => (saveDialog as (...x: unknown[]) => unknown)(...a) }));
 
 import * as S from '../src/lib/modules/menu/stores';
 import { saveToPath, pickSaveTo } from '../src/lib/modules/menu/io/saveService';
