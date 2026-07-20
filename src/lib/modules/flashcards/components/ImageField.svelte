@@ -1,14 +1,24 @@
 <script lang="ts">
   import SearchIcon from 'lucide-svelte/icons/search';
+  import ExternalLink from 'lucide-svelte/icons/external-link';
   import Crop from 'lucide-svelte/icons/crop';
+  import { openUrl } from '@tauri-apps/plugin-opener';
   import ImageSearchModal from './ImageSearchModal.svelte';
   import CropModal from './CropModal.svelte';
   import { showToast } from '../../../shell';
 
-  let { value = '', onChange }: { value?: string; onChange: (url: string) => void } = $props();
+  let { value = '', query = '', onChange }:
+    { value?: string; query?: string; onChange: (url: string) => void } = $props();
   let fileInput: HTMLInputElement;
   let showSearch = $state(false);
   let showCrop = $state(false);
+
+  const pinterestUrl = $derived(
+    `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(query.trim())}&rs=typed`,
+  );
+  function openPinterest() {
+    openUrl(pinterestUrl).catch(() => showToast('Could not open Pinterest', 'error'));
+  }
 
   function cssUrl(v: string): string {
     // percent-encode chars that would break url("...") — quotes, parens, backslash, whitespace.
@@ -65,6 +75,9 @@
       <button type="button" onclick={() => fileInput.click()}>Pick…</button>
       <button type="button" onclick={paste}>Paste</button>
       <button type="button" onclick={() => (showSearch = true)}><SearchIcon size={13} /> Search</button>
+      <button type="button" disabled={!query.trim()}
+              title={query.trim() ? `Search Pinterest for "${query.trim()}"` : 'No search term for this record'}
+              onclick={openPinterest}><ExternalLink size={13} /> Pinterest</button>
       {#if value}<button type="button" onclick={() => (showCrop = true)}><Crop size={13} /> Edit image</button>{/if}
       {#if value}<button type="button" onclick={() => onChange('')}>Clear</button>{/if}
     </div>
@@ -90,5 +103,6 @@
   .btns { display:flex; gap:6px; }
   .btns button { border:1px solid var(--border); background:transparent; color:var(--text);
     border-radius:6px; padding:4px 10px; font:inherit; }
-  .btns button:hover { background:var(--accent-weak); color:var(--accent); }
+  .btns button:hover:not(:disabled) { background:var(--accent-weak); color:var(--accent); }
+  .btns button:disabled { opacity:.5; cursor:default; }
 </style>

@@ -8,6 +8,7 @@
   import { confirm } from '@tauri-apps/plugin-dialog';
   import { project, selectedRecordId, setField, deleteRecord, duplicateRecord, selectAdjacentRecord } from '../stores';
   import { keyedDebounce } from '../../../debounce';
+  import { resolveQuery } from '../lib/imageAutofill';
   import RecordField from './RecordField.svelte';
   import EmptyState from './EmptyState.svelte';
   import AutofillImagesModal from './AutofillImagesModal.svelte';
@@ -31,6 +32,14 @@
   $effect(() => {
     const id = $selectedRecordId;
     if (id !== lastId) { debounced.flushAll(); lastId = id; }
+  });
+  // Search term for image lookups (Pinterest button, etc.) = the record's first
+  // non-image text field, resolved at the active locale — same default the
+  // auto-fill modal uses as its query source.
+  const imageQuery = $derived.by(() => {
+    if (!record || !schema) return '';
+    const key = schema.fields.find((f) => f.type !== 'image')?.key;
+    return key ? resolveQuery(record, key, $project.activeLocale) : '';
   });
   let showAutofill = $state(false);
   const canAutofill = $derived(!!schema
@@ -89,6 +98,7 @@
             value={record.fields[f.key] ?? ''}
             locales={$project.locales}
             activeLocale={$project.activeLocale}
+            imageQuery={imageQuery}
             onChange={(val, locale) => onFieldChange(f.key, val, locale)} />
         {/each}
         {#if schema.fields.length === 0}
