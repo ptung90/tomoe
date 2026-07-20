@@ -6,7 +6,9 @@ import * as cardMapping from './cardMapping';
 import * as cardOps from './cardOps';
 import * as ai from './lib/ai';
 import { mergeStyle } from './lib/style';
+import { settingsToPreset, stripPresetKeys, type StylePreset } from './lib/stylePreset';
 import { parseSchemaExport, type SchemaExportPayload, type SchemaLibraryEntry } from './io/schemaIO';
+import { parseStylePreset, type StylePresetEntry } from './io/stylePresetIO';
 import { hashContent } from './lib/fileSync';
 import { CONTINENT_COLORS } from './lib/palette';
 import type { PrintSelection } from './lib/printCards';
@@ -154,6 +156,63 @@ export function renameLibraryEntry(id: string, name: string): void {
     e.id === id ? { ...e, name, schema: { ...e.schema, name } } : e);
   persistSchemaLibrary(next);
   _schemaLibraryVersion.update((n) => n + 1);
+}
+
+// ── Style Preset Library (localStorage, app-level — mirrors the Schema Library above) ────────
+const STYLE_PRESET_KEY = 'tomoe.flashcards.stylePresetLibrary';
+function loadStylePresets(): StylePresetEntry[] {
+  try { const raw = localStorage.getItem(STYLE_PRESET_KEY); const a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }
+  catch { return []; }
+}
+function persistStylePresets(list: StylePresetEntry[]): void {
+  try { localStorage.setItem(STYLE_PRESET_KEY, JSON.stringify(list)); } catch { /* ignore storage errors */ }
+}
+const _stylePresetVersion = writable(0);
+export const stylePresetLibrary: Readable<StylePresetEntry[]> = derived(_stylePresetVersion, () => loadStylePresets());
+/** Drives the StylePresetModal open/closed (UI only, not in the document). */
+export const stylePresetOpen: Writable<boolean> = writable(false);
+
+/** Snapshot the CURRENT project's Global style into the library as a new named preset. */
+export function saveStylePreset(name: string): string {
+  const id = uid('sp');
+  const entry: StylePresetEntry = { id, name, addedAt: Date.now(), preset: settingsToPreset(get(project).settings) };
+  persistStylePresets([entry, ...loadStylePresets()]);
+  _stylePresetVersion.update((n) => n + 1);
+  return id;
+}
+export function deleteStylePreset(id: string): void {
+  persistStylePresets(loadStylePresets().filter((e) => e.id !== id));
+  _stylePresetVersion.update((n) => n + 1);
+}
+export function renameStylePreset(id: string, name: string): void {
+  persistStylePresets(loadStylePresets().map((e) => (e.id === id ? { ...e, name } : e)));
+  _stylePresetVersion.update((n) => n + 1);
+}
+/** Parse + add a portable `.tomoestyle.json` file's contents to the library. Never throws. */
+export function importStylePresetText(text: string): { ok: boolean; name?: string; error?: string } {
+  try {
+    const { name, preset } = parseStylePreset(text);
+    const entry: StylePresetEntry = { id: uid('sp'), name, addedAt: Date.now(), preset };
+    persistStylePresets([entry, ...loadStylePresets()]);
+    _stylePresetVersion.update((n) => n + 1);
+    return { ok: true, name };
+  } catch (e) { return { ok: false, error: e instanceof Error ? e.message : 'Not a valid Tomoe style preset file' }; }
+}
+
+/** Apply a preset project-wide in ONE undo step: always write Global; optionally strip the preset's
+ *  keys from every view (template.style) and/or card (card.style) so they inherit the new Global.
+ *  Border + page + layout overrides are always preserved (they're not preset keys). */
+export function applyStylePreset(preset: StylePreset, opts: { syncViews: boolean; clearCards: boolean }): void {
+  let np = cardMapping.applySettings(get(project), preset);
+  if (opts.syncViews) {
+    np = { ...np, schemas: np.schemas.map((s) => ({
+      ...s, cardTemplates: s.cardTemplates.map((t) => (t.style ? { ...t, style: stripPresetKeys(t.style) } : t)),
+    })) };
+  }
+  if (opts.clearCards) {
+    np = { ...np, cards: np.cards.map((c) => (c.style ? { ...c, style: stripPresetKeys(c.style) } : c)) };
+  }
+  commit(np);
 }
 /** Replace a library entry's fields (immutable, deep-cloned). cardTemplates are left as-is — a
  *  later Insert + recordToCard tolerates cardTemplate field keys that no longer exist. Persisted. */
