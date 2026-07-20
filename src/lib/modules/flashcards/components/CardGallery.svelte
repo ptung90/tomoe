@@ -11,7 +11,7 @@
   import { project, schemaEditorOpen, cardEditorOpen, packAllForSchema, regenerateCard, deleteCard, applyCardToRecords, galleryStatusbar } from '../stores';
   import { deriveAutoTemplate, recordToCard, viewLabel } from '../cardMapping';
   import { isCardStale } from '../cardOps';
-  import { buildCardHTML, buildSheetHTML, sheetLayout } from '../lib/card-render';
+  import { buildCardHTML, buildSheetHTML, buildPackedSheetHTML, sheetLayout } from '../lib/card-render';
   import { collectPrintSheets } from '../lib/printCards';
   import { zoomStep } from '../lib/zoom';
   import { resolveStyle } from '../lib/style';
@@ -125,7 +125,9 @@
           <div class="sheet-thumb">
             <div class="thumb-frame" style={`width:${Math.round(it.sheet.lay.sheetW * it.scale)}px;height:${Math.round(it.sheet.lay.sheetH * it.scale)}px;`}>
               <div class="thumb-scaler" style={`transform:scale(${it.scale});width:${it.sheet.lay.sheetW}px;height:${it.sheet.lay.sheetH}px;`}>
-                {@html buildSheetHTML(it.sheet.cards, it.sheet.lay, it.sheet.settings, $project.activeLocale)}
+                {@html it.sheet.pack
+                  ? buildPackedSheetHTML(it.sheet.pack, it.sheet.lay.sheetW, it.sheet.lay.sheetH, $project.activeLocale)
+                  : buildSheetHTML(it.sheet.cards, it.sheet.lay, it.sheet.settings, $project.activeLocale)}
               </div>
             </div>
             <span class="thumb-cap">{it.name} · page {it.page}</span>

@@ -15,7 +15,8 @@
 .fc-section__content li { margin-bottom:1px; }
 .fc-image-slot { background:transparent; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
 .fc-image-slot .empty-placeholder { color:#9ca3af; font-size:11px; text-align:center; pointer-events:none; }
-.fc-image-slot > div.img-bg { position:absolute; inset:0; }
+.fc-image-slot > div.img-bg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.fc-image-slot > div.img-bg > img.fc-img { display:block; box-sizing:border-box; }
 .fc-img-label { padding:2px 5px; font-size:0.78em; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* Grid overrides for the in-scope layouts */

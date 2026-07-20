@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, DEFAULT_SETTINGS, type Project, type Schema, type CardTemplate, type Card } from '../src/lib/modules/flashcards/model';
 import * as cardOps from '../src/lib/modules/flashcards/cardOps';
-import { collectPrintCards, collectPrintSheets, mergeLeftoverSheets, type Sheet } from '../src/lib/modules/flashcards/lib/printCards';
+import { collectPrintCards, collectPrintSheets, mergeLeftoverSheets, packLeftovers, type Sheet, type PackItem } from '../src/lib/modules/flashcards/lib/printCards';
 import { sheetLayout } from '../src/lib/modules/flashcards/lib/card-render';
 
 function proj(layout: string, n: number, templatePatch: Partial<CardTemplate> = {}): Project {
@@ -170,15 +170,20 @@ describe('collectPrintSheets — grouped by view', () => {
     expect(sheets[1].cards).toHaveLength(4); // merged partial page: 1 (sA leftover) + 3 (sB)
   });
 
-  it('does not merge partials with a different layout (different cardsPerPage)', () => {
+  it('flow-packs different-grid trailing partials (same paper+style), keeping every card at its native size', () => {
     const p = newProject();
     p.schemas.push(schemaWithCardsPerPage('sA', 4), schemaWithCardsPerPage('sB', 6));
     for (let i = 0; i < 3; i++) p.records.push({ id: 'a' + i, schemaId: 'sA', fieldsHash: '', fields: { title: { en: 'A' + i, vi: '' } } });
     for (let i = 0; i < 3; i++) p.records.push({ id: 'b' + i, schemaId: 'sB', fieldsHash: '', fields: { title: { en: 'B' + i, vi: '' } } });
     const sheets = collectPrintSheets(p);
-    expect(sheets).toHaveLength(2); // lone partials, different layout keys — kept separate
-    expect(sheets.some((s) => s.cards.length === 3 && s.lay.perPage === 4)).toBe(true);
-    expect(sheets.some((s) => s.cards.length === 3 && s.lay.perPage === 6)).toBe(true);
+    const packed = sheets.filter((s) => s.pack);
+    expect(packed.length).toBeGreaterThanOrEqual(1);
+    // every leftover card appears exactly once across the packed page(s)
+    const ids = packed.flatMap((s) => s.pack!.map((it) => it.card.recordId)).sort();
+    expect(ids).toEqual(['a0', 'a1', 'a2', 'b0', 'b1', 'b2']);
+    // native sizes preserved (not resized to one grid): sA (4-up=2×2) cells are taller than sB (6-up=2×3)
+    const byRec = new Map(packed.flatMap((s) => s.pack!).map((it) => [it.card.recordId, it]));
+    expect(byRec.get('a0')!.cellH).toBeGreaterThan(byRec.get('b0')!.cellH);
   });
 
   it('does not merge same-geometry partials whose views have DIFFERENT resolved style (e.g. border width)', () => {
@@ -220,6 +225,18 @@ describe('mergeLeftoverSheets (pure)', () => {
     expect(out).toHaveLength(1);
     expect(out[0].cards.map((c) => c.id)).toEqual(['c1', 'c2', 'c3', 'c4']);
   });
+  it('flow-packs partials of different grids, keeping each card native size (not resized to one grid)', () => {
+    const small = fakeSheet([fakeCard('c1')], 4);            // 2×2 = 4-up (bigger cells)
+    const dense = fakeSheet([fakeCard('c2')], 12);           // 3×4 = 12-up (smaller cells)
+    const out = mergeLeftoverSheets([small, dense]);
+    const packed = out.filter((s) => s.pack);
+    expect(packed).toHaveLength(1);                          // 2 small cards fit one page
+    const items = packed[0].pack!;
+    expect(items.map((it) => it.card.id).sort()).toEqual(['c1', 'c2']);
+    const c1 = items.find((it) => it.card.id === 'c1')!, c2 = items.find((it) => it.card.id === 'c2')!;
+    expect(c1.cellW).toBeGreaterThan(c2.cellW);              // c1 keeps the roomy 4-up cell, c2 the tight 12-up cell
+    expect(c1.cellH).toBeGreaterThan(c2.cellH);
+  });
   it('a lone partial with a unique layout keeps its own page, after the full sheets', () => {
     const full = fakeSheet([fakeCard('c1'), fakeCard('c2')], 2);
     const p1 = fakeSheet([fakeCard('c3')], 4);
@@ -234,5 +251,28 @@ describe('mergeLeftoverSheets (pure)', () => {
     const input = [p1, p2];
     mergeLeftoverSheets(input);
     expect(input).toEqual([p1, p2]);
+  });
+});
+
+describe('packLeftovers (pure shelf-pack)', () => {
+  const item = (id: string, w: number, h: number): PackItem => ({ card: fakeCard(id), cellW: w, cellH: h, settings: DEFAULT_SETTINGS });
+
+  it('packs multiple items per row when they fit the width', () => {
+    const pages = packLeftovers([item('a', 40, 40), item('b', 40, 40)], 100, 100);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].map((it) => it.card.id)).toEqual(['a', 'b']);
+  });
+  it('wraps to a new row past the width, and a new page past the height', () => {
+    // 60-wide items → one per row (two would be 120 > 100); 60-tall → one row per page (two rows = 120 > 100)
+    const pages = packLeftovers([item('a', 60, 60), item('b', 60, 60)], 100, 100);
+    expect(pages).toHaveLength(2);
+    expect(pages[0].map((it) => it.card.id)).toEqual(['a']);
+    expect(pages[1].map((it) => it.card.id)).toEqual(['b']);
+  });
+  it('keeps each item at its own size (never resizes)', () => {
+    const pages = packLeftovers([item('big', 50, 60), item('small', 50, 20)], 100, 100);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].find((it) => it.card.id === 'big')!.cellH).toBe(60);
+    expect(pages[0].find((it) => it.card.id === 'small')!.cellH).toBe(20);
   });
 });

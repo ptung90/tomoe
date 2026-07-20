@@ -14,8 +14,11 @@ export interface Settings {
   border: { width: number; style: string; color: string; radius: number };
   /** backgroundSize/Position drive object-fit; borderRadius (px) rounds the image corners and
    *  backgroundColor fills behind it — the latter two "frame" images whose background can't be
-   *  cleanly removed (a colored rounded card instead of a raw cut-out). */
-  image: { backgroundSize: string; backgroundPosition: string; borderRadius: number; backgroundColor: string };
+   *  cleanly removed (a colored rounded card instead of a raw cut-out).
+   *  borderWidth/Style/Color draw a border on the image element itself: with fit=contain the
+   *  element shrinks to the image (aspect preserved) so the border hugs it; width 0 = no border. */
+  image: { backgroundSize: string; backgroundPosition: string; borderRadius: number; backgroundColor: string;
+           borderWidth: number; borderStyle: string; borderColor: string };
   titleFont: FontSpec; contentFont: FontSpec;
   pdfImageFormat: 'jpeg'|'png'; pdfJpegQuality: number; pdfScale: number; customCss: string;
 }
@@ -48,7 +51,8 @@ export const DEFAULT_SETTINGS: Settings = {
   paraGap: 2,
   textVAlign: 'middle',
   border: { width: 4, style: 'double', color: '#6B21A8', radius: 0 },
-  image: { backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 0, backgroundColor: 'transparent' },
+  image: { backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 0, backgroundColor: 'transparent',
+           borderWidth: 0, borderStyle: 'solid', borderColor: '#000000' },
   titleFont: { family: 'Lexend', size: 14, weight: 700, color: '#1a1a1a', lineHeight: 1.0 },
   contentFont: { family: 'Lexend', size: 12, weight: 400, color: '#1a1a1a', lineHeight: 1.1 },
   pdfImageFormat: 'jpeg', pdfJpegQuality: 0.85, pdfScale: 2, customCss: '',

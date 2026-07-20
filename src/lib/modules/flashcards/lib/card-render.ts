@@ -109,32 +109,47 @@ export function getGridTemplateStyle(layout: string, sp: GridSplit): string {
   return generator ? generator(sp.row, sp.col, sp.inner) : '';
 }
 
+/** Fit + position for the inner <img>. cover fills the slot and crops (border tracks the slot box);
+ *  contain/auto keep the intrinsic ratio and let the element shrink to the image, so a border hugs
+ *  the visible picture instead of the empty slot. object-position only bites when the box is fixed
+ *  (cover); contain is centred by the flex wrapper (.img-bg). */
+function imgFitStyle(size: string, position: string): string {
+  if (size === 'cover')
+    return 'width:100%;height:100%;object-fit:cover;object-position:' + position + ';';
+  return 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;';
+}
+
 function resolveImgStyle(img: CardImage | undefined, globalImgStyle: string): string {
   if (!img || img.size == null) return globalImgStyle;
-  return 'background-size:' + img.size + ';background-position:center;' +
+  return imgFitStyle(img.size, 'center') +
     (img.size !== 'cover' && img.color ? 'background-color:' + img.color + ';' : '');
 }
 
-/** Optional per-image "frame" CSS shared by grid + flow renders: rounds the corners and/or fills a
- *  solid background behind the image. Emitted only when set (radius > 0, colour not transparent),
- *  so default images stay unstyled. Trailing semicolons kept so it appends cleanly. */
+/** Optional per-image "frame" CSS shared by grid + flow renders: rounds the corners, fills a solid
+ *  background behind the image, and/or draws a border. Emitted only when set (radius > 0, colour not
+ *  transparent, border width > 0), so default images stay unstyled. In the grid path this rides on
+ *  the inner <img>, so with fit=contain the border/radius hug the picture, not the empty slot.
+ *  Trailing semicolons kept so it appends cleanly. */
 export function imageFrameStyle(image: Settings['image']): string {
   const radius = image.borderRadius ?? 0;
   const color = image.backgroundColor ?? 'transparent';
+  const bw = image.borderWidth ?? 0;
   return (radius > 0 ? 'border-radius:' + radius + 'px;' : '') +
-    (color && color !== 'transparent' ? 'background-color:' + color + ';' : '');
+    (color && color !== 'transparent' ? 'background-color:' + color + ';' : '') +
+    (bw > 0 ? 'border:' + bw + 'px ' + (image.borderStyle || 'solid') + ' ' + (image.borderColor || '#000000') + ';' : '');
 }
 
 function buildSlots(card: Card, slotCount: number, imgStyle: string, frameStyle: string, forPrint = false): string {
   return Array.from({ length: slotCount }, (_, i) => {
     const img = card.images.find((im) => im.slot === i);
     if (img && img.url) {
+      // Inner <img> (not a background-image div) so a border/radius can hug the picture while
+      // fit=contain preserves its aspect ratio; .img-bg is the flex-centering wrapper.
       return (
-        '<div class="fc-image-slot fc-image-slot-' + i +
-        '"><div class="img-bg" style="background-image:url(\'' + esc(img.url) + '\');' +
-        resolveImgStyle(img, imgStyle) +
-        'background-repeat:no-repeat;width:100%;height:100%;' + frameStyle + '"></div>' +
-        '</div>'
+        '<div class="fc-image-slot fc-image-slot-' + i + '"><div class="img-bg">' +
+        '<img class="fc-img" alt="" src="' + esc(img.url) + '" style="' +
+        resolveImgStyle(img, imgStyle) + frameStyle + '" />' +
+        '</div></div>'
       );
     }
     if (forPrint) return '<div class="fc-image-slot fc-image-slot-' + i + '" style="background:transparent;"></div>';
@@ -207,12 +222,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const split: GridSplit = card.imageGridSplit ||
     LAYOUT_SPLIT_DEFAULTS[card.layout] || { row: 50, col: 50, inner: 50 };
 
-  const imgStyle =
-    'background-size:' +
-    s.image.backgroundSize +
-    ';background-position:' +
-    s.image.backgroundPosition +
-    ';';
+  const imgStyle = imgFitStyle(s.image.backgroundSize, s.image.backgroundPosition);
 
   const frameStyle = imageFrameStyle(s.image);
   const slots = buildSlots(card, slotCount, imgStyle, frameStyle, forPrint);
@@ -415,4 +425,19 @@ export function buildSheetHTML(cards: Card[], lay: { cols: number; rows: number;
   const rowTrack = lay.fillCell ? 'repeat(' + rows + ',1fr)' : 'repeat(' + rows + ',' + cellH + 'px)';
   const justify = lay.fillCell ? '' : 'justify-content:start;align-content:start;';
   return `<div class="fc-sheet" style="width:${w}px;height:${h}px;display:grid;grid-template-columns:${colTrack};grid-template-rows:${rowTrack};${justify}background:#fff;overflow:hidden;">${cells}</div>`;
+}
+
+/** Render a flow-PACKED leftover sheet: cards from different-grid views combined on one page, each
+ *  kept at its OWN native cell size + style (no uniform grid, no resize). Flex-wrap from the top-left
+ *  mirrors printCards' packLeftovers() row-fill, so what paginates is what renders. */
+export function buildPackedSheetHTML(
+  items: { card: Card; cellW: number; cellH: number; settings: Settings }[],
+  sheetW: number, sheetH: number, locale: string, forPrint = false,
+): string {
+  const cells = items.map((it) =>
+    `<div class="fc-sheet-cell" style="width:${it.cellW}px;height:${it.cellH}px;overflow:hidden;">` +
+    buildCardHTML(it.card, resolveStyle(it.settings, it.card.style), locale, forPrint, { w: it.cellW, h: it.cellH }) +
+    `</div>`).join('');
+  return `<div class="fc-sheet fc-sheet--packed" style="width:${sheetW}px;height:${sheetH}px;` +
+    `display:flex;flex-wrap:wrap;align-content:flex-start;background:#fff;overflow:hidden;">${cells}</div>`;
 }

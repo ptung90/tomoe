@@ -233,6 +233,15 @@
         </span>
         <span class="tool" title="Image corner radius (px)"><Spline size={14} /><input aria-label="Image corner radius" type="number" min="0"
           value={eff.image.borderRadius} onchange={(e) => write({ image: { borderRadius: num(e) } })} /></span>
+        <span class="tool" title="Image border width (px)"><Square size={14} /><input aria-label="Image border width" type="number" min="0"
+          value={eff.image.borderWidth ?? 0} onchange={(e) => write({ image: { borderWidth: num(e) } })} /></span>
+        <span class="tool" title="Image border style"><SquareDashed size={14} />
+          <select aria-label="Image border style" value={eff.image.borderStyle ?? 'solid'} onchange={(e) => write({ image: { borderStyle: str(e) } })}>
+            {#each ['solid','dashed','dotted','double'] as st (st)}<option value={st}>{st}</option>{/each}
+          </select>
+        </span>
+        <span class="tool" title="Image border color"><ColorField ariaLabel="Image border color" value={eff.image.borderColor ?? '#000000'}
+          oninput={(hex) => write({ image: { borderColor: hex } })} /></span>
         <span class="tool" title="Fill a background behind the image (for images whose background can't be removed)">
           <input type="checkbox" aria-label="Fill image background" checked={imgFillOn} onchange={toggleImgFill} />
           <ColorField ariaLabel="Image background color" value={imgFillColor} disabled={!imgFillOn}

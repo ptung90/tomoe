@@ -78,29 +78,66 @@ function card(partial: Partial<Card>): Card {
   return { id: 'c1', layout: '1top-1bot', imageHeightPercent: 50, images: [], title: '', sections: [], ...partial };
 }
 
-// Style of the inner `.img-bg` div (isolates the image element from the card border).
-function imgBgStyle(html: string): string {
-  return /img-bg" style="([^"]*)"/.exec(html)?.[1] ?? '';
+// Inline style of the inner `<img class="fc-img">` (the element that carries fit + frame,
+// isolated from the card border so a border/radius hugs the image itself).
+function fcImgStyle(html: string): string {
+  return /class="fc-img"[^>]*\sstyle="([^"]*)"/.exec(html)?.[1] ?? '';
 }
 
-describe('buildCardHTML — image frame (border-radius + background fill)', () => {
+describe('buildCardHTML — image frame (border-radius + background fill + border)', () => {
   const withImg = () => card({ layout: '1top-1bot', images: [{ slot: 0, url: 'a.png' }], sections: [{ id: 's1', label: '', content: 'hi' }] });
 
-  it('applies image border-radius and background-color to the image div when set', () => {
+  it('renders the image as an inner <img class="fc-img"> (not a background-image div)', () => {
+    const html = buildCardHTML(withImg(), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('class="img-bg"');
+    expect(html).toContain('<img class="fc-img"');
+    expect(html).toContain('src="a.png"');
+    expect(html).not.toContain('background-image');
+  });
+
+  it('applies image border-radius and background-color to the <img> when set', () => {
     const html = buildCardHTML(withImg(), {
       ...DEFAULT_SETTINGS,
       image: { ...DEFAULT_SETTINGS.image, borderRadius: 14, backgroundColor: '#eef' },
     }, 'en');
-    const style = imgBgStyle(html);
+    const style = fcImgStyle(html);
     expect(style).toContain('border-radius:14px');
     expect(style).toContain('background-color:#eef');
   });
 
-  it('omits border-radius (0) and background-color (transparent) by default', () => {
-    const html = buildCardHTML(withImg(), DEFAULT_SETTINGS, 'en');
-    const style = imgBgStyle(html);
+  it('applies an image border (width/style/color) to the <img> when width > 0', () => {
+    const html = buildCardHTML(withImg(), {
+      ...DEFAULT_SETTINGS,
+      image: { ...DEFAULT_SETTINGS.image, borderWidth: 2, borderStyle: 'solid', borderColor: '#333333' },
+    }, 'en');
+    expect(fcImgStyle(html)).toContain('border:2px solid #333333');
+  });
+
+  it('omits border-radius (0), background-color (transparent) and border (width 0) by default', () => {
+    const style = fcImgStyle(buildCardHTML(withImg(), DEFAULT_SETTINGS, 'en'));
     expect(style).not.toContain('border-radius');
     expect(style).not.toContain('background-color');
+    expect(style).not.toMatch(/border:/);
+  });
+
+  it('fit=contain keeps aspect ratio (object-fit:contain + max-width) so a border hugs the image', () => {
+    const html = buildCardHTML(withImg(), {
+      ...DEFAULT_SETTINGS, image: { ...DEFAULT_SETTINGS.image, backgroundSize: 'contain' },
+    }, 'en');
+    const style = fcImgStyle(html);
+    expect(style).toContain('object-fit:contain');
+    expect(style).toContain('max-width:100%');
+    expect(style).not.toContain('width:100%;height:100%');
+  });
+
+  it('fit=cover fills the slot (object-fit:cover + full size + object-position)', () => {
+    const html = buildCardHTML(withImg(), {
+      ...DEFAULT_SETTINGS, image: { ...DEFAULT_SETTINGS.image, backgroundSize: 'cover', backgroundPosition: 'top' },
+    }, 'en');
+    const style = fcImgStyle(html);
+    expect(style).toContain('object-fit:cover');
+    expect(style).toContain('width:100%;height:100%');
+    expect(style).toContain('object-position:top');
   });
 });
 

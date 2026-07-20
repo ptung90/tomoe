@@ -3,7 +3,7 @@ import { toCanvas } from 'html-to-image';
 import './card-render.css';
 import type { Project } from '../model';
 import { collectPrintSheets, type PrintSelection } from './printCards';
-import { buildSheetHTML, PAPER_MM } from './card-render';
+import { buildSheetHTML, buildPackedSheetHTML, PAPER_MM } from './card-render';
 import { applyFlowFit } from './flow-render';
 import { withTimeout, heapMB } from './perf';
 import { slugifyName } from './filename';
@@ -52,7 +52,9 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
       const pageH = landscape ? paperMm.w : paperMm.h;
       const px = { w: sheet.lay.sheetW, h: sheet.lay.sheetH };
 
-      host.innerHTML = buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, project.activeLocale, true, px);
+      host.innerHTML = sheet.pack
+        ? buildPackedSheetHTML(sheet.pack, sheet.lay.sheetW, sheet.lay.sheetH, project.activeLocale, true)
+        : buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, project.activeLocale, true, px);
       const page = host.firstElementChild as HTMLElement;
 
       await document.fonts?.ready;
