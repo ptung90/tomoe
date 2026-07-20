@@ -57,6 +57,21 @@ export function resetContinentColors(): void {
   try { localStorage.removeItem(CONTINENT_COLORS_KEY); } catch { /* ignore */ }
 }
 
+/** The style patch a continent contributes. v1: just the border colour (from the remappable
+ *  `continentColors` store). Isolated so a continent can contribute more later — a richer
+ *  StyleOverrides — without a data-model change (see spec Feature B extensibility). */
+function continentPatch(key: string): StyleOverrides {
+  return { border: { color: get(continentColors)[key] } };
+}
+/** Set the project's continent (or null = none) in ONE undo step. A continent auto-applies its
+ *  signature colour to Global border; None only clears the category (border colour left as-is). */
+export function setProjectCategory(key: string | null): void {
+  const p = get(project);
+  if (!key) { commit({ ...p, category: undefined }); return; }
+  const np = cardMapping.applySettings(p, continentPatch(key));
+  commit({ ...np, category: key });
+}
+
 // ── AI config (localStorage, NOT in the document) ───────────────────────
 function loadAiConfig(): ai.AiConfig {
   try {
