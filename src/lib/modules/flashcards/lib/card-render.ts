@@ -505,3 +505,17 @@ export function buildPackedSheetHTML(
   return `<div class="fc-sheet fc-sheet--packed" style="width:${sheetW}px;height:${sheetH}px;` +
     `display:flex;flex-wrap:wrap;align-content:flex-start;background:#fff;overflow:hidden;">${cells}</div>`;
 }
+
+/** Compact bin-packed page: cards placed at exact px positions (x/y/w/h from the packer), so mixed
+ *  views/sizes tile tightly to save paper. Each card keeps its own resolved style + aspect. */
+export function buildAbsSheetHTML(
+  items: { card: Card; x: number; y: number; w: number; h: number; settings: Settings }[],
+  sheetW: number, sheetH: number, locale: string, forPrint = false,
+): string {
+  const cells = items.map((it) =>
+    `<div class="fc-sheet-cell" style="position:absolute;left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;overflow:hidden;">` +
+    buildCardHTML(it.card, resolveStyle(it.settings, it.card.style), locale, forPrint, { w: it.w, h: it.h }) +
+    `</div>`).join('');
+  return `<div class="fc-sheet fc-sheet--abs" style="position:relative;width:${sheetW}px;height:${sheetH}px;` +
+    `background:#fff;overflow:hidden;">${cells}</div>`;
+}

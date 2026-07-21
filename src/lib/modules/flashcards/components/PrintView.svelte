@@ -2,7 +2,7 @@
   import '../lib/card-render.css';
   import { project, printSelection } from '../stores';
   import { collectPrintSheets } from '../lib/printCards';
-  import { buildSheetHTML, buildPackedSheetHTML } from '../lib/card-render';
+  import { buildSheetHTML, buildPackedSheetHTML, buildAbsSheetHTML } from '../lib/card-render';
   import { applyFlowFit } from '../lib/flow-render';
 
   const sheets = $derived(collectPrintSheets($project, $printSelection ?? undefined));
@@ -29,7 +29,9 @@
     <div class="print-page" style={`width:${sheet.lay.sheetW}px;height:${sheet.lay.sheetH}px;`}>
       {@html sheet.pack
         ? buildPackedSheetHTML(sheet.pack, sheet.lay.sheetW, sheet.lay.sheetH, $project.activeLocale, true)
-        : buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, $project.activeLocale, true)}
+        : sheet.abs
+          ? buildAbsSheetHTML(sheet.abs, sheet.lay.sheetW, sheet.lay.sheetH, $project.activeLocale, true)
+          : buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, $project.activeLocale, true)}
     </div>
   {/each}
 </div>

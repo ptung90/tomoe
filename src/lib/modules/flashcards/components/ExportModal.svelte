@@ -6,7 +6,7 @@
   import { writeFile } from '@tauri-apps/plugin-fs';
   import { project, printSelection } from '../stores';
   import { deriveAutoTemplate, viewLabel, schemaTitleKey } from '../cardMapping';
-  import { collectPrintSheets } from '../lib/printCards';
+  import { collectPrintSheets, collectPackedSheets } from '../lib/printCards';
   import { exportCardsPdf, pdfFileName, pdfStamp } from '../lib/pdfExport';
   import { heapSuffix } from '../lib/perf';
   import { resolveLocale } from '../lib/card-render';
@@ -26,6 +26,8 @@
   let selViews = $state<Set<string>>(new Set());
   let selRecords = $state<Set<string>>(new Set());
   let exporting = $state(false);
+  // Compact = paper-saving 2D bin-pack for the PDF (mixes views/sizes, per-page orientation). Off = classic per-view grid.
+  let compact = $state(false);
 
   // Default to "everything selected" each time the modal opens.
   $effect(() => {
@@ -33,7 +35,7 @@
   });
 
   const selection = $derived({ views: selViews, records: selRecords });
-  const pageCount = $derived(open ? collectPrintSheets($project, selection).length : 0);
+  const pageCount = $derived(open ? (compact ? collectPackedSheets : collectPrintSheets)($project, selection).length : 0);
 
   function recordLabel(rec: (typeof groups)[number]['records'][number], schema: (typeof groups)[number]['schema']): string {
     const key = schemaTitleKey(schema);
@@ -58,7 +60,7 @@
     if (!pageCount || exporting) return;
     exporting = true;
     try {
-      const bytes = await exportCardsPdf($project, selection);
+      const bytes = await exportCardsPdf($project, selection, { compact });
       if (!bytes) { showToast('Nothing selected to export', 'error'); return; }
       const path = await saveDialog({ defaultPath: pdfFileName($project.projectName, pdfStamp(new Date())), filters: [{ name: 'PDF', extensions: ['pdf'] }] });
       if (!path) return;
@@ -79,6 +81,10 @@
         <button type="button" class="close" aria-label="close" onclick={onClose}><X size={16} /></button>
       </header>
       <div class="body">
+        <label class="opt" title="Xếp gọn mọi thẻ (mọi view) vào ít trang nhất để tiết kiệm giấy — trộn cỡ/chiều giấy, giữ tỉ lệ. Áp dụng cho Save PDF.">
+          <input type="checkbox" checked={compact} onchange={() => (compact = !compact)} />
+          <span>Xếp gọn tiết kiệm giấy (PDF)</span>
+        </label>
         {#each groups as g (g.schema.id)}
           <section class="group">
             {#if groups.length > 1}<h3 class="schema-name">{g.schema.name}</h3>{/if}
@@ -142,6 +148,7 @@
   .title { font-weight:600; }
   .close { border:none; background:transparent; color:var(--text-muted); }
   .body { padding:12px 14px; overflow:auto; display:flex; flex-direction:column; gap:16px; }
+  .opt { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; cursor:pointer; }
   .schema-name { font-size:13px; margin:0 0 6px; }
   .group { display:flex; flex-direction:column; gap:10px; }
   .sub-head { display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:700;

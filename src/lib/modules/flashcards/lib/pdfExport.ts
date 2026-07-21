@@ -2,8 +2,8 @@ import { jsPDF } from 'jspdf';
 import { toCanvas } from 'html-to-image';
 import './card-render.css';
 import type { Project } from '../model';
-import { collectPrintSheets, type PrintSelection } from './printCards';
-import { buildSheetHTML, buildPackedSheetHTML, PAPER_MM } from './card-render';
+import { collectPrintSheets, collectPackedSheets, type PrintSelection } from './printCards';
+import { buildSheetHTML, buildPackedSheetHTML, buildAbsSheetHTML, PAPER_MM } from './card-render';
 import { applyFlowFit } from './flow-render';
 import { withTimeout, heapMB } from './perf';
 import { slugifyName } from './filename';
@@ -25,8 +25,9 @@ export function pdfFileName(projectName: string, stamp: string): string {
  * null if there are no sheets. Browser/webview only (uses DOM + canvas). Throws on a
  * tainted canvas (a non-CORS remote image) — the caller surfaces that.
  */
-export async function exportCardsPdf(project: Project, selection?: PrintSelection): Promise<Uint8Array | null> {
-  const sheets = collectPrintSheets(project, selection);
+export async function exportCardsPdf(project: Project, selection?: PrintSelection, opts?: { compact?: boolean }): Promise<Uint8Array | null> {
+  // compact = paper-saving 2D bin-pack (mixed views/sizes/orientation); else the classic per-view grid.
+  const sheets = opts?.compact ? collectPackedSheets(project, selection) : collectPrintSheets(project, selection);
   if (!sheets.length) return null;
 
   const s = project.settings;
@@ -54,7 +55,9 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
 
       host.innerHTML = sheet.pack
         ? buildPackedSheetHTML(sheet.pack, sheet.lay.sheetW, sheet.lay.sheetH, project.activeLocale, true)
-        : buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, project.activeLocale, true, px);
+        : sheet.abs
+          ? buildAbsSheetHTML(sheet.abs, sheet.lay.sheetW, sheet.lay.sheetH, project.activeLocale, true)
+          : buildSheetHTML(sheet.cards, sheet.lay, sheet.settings, project.activeLocale, true, px);
       const page = host.firstElementChild as HTMLElement;
 
       await document.fonts?.ready;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, DEFAULT_SETTINGS, type Project, type Schema, type CardTemplate, type Card } from '../src/lib/modules/flashcards/model';
 import * as cardOps from '../src/lib/modules/flashcards/cardOps';
-import { collectPrintCards, collectPrintSheets, mergeLeftoverSheets, packLeftovers, type Sheet, type PackItem } from '../src/lib/modules/flashcards/lib/printCards';
+import { collectPrintCards, collectPrintSheets, collectPackedSheets, mergeLeftoverSheets, packLeftovers, type Sheet, type PackItem } from '../src/lib/modules/flashcards/lib/printCards';
 import { sheetLayout } from '../src/lib/modules/flashcards/lib/card-render';
 
 function proj(layout: string, n: number, templatePatch: Partial<CardTemplate> = {}): Project {
@@ -204,6 +204,38 @@ describe('collectPrintSheets — grouped by view', () => {
     const sheets = collectPrintSheets(p);
     expect(sheets).toHaveLength(1);
     expect(sheets[0].cards).toHaveLength(6);
+  });
+});
+
+describe('collectPackedSheets (compact bin-pack)', () => {
+  it('packs every (record × view) card within page bounds, no overlap, mixed orientation allowed', () => {
+    const p = projViews([{ layout: 'fulltext', cardsPerPage: 4 }, { layout: '1full', cardsPerPage: 2 }], 3);
+    const sheets = collectPackedSheets(p);
+    const items = sheets.flatMap((s) => s.abs ?? []);
+    expect(items).toHaveLength(6); // 3 records × 2 views
+    for (const s of sheets) {
+      expect(s.abs).toBeTruthy();
+      expect(['portrait', 'landscape']).toContain(s.lay.orient);
+      for (const it of s.abs!) {
+        expect(it.x + it.w).toBeLessThanOrEqual(s.lay.sheetW + 1);
+        expect(it.y + it.h).toBeLessThanOrEqual(s.lay.sheetH + 1);
+      }
+      // no two cards on a page overlap
+      for (let a = 0; a < s.abs!.length; a++) for (let b = a + 1; b < s.abs!.length; b++) {
+        const A = s.abs![a], B = s.abs![b];
+        const sep = A.x + A.w <= B.x + 1 || B.x + B.w <= A.x + 1 || A.y + A.h <= B.y + 1 || B.y + B.h <= A.y + 1;
+        expect(sep).toBe(true);
+      }
+    }
+  });
+  it('respects the selection filter (only the chosen view)', () => {
+    const p = projViews([{ layout: 'fulltext', cardsPerPage: 4 }, { layout: '1full', cardsPerPage: 2 }], 3);
+    const t0 = p.schemas[0].cardTemplates[0].id;
+    const items = collectPackedSheets(p, { views: new Set([t0]) }).flatMap((s) => s.abs ?? []);
+    expect(items).toHaveLength(3);
+  });
+  it('empty project → no sheets', () => {
+    expect(collectPackedSheets(newProject())).toEqual([]);
   });
 });
 

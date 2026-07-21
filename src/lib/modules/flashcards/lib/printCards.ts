@@ -1,7 +1,8 @@
 import type { Project, Card, Schema, Settings } from '../model';
 import { deriveAutoTemplate, recordToCard, chunkRecords } from '../cardMapping';
-import { sheetLayout } from './card-render';
+import { sheetLayout, getPaperPx } from './card-render';
 import { resolveStyle } from './style';
+import { packAll } from './binPack';
 
 /** A schema's views, in order — its real cardTemplates, or a single derived one if it has none yet. */
 function viewsFor(schema: Schema) {
@@ -28,10 +29,13 @@ export function collectPrintCards(project: Project): Card[] {
  *  it renders exactly as it does on that view's own pages (no uniform-grid resize). */
 export interface PackItem { card: Card; cellW: number; cellH: number; settings: Settings; }
 
-/** A printed page. Normally a uniform N-up grid (`lay` + `cards`). When `pack` is set the page is a
- *  flow-packed leftover: cards from different-grid views combined onto one sheet, each kept at its
- *  own size/style (`cards`/`settings`/`lay` are still filled for count, paper geometry and captions). */
-export interface Sheet { cards: Card[]; lay: ReturnType<typeof sheetLayout>; settings: Settings; pack?: PackItem[]; }
+/** One absolutely-placed card on a compact-packed page: its exact px box (x/y/w/h) + source style. */
+export interface AbsItem { card: Card; x: number; y: number; w: number; h: number; settings: Settings; }
+
+/** A printed page. Normally a uniform N-up grid (`lay` + `cards`). `pack` = flow-packed leftover;
+ *  `abs` = compact bin-packed page (cards at exact px positions, mixed views/sizes, per-page
+ *  orientation). `cards`/`settings`/`lay` stay filled for count, paper geometry and captions. */
+export interface Sheet { cards: Card[]; lay: ReturnType<typeof sheetLayout>; settings: Settings; pack?: PackItem[]; abs?: AbsItem[]; }
 
 /** Optional export filter — include only the given view ids and/or record ids. An unset field means
  *  "all" for that dimension; an empty Set means "none". */
@@ -153,4 +157,44 @@ export function mergeLeftoverSheets(sheets: Sheet[]): Sheet[] {
  *  same-layout views (fewer, fuller pages on export/print). Pure. */
 export function collectPrintSheets(project: Project, selection?: PrintSelection): Sheet[] {
   return mergeLeftoverSheets(sheetsByView(project, selection));
+}
+
+/** COMPACT / paper-saving export: pack ALL of a schema's cards (every view × record) — at their
+ *  exact print sizes, no grouping — into as few pages as possible via 2D bin-packing, each page
+ *  picking the orientation that fits more (so the output mixes portrait & landscape). Cards keep
+ *  their aspect (placed at exact px). One bin-pack per schema (different schemas stay on their own
+ *  pages). Returns `abs` sheets consumed by buildAbsSheetHTML. Pure. */
+export function collectPackedSheets(project: Project, selection?: PrintSelection): Sheet[] {
+  const out: Sheet[] = [];
+  const paper = project.settings.paperSize;
+  const portrait = getPaperPx(paper, 'portrait');
+  const landscape = getPaperPx(paper, 'landscape');
+  for (const schema of project.schemas) {
+    const recs = project.records.filter((r) => r.schemaId === schema.id
+      && (!selection?.records || selection.records.has(r.id)));
+    if (!recs.length) continue;
+    const items: AbsItem[] = [];
+    for (const template of viewsFor(schema)) {
+      if (selection?.views && !selection.views.has(template.id)) continue;
+      const settings = resolveStyle(project.settings, template.style);
+      const lay = sheetLayout(template, settings.paperSize, settings.orientation);
+      for (const r of recs) {
+        const card = project.cards.find((c) => c.recordId === r.id && c.templateId === template.id)
+          ?? recordToCard(r, schema, template, project.settings, project.activeLocale);
+        items.push({ card, x: 0, y: 0, w: lay.cellW, h: lay.cellH, settings });
+      }
+    }
+    if (!items.length) continue;
+    const pages = packAll(items.map((it) => ({ w: it.w, h: it.h })), portrait, landscape);
+    for (const pg of pages) {
+      const abs = pg.place.map((pl) => ({ ...items[pl.i], x: pl.x, y: pl.y }));
+      out.push({
+        cards: abs.map((a) => a.card),
+        lay: { cols: 1, rows: 1, cellW: pg.w, cellH: pg.h, perPage: abs.length, fillCell: false, sheetW: pg.w, sheetH: pg.h, orient: pg.orient },
+        settings: project.settings,
+        abs,
+      });
+    }
+  }
+  return out;
 }
