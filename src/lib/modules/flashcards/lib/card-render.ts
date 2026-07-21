@@ -301,6 +301,9 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     `${_cs} .fc-section__content > p:last-child{margin-bottom:0}`;
   const cardStyleTag = '<style>' + _h1Rule + _labelSizeRule + _contentSizeRule + _imgLabelFontRule + _paraGapRule + (card.customCss ? _scopeCardCss(card.customCss, card.id) : '') + '</style>';
   const showTitle = !!resolvedTitle && !card.hideTitle;
+  // Stable per-record hook for custom CSS (e.g. `.fc-card[data-record="rec_np"] .img-bg{border:none}`).
+  // Keyed on the record id, so it survives image embedding (data: URIs) unlike a src-based selector.
+  const dataRecord = card.recordId ? ' data-record="' + esc(card.recordId) + '"' : '';
 
   // fullimage: image-only card with inner padding wrapper
   if (card.layout === 'fullimage') {
@@ -312,8 +315,8 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       'px;';
     return (
       cardStyleTag +
-      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
-      '" style="' + nopadStyle + borderStyle + '">' +
+      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id + '"' + dataRecord +
+      ' style="' + nopadStyle + borderStyle + '">' +
       '<div style="' + innerWrapStyle + '">' +
       '<div class="fc-image-area" style="height:' + (cardH - 2 * imgPaddingPx - 2 * borderW) + 'px;position:relative;">' +
       slots + handles +
@@ -325,8 +328,8 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   if (card.layout === 'title-img-text') {
     return (
       cardStyleTag +
-      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
-      '" style="' + sizeStyle + borderStyle + '">' +
+      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id + '"' + dataRecord +
+      ' style="' + sizeStyle + borderStyle + '">' +
       (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>' : '') +
       // Image auto-fills the empty middle between title and text; imageHeightPercent is the floor (min-height).
       '<div class="fc-image-area" style="min-height:' + imgH + 'px;position:relative;flex:1 1 auto;' + imgAreaPad + '">' + slots + handles + '</div>' +
@@ -340,8 +343,8 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   if (card.layout === 'fulltext') {
     return (
       cardStyleTag +
-      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id +
-      '" style="' + sizeStyle + borderStyle + '">' +
+      '<div class="' + cls + '" data-layout="' + card.layout + '" data-id="' + card.id + '"' + dataRecord +
+      ' style="' + sizeStyle + borderStyle + '">' +
       '<div class="fc-text-area" style="height:' + cardH + 'px;overflow:auto;' + textVAlignStyle + '">' +
       (showTitle ? '<div class="fc-title" style="' + titleStyle + '">' + titleHtml + '</div>' : '') +
       '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' + sectionsHtml + '</div>' +
@@ -356,8 +359,8 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
     '" data-layout="' +
     card.layout +
     '" data-id="' +
-    card.id +
-    '" style="' +
+    card.id + '"' + dataRecord +
+    ' style="' +
     sizeStyle +
     borderStyle +
     '">' +

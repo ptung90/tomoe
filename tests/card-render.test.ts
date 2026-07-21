@@ -452,6 +452,19 @@ describe('buildSheetHTML', () => {
   });
 });
 
+describe('buildCardHTML — data-record hook (stable per-record CSS target)', () => {
+  it('emits data-record="<recordId>" on the card, for every layout', () => {
+    for (const layout of ['1full', 'title-img-text', 'fulltext', 'fullimage']) {
+      const html = buildCardHTML(card({ layout, recordId: 'rec_np', images: [{ slot: 0, url: 'a.png' }] }), DEFAULT_SETTINGS, 'en');
+      expect(html).toContain('data-record="rec_np"');
+    }
+  });
+  it('omits data-record when the card has no recordId', () => {
+    const html = buildCardHTML(card({ layout: '1full' }), DEFAULT_SETTINGS, 'en');
+    expect(html).not.toContain('data-record');
+  });
+});
+
 describe('buildCardHTML — imgTextGap (space between image and text)', () => {
   // Style of the .fc-text-area block (the text half that sits below the image).
   const textAreaStyle = (html: string) => /class="fc-text-area" style="([^"]*)"/.exec(html)?.[1] ?? '';
