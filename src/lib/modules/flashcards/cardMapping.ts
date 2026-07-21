@@ -73,8 +73,11 @@ export function recordToCard(
   const imageFields = activeFields.filter((f) => f.type === 'image');
   const { titleField, sectionFields } = splitTitleSections(schema, activeFields);
   const slotCount = LAYOUT_SLOTS[template.layout] ?? 0;
+  // img-text-flags shows 1 main image (slot 0) plus every EXTRA image field as a corner flag, so it
+  // maps all active image fields — not just the layout's single main slot (which would drop the flags).
+  const maxImages = template.layout === 'img-text-flags' ? imageFields.length : Math.min(slotCount, imageFields.length);
   const images: CardImage[] = [];
-  for (let i = 0; i < Math.min(slotCount, imageFields.length); i++) {
+  for (let i = 0; i < maxImages; i++) {
     const url = resolveLocale(record.fields[imageFields[i].key], locale);
     if (url) images.push({ slot: i, url });
   }

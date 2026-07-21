@@ -50,6 +50,29 @@ describe('recordToCard', () => {
     expect(c.images[0]).toMatchObject({ slot: 0, url: 'http://x/o.png' });
     expect(c.layout).toBe('1top-1bot');
   });
+  it('img-text-flags maps EVERY image field (slot 0 = main, slots ≥1 = corner flags)', () => {
+    const s: Schema = { id: 's1', name: 'W', cardTemplates: [], fields: [
+      { id: 'f1', key: 'title', label: 'Title', type: 'text', multilingual: true },
+      { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+      { id: 'f3', key: 'flag', label: 'Flag', type: 'image' },
+    ] };
+    const r: RecordItem = { id: 'r1', schemaId: 's1', fieldsHash: '', fields: {
+      title: { en: 'Himalaya', vi: '' }, pic: 'http://x/main.jpg', flag: 'http://x/np.png' } };
+    const t: CardTemplate = { ...deriveAutoTemplate(s), layout: 'img-text-flags' };
+    const c = recordToCard(r, s, t, DEFAULT_SETTINGS, 'en');
+    expect(c.images).toHaveLength(2);
+    expect(c.images[0]).toMatchObject({ slot: 0, url: 'http://x/main.jpg' });
+    expect(c.images[1]).toMatchObject({ slot: 1, url: 'http://x/np.png' });
+  });
+  it('non-flags layouts still cap images at the layout slot count (1full → 1)', () => {
+    const s: Schema = { id: 's1', name: 'W', cardTemplates: [], fields: [
+      { id: 'f2', key: 'pic', label: 'Pic', type: 'image' },
+      { id: 'f3', key: 'flag', label: 'Flag', type: 'image' },
+    ] };
+    const r: RecordItem = { id: 'r1', schemaId: 's1', fieldsHash: '', fields: { pic: 'http://x/a.png', flag: 'http://x/b.png' } };
+    const t: CardTemplate = { ...deriveAutoTemplate(s), layout: '1full' };
+    expect(recordToCard(r, s, t, DEFAULT_SETTINGS, 'en').images).toHaveLength(1);
+  });
   it('resolves the requested locale', () => {
     const c = recordToCard(rec, schema(), deriveAutoTemplate(schema()), DEFAULT_SETTINGS, 'vi');
     expect(c.title).toBe('Cú');
