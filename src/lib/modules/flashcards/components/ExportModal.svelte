@@ -27,7 +27,7 @@
   let selRecords = $state<Set<string>>(new Set());
   let exporting = $state(false);
   // Compact = paper-saving 2D bin-pack for the PDF (mixes views/sizes, per-page orientation). Off = classic per-view grid.
-  let compact = $state(false);
+  let compact = $state(true);
   // Final step for compact: force the whole PDF to one physical orientation (rotating off-orientation pages 90°).
   let orient = $state<'portrait' | 'landscape'>('landscape');
 
@@ -83,16 +83,16 @@
         <button type="button" class="close" aria-label="close" onclick={onClose}><X size={16} /></button>
       </header>
       <div class="body">
-        <label class="opt" title="Xếp gọn mọi thẻ (mọi view) vào ít trang nhất để tiết kiệm giấy — trộn cỡ/chiều giấy, giữ tỉ lệ. Áp dụng cho Save PDF.">
+        <label class="opt" title="Pack all cards (every view) into the fewest pages to save paper — mixes sizes/orientation, keeps aspect. Applies to Save PDF.">
           <input type="checkbox" checked={compact} onchange={() => (compact = !compact)} />
-          <span>Xếp gọn tiết kiệm giấy (PDF)</span>
+          <span>Compact — save paper (PDF)</span>
         </label>
         {#if compact}
           <div class="opt-row">
-            <span>Chiều giấy in</span>
+            <span>Paper orientation</span>
             <span class="seg">
-              <button type="button" class:on={orient === 'portrait'} onclick={() => (orient = 'portrait')}>Dọc</button>
-              <button type="button" class:on={orient === 'landscape'} onclick={() => (orient = 'landscape')}>Ngang</button>
+              <button type="button" class:on={orient === 'portrait'} onclick={() => (orient = 'portrait')}>Portrait</button>
+              <button type="button" class:on={orient === 'landscape'} onclick={() => (orient = 'landscape')}>Landscape</button>
             </span>
           </div>
         {/if}
