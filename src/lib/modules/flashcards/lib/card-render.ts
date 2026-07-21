@@ -404,11 +404,26 @@ export function sheetGrid(n: number, orientation: string): { cols: number; rows:
 }
 /** Resolve grid + cell px for a template's tiling on a sheet. Pure.
  *  fixed grid → cells fill the sheet (fillCell=true); auto-fit → real-size cards packed floor(sheet/card). */
+/** Common base grid (÷N) for the span tiling mode: a card occupies rowSpan×colSpan of an N×N page
+ *  ruler, so cards from different views (all on the same ruler) get commensurate sizes that line up
+ *  when cut. */
+const SPAN_BASE = 12;
 export function sheetLayout(
-  opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number; gridCols?: number; gridRows?: number },
+  opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number; gridCols?: number; gridRows?: number; rowSpan?: number; colSpan?: number },
   sheetSize: string, orientation: string,
 ): { cols: number; rows: number; cellW: number; cellH: number; perPage: number; fillCell: boolean; sheetW: number; sheetH: number; orient: string } {
   const sheet = getPaperPx(sheetSize, orientation);
+  // Base-grid span (highest precedence): each card is rowSpan×colSpan of a SPAN_BASE×SPAN_BASE page
+  // ruler. Fixed-px cells packed from the top-left (fillCell=false); leftover ruler units stay empty.
+  if ((opts.rowSpan ?? 0) >= 1 && (opts.colSpan ?? 0) >= 1) {
+    const rSpan = Math.min(SPAN_BASE, Math.round(opts.rowSpan!));
+    const cSpan = Math.min(SPAN_BASE, Math.round(opts.colSpan!));
+    const cols = Math.max(1, Math.floor(SPAN_BASE / cSpan));
+    const rows = Math.max(1, Math.floor(SPAN_BASE / rSpan));
+    const cellW = Math.floor((sheet.w * cSpan) / SPAN_BASE);
+    const cellH = Math.floor((sheet.h * rSpan) / SPAN_BASE);
+    return { cols, rows, cellW, cellH, perPage: cols * rows, fillCell: false, sheetW: sheet.w, sheetH: sheet.h, orient: orientation };
+  }
   if (opts.autoFit) {
     const card = getPaperPx(opts.cardSize || 'A7', orientation);
     const cols = Math.max(1, Math.floor(sheet.w / card.w));

@@ -408,6 +408,32 @@ describe('sheetLayout — fixed grid', () => {
   });
 });
 
+describe('sheetLayout — base-grid span (÷12)', () => {
+  it('card 5×3 on a 12×12 base → 4 cols × 2 rows, cells = 3/12 × 5/12 of the sheet, packed (fillCell false)', () => {
+    const lay = sheetLayout({ rowSpan: 5, colSpan: 3 }, 'A4', 'landscape');
+    const sheet = getPaperPx('A4', 'landscape');
+    expect(lay.cols).toBe(4);            // floor(12/3)
+    expect(lay.rows).toBe(2);            // floor(12/5) — 2 rows used, 2 base-rows left empty
+    expect(lay.perPage).toBe(8);
+    expect(lay.fillCell).toBe(false);    // fixed-px cells, packed top-left
+    expect(lay.cellW).toBe(Math.floor(sheet.w * 3 / 12));
+    expect(lay.cellH).toBe(Math.floor(sheet.h * 5 / 12));
+  });
+  it('span mode wins over gridCols/gridRows and autoFit', () => {
+    const lay = sheetLayout({ rowSpan: 6, colSpan: 6, gridCols: 3, gridRows: 3, autoFit: true, cardSize: 'A7' }, 'A4', 'portrait');
+    expect(lay.cols).toBe(2); expect(lay.rows).toBe(2); expect(lay.perPage).toBe(4);
+    expect(lay.fillCell).toBe(false);
+  });
+  it('clamps a span larger than the base to a single full-page card', () => {
+    const lay = sheetLayout({ rowSpan: 20, colSpan: 20 }, 'A4', 'portrait');
+    expect(lay.cols).toBe(1); expect(lay.rows).toBe(1); expect(lay.perPage).toBe(1);
+  });
+  it('normal views (no rowSpan/colSpan) are unaffected', () => {
+    const lay = sheetLayout({ cardsPerPage: 6 }, 'A4', 'portrait');
+    expect(lay.fillCell).toBe(true); expect(lay.perPage).toBe(6);
+  });
+});
+
 describe('sheetLayout — auto-fit', () => {
   it('packs real-size A7 cards onto an A4 sheet (portrait), fillCell false', () => {
     const lay = sheetLayout({ autoFit: true, cardSize: 'A7' }, 'A4', 'portrait');

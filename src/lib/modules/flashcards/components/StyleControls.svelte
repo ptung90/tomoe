@@ -111,17 +111,32 @@
   const orient = $derived(eff.orientation);
   const resolvedPerPage = $derived(template ? sheetLayout(template, eff.paperSize, orient).perPage : 0);
   const CARD_SIZES = ['A5', 'A6', 'A7', 'A8'];
+  // Tiling mode: 'fixed' (grid), 'autofit' (real card size), or 'span' (base-grid ÷12 rowSpan×colSpan).
+  const spanMode = $derived(!!(template?.rowSpan && template?.colSpan));
+  // Switching to fixed/auto-fit clears the span so only one mode is active at a time.
+  function onFixedMode() {
+    if (schema && template) setTemplateLayout(schema.id, { autoFit: false, rowSpan: undefined, colSpan: undefined }, template.id);
+  }
   function onAutoFitMode(autoFit: boolean) {
-    if (schema && template) setTemplateLayout(schema.id, { autoFit }, template.id);
+    if (schema && template) setTemplateLayout(schema.id, { autoFit, rowSpan: undefined, colSpan: undefined }, template.id);
+  }
+  function onSpanMode() {
+    if (schema && template) setTemplateLayout(schema.id, { rowSpan: template.rowSpan ?? 6, colSpan: template.colSpan ?? 6, autoFit: false }, template.id);
+  }
+  function onRowSpan(e: Event) {
+    if (schema && template) setTemplateLayout(schema.id, { rowSpan: Math.min(12, Math.max(1, Math.round(num(e)))) }, template.id);
+  }
+  function onColSpan(e: Event) {
+    if (schema && template) setTemplateLayout(schema.id, { colSpan: Math.min(12, Math.max(1, Math.round(num(e)))) }, template.id);
   }
   // Derived defaults so a file that only has `cardsPerPage` shows sensible cols/rows (not blank).
   const gridCols = $derived(template ? (template.gridCols ?? sheetGrid(template.cardsPerPage ?? 1, orient).cols) : 1);
   const gridRows = $derived(template ? (template.gridRows ?? sheetGrid(template.cardsPerPage ?? 1, orient).rows) : 1);
   function onGridCols(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { gridCols: Math.max(1, Math.round(num(e))), gridRows, autoFit: false }, template.id);
+    if (schema && template) setTemplateLayout(schema.id, { gridCols: Math.max(1, Math.round(num(e))), gridRows, autoFit: false, rowSpan: undefined, colSpan: undefined }, template.id);
   }
   function onGridRows(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { gridCols, gridRows: Math.max(1, Math.round(num(e))), autoFit: false }, template.id);
+    if (schema && template) setTemplateLayout(schema.id, { gridCols, gridRows: Math.max(1, Math.round(num(e))), autoFit: false, rowSpan: undefined, colSpan: undefined }, template.id);
   }
   function onCardSize(e: Event) {
     if (schema && template) setTemplateLayout(schema.id, { cardSize: (e.target as HTMLSelectElement).value as any, autoFit: true }, template.id);
@@ -255,12 +270,22 @@
     {:else if tab === 'page'}
       <div class="toolbar">
         <div class="seg" title="Tiling mode" role="tablist" aria-label="Tiling mode">
-          <button type="button" role="tab" aria-selected={!template?.autoFit} class:on={!template?.autoFit}
-            disabled={!schema} onclick={() => onAutoFitMode(false)}>Fixed</button>
+          <button type="button" role="tab" aria-selected={!template?.autoFit && !spanMode} class:on={!template?.autoFit && !spanMode}
+            disabled={!schema} onclick={onFixedMode}>Fixed</button>
           <button type="button" role="tab" aria-selected={!!template?.autoFit} class:on={!!template?.autoFit}
             disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
+          <button type="button" role="tab" aria-selected={spanMode} class:on={spanMode}
+            disabled={!schema} onclick={onSpanMode} title="Base grid — card spans N of 12 rows/cols">Base ÷12</button>
         </div>
-        {#if !template?.autoFit}
+        {#if spanMode}
+          <span class="tool" title="Column span (of 12)"><LayoutGrid size={14} />
+            <input aria-label="Column span" type="number" min="1" max="12" value={template?.colSpan ?? 6} disabled={!schema} onchange={onColSpan} />
+          </span>
+          <span class="tool" title="Row span (of 12)"><LayoutGrid size={14} />
+            <input aria-label="Row span" type="number" min="1" max="12" value={template?.rowSpan ?? 6} disabled={!schema} onchange={onRowSpan} />
+          </span>
+          <span class="hint">of 12 · ≈ {resolvedPerPage}/page</span>
+        {:else if !template?.autoFit}
           <span class="tool" title="Columns"><LayoutGrid size={14} />
             <input aria-label="Columns" type="number" min="1" value={gridCols} disabled={!schema} onchange={onGridCols} />
           </span>
