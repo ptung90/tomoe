@@ -407,7 +407,7 @@ export function sheetGrid(n: number, orientation: string): { cols: number; rows:
 /** Common base grid (÷N) for the span tiling mode: a card occupies rowSpan×colSpan of an N×N page
  *  ruler, so cards from different views (all on the same ruler) get commensurate sizes that line up
  *  when cut. */
-const SPAN_BASE = 12;
+const SPAN_BASE = 36;
 export function sheetLayout(
   opts: { autoFit?: boolean; cardSize?: string; cardsPerPage?: number; gridCols?: number; gridRows?: number; rowSpan?: number; colSpan?: number },
   sheetSize: string, orientation: string,

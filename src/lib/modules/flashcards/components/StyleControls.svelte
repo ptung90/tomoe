@@ -121,13 +121,13 @@
     if (schema && template) setTemplateLayout(schema.id, { autoFit, rowSpan: undefined, colSpan: undefined }, template.id);
   }
   function onSpanMode() {
-    if (schema && template) setTemplateLayout(schema.id, { rowSpan: template.rowSpan ?? 6, colSpan: template.colSpan ?? 6, autoFit: false }, template.id);
+    if (schema && template) setTemplateLayout(schema.id, { rowSpan: template.rowSpan ?? 18, colSpan: template.colSpan ?? 18, autoFit: false }, template.id);
   }
   function onRowSpan(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { rowSpan: Math.min(12, Math.max(1, Math.round(num(e)))) }, template.id);
+    if (schema && template) setTemplateLayout(schema.id, { rowSpan: Math.min(36, Math.max(1, Math.round(num(e)))) }, template.id);
   }
   function onColSpan(e: Event) {
-    if (schema && template) setTemplateLayout(schema.id, { colSpan: Math.min(12, Math.max(1, Math.round(num(e)))) }, template.id);
+    if (schema && template) setTemplateLayout(schema.id, { colSpan: Math.min(36, Math.max(1, Math.round(num(e)))) }, template.id);
   }
   // Derived defaults so a file that only has `cardsPerPage` shows sensible cols/rows (not blank).
   const gridCols = $derived(template ? (template.gridCols ?? sheetGrid(template.cardsPerPage ?? 1, orient).cols) : 1);
@@ -275,16 +275,16 @@
           <button type="button" role="tab" aria-selected={!!template?.autoFit} class:on={!!template?.autoFit}
             disabled={!schema} onclick={() => onAutoFitMode(true)}>Auto-fit</button>
           <button type="button" role="tab" aria-selected={spanMode} class:on={spanMode}
-            disabled={!schema} onclick={onSpanMode} title="Base grid — card spans N of 12 rows/cols">Base ÷12</button>
+            disabled={!schema} onclick={onSpanMode} title="Base grid — card spans N of 36 rows/cols">Base ÷36</button>
         </div>
         {#if spanMode}
-          <span class="tool" title="Column span (of 12)"><LayoutGrid size={14} />
-            <input aria-label="Column span" type="number" min="1" max="12" value={template?.colSpan ?? 6} disabled={!schema} onchange={onColSpan} />
+          <span class="tool" title="Column span (of 36)"><LayoutGrid size={14} />
+            <input aria-label="Column span" type="number" min="1" max="36" value={template?.colSpan ?? 18} disabled={!schema} onchange={onColSpan} />
           </span>
-          <span class="tool" title="Row span (of 12)"><LayoutGrid size={14} />
-            <input aria-label="Row span" type="number" min="1" max="12" value={template?.rowSpan ?? 6} disabled={!schema} onchange={onRowSpan} />
+          <span class="tool" title="Row span (of 36)"><LayoutGrid size={14} />
+            <input aria-label="Row span" type="number" min="1" max="36" value={template?.rowSpan ?? 18} disabled={!schema} onchange={onRowSpan} />
           </span>
-          <span class="hint">of 12 · ≈ {resolvedPerPage}/page</span>
+          <span class="hint">of 36 · ≈ {resolvedPerPage}/page</span>
         {:else if !template?.autoFit}
           <span class="tool" title="Columns"><LayoutGrid size={14} />
             <input aria-label="Columns" type="number" min="1" value={gridCols} disabled={!schema} onchange={onGridCols} />
