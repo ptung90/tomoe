@@ -219,7 +219,10 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const sectionsFlexOverride = vAlign !== 'top' ? 'flex:none;' : '';
   const cardW = w - 2 * marginPx;
   const cardH = h - 2 * marginPx;
-  const innerH = cardH - 2 * paddingPx;
+  // Card is border-box, so its border eats into the content height too — subtract it (as `fullimage`
+  // does) or a 100% image overflows the padding/border (image + text budget would exceed the content box).
+  const borderW = s.border.width || 0;
+  const innerH = cardH - 2 * paddingPx - 2 * borderW;
   const imgH = Math.round((innerH * card.imageHeightPercent) / 100);
   const slotCount = LAYOUT_SLOTS[card.layout] ?? 3;
   const split: GridSplit = card.imageGridSplit ||
@@ -316,7 +319,6 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
 
   // fullimage: image-only card with inner padding wrapper
   if (card.layout === 'fullimage') {
-    const borderW = s.border.width || 0;
     const nopadStyle = 'width:' + cardW + 'px;height:' + cardH + 'px;margin:' + marginPx + 'px auto;background:white;padding:0;';
     const innerWrapStyle =
       'box-sizing:border-box;width:100%;height:100%;padding:' +
