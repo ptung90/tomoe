@@ -104,7 +104,7 @@
   function onImageHeight(e: Event) {
     if (!schema || !template) return;
     const v = Math.round(Number((e.target as HTMLInputElement).value)) || 50;
-    setTemplateLayout(schema.id, { imageHeightPercent: Math.min(95, Math.max(5, v)) }, template.id);
+    setTemplateLayout(schema.id, { imageHeightPercent: Math.min(100, Math.max(5, v)) }, template.id);
   }
 
   // Cards/page (N-up tiling): Fixed grid (cardsPerPage) or Auto-fit (real-size cardSize).
@@ -221,7 +221,7 @@
     {:else if tab === 'image'}
       <div class="toolbar">
         {#if imgHeightApplies}
-          <span class="tool" title="Image height %"><StretchVertical size={14} /><input aria-label="Image height %" type="number" min="5" max="95"
+          <span class="tool" title="Image height %"><StretchVertical size={14} /><input aria-label="Image height %" type="number" min="5" max="100"
             value={template?.imageHeightPercent ?? 50} onchange={onImageHeight} /></span>
         {/if}
         <span class="tool" title="Image fit"><ScanLine size={14} />
