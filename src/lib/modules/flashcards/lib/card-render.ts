@@ -139,6 +139,38 @@ export function imageFrameStyle(image: Settings['image']): string {
     (bw > 0 ? 'border:' + bw + 'px ' + (image.borderStyle || 'solid') + ' ' + (image.borderColor || '#000000') + ';' : '');
 }
 
+/** On-screen preview only: swap a big `data:` base64 image for a cached `blob:` object URL. Keeps the
+ *  rendered HTML tiny and the <img src> stable, so re-rendering (typing, record switch) doesn't force
+ *  the browser to re-parse megabytes of base64 and re-decode the image — the main cause of edit lag.
+ *  For print/PDF (forPrint) the data: URI is kept (safest for html-to-image). Browser-only; falls back
+ *  to the original url when Blob/createObjectURL aren't available (e.g. tests) or on any error. */
+const _blobUrlCache = new Map<string, string>();
+export function previewSrc(url: string, forPrint = false): string {
+  if (forPrint || !url.startsWith('data:')) return url;
+  const cached = _blobUrlCache.get(url);
+  if (cached) return cached;
+  try {
+    const comma = url.indexOf(',');
+    const meta = url.slice(5, comma);
+    const mime = meta.split(';')[0] || 'image/png';
+    const body = url.slice(comma + 1);
+    let blob: Blob;
+    if (meta.includes(';base64')) {
+      const bin = atob(body);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      blob = new Blob([bytes], { type: mime });
+    } else {
+      blob = new Blob([decodeURIComponent(body)], { type: mime });
+    }
+    const obj = URL.createObjectURL(blob);
+    _blobUrlCache.set(url, obj);
+    return obj;
+  } catch {
+    return url;
+  }
+}
+
 function buildSlots(card: Card, slotCount: number, imgStyle: string, frameStyle: string, forPrint = false): string {
   return Array.from({ length: slotCount }, (_, i) => {
     const img = card.images.find((im) => im.slot === i);
@@ -147,7 +179,7 @@ function buildSlots(card: Card, slotCount: number, imgStyle: string, frameStyle:
       // fit=contain preserves its aspect ratio; .img-bg is the flex-centering wrapper.
       return (
         '<div class="fc-image-slot fc-image-slot-' + i + '"><div class="img-bg">' +
-        '<img class="fc-img" alt="" src="' + esc(img.url) + '" style="' +
+        '<img class="fc-img" alt="" src="' + esc(previewSrc(img.url, forPrint)) + '" style="' +
         resolveImgStyle(img, imgStyle) + frameStyle + '" />' +
         '</div></div>'
       );
@@ -238,7 +270,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
   const cornerFlags = card.layout === 'img-text-flags' ? card.images.filter((im) => im.slot >= 1 && im.url) : [];
   const cornerFlagsHtml = cornerFlags.length
     ? '<div class="fc-corner-flags">' +
-      cornerFlags.map((im) => '<img class="fc-flag" alt="" src="' + esc(im.url) + '" />').join('') +
+      cornerFlags.map((im) => '<img class="fc-flag" alt="" src="' + esc(previewSrc(im.url, forPrint)) + '" />').join('') +
       '</div>'
     : '';
   const handles = '';

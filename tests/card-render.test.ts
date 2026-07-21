@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getPaperPx, mmToPx, esc, resolveLocale, resolveLabel, labelLocaleValue, setLabelLocale, mutedHex } from '../src/lib/modules/flashcards/lib/card-render';
-import { buildCardHTML, sheetGrid, sheetLayout, buildSheetHTML } from '../src/lib/modules/flashcards/lib/card-render';
+import { buildCardHTML, sheetGrid, sheetLayout, buildSheetHTML, previewSrc } from '../src/lib/modules/flashcards/lib/card-render';
 import { LAYOUT_SLOTS, LAYOUT_IDS } from '../src/lib/modules/flashcards/lib/layouts';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
 
@@ -405,6 +405,23 @@ describe('sheetLayout — fixed grid', () => {
     expect(lay1.cols).toBe(2); expect(lay1.rows).toBe(3); // gridRows missing → fallback
     const lay2 = sheetLayout({ gridCols: 0, gridRows: 5, cardsPerPage: 6 }, 'A4', 'portrait');
     expect(lay2.cols).toBe(2); expect(lay2.rows).toBe(3); // gridCols < 1 → fallback
+  });
+});
+
+describe('previewSrc — preview blob-url swap (base64 lag fix)', () => {
+  it('returns non-data urls unchanged', () => {
+    expect(previewSrc('https://x/a.png', false)).toBe('https://x/a.png');
+    expect(previewSrc('a.png', false)).toBe('a.png');
+  });
+  it('keeps the data: URI for print/export (forPrint=true)', () => {
+    const d = 'data:image/png;base64,AAAA';
+    expect(previewSrc(d, true)).toBe(d);
+  });
+  it('maps a data: URI to a STABLE cached value for preview (same input → same output)', () => {
+    const d = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+    const a = previewSrc(d, false);
+    expect(previewSrc(d, false)).toBe(a); // cached — identical output, so re-renders keep the same <img src>
+    expect(typeof a).toBe('string');
   });
 });
 
