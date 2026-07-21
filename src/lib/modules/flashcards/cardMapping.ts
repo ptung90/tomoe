@@ -236,6 +236,24 @@ export function addView(p: Project, schemaId: string): { project: Project; id: s
   return { project, id: created.id };
 }
 
+/** Clones a view — all layout / fields / style / span — and inserts the copy right AFTER the source,
+ *  returning its fresh id (via `uid('tpl')`, so packed-card lookups never collide). Materializes a
+ *  virgin schema's synthetic baseline first (like addView). `name` sets the copy's explicit label
+ *  (caller passes "<source label> copy"); with no `name`, falls back to source name + " copy". Pure. */
+export function duplicateView(p: Project, schemaId: string, templateId: string, name?: string): { project: Project; id: string | null } {
+  const schema = p.schemas.find((s) => s.id === schemaId);
+  if (!schema) return { project: p, id: null };
+  const baseline = schema.cardTemplates.length ? schema.cardTemplates : [deriveAutoTemplate(schema)];
+  const idx = baseline.findIndex((t) => t.id === templateId);
+  if (idx === -1) return { project: p, id: null };
+  const copy: CardTemplate = { ...structuredClone(baseline[idx]), id: uid('tpl') };
+  const copyName = name ?? (baseline[idx].name ? baseline[idx].name + ' copy' : undefined);
+  if (copyName !== undefined) copy.name = copyName; else delete copy.name;
+  const cardTemplates = [...baseline.slice(0, idx + 1), copy, ...baseline.slice(idx + 1)];
+  const project = { ...p, schemas: p.schemas.map((s) => (s.id === schemaId ? { ...s, cardTemplates } : s)) };
+  return { project, id: copy.id };
+}
+
 /** Renames a view. Materializes a virgin schema's synthetic auto-derived view first (same as
  *  applyTemplatePatch) — a schema with no persisted cardTemplates yet must still be renamable. */
 export function renameView(p: Project, schemaId: string, templateId: string, name: string): Project {

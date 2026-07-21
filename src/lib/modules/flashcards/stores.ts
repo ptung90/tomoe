@@ -456,6 +456,12 @@ export function addView(schemaId: string): void {
   commit(np);
   activeViewId.set(id);
 }
+export function duplicateView(schemaId: string, templateId: string, name?: string): void {
+  const { project: np, id } = cardMapping.duplicateView(get(project), schemaId, templateId, name);
+  if (!id) return;
+  commit(np);
+  activeViewId.set(id);
+}
 export function renameView(schemaId: string, templateId: string, name: string): void {
   commit(cardMapping.renameView(get(project), schemaId, templateId, name));
 }

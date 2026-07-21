@@ -5,8 +5,9 @@
   import Plus from 'lucide-svelte/icons/plus';
   import MoreHorizontal from 'lucide-svelte/icons/more-horizontal';
   import Pencil from 'lucide-svelte/icons/pencil';
+  import Copy from 'lucide-svelte/icons/copy';
   import Trash2 from 'lucide-svelte/icons/trash-2';
-  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, renameView, deleteView, previewStatusbar } from '../stores';
+  import { project, selectedRecordId, activeViewId, selectView, setSettings, setTemplateLayout, addView, duplicateView, renameView, deleteView, previewStatusbar } from '../stores';
   import { deriveAutoTemplate, recordToCard, chunkRecords, viewLabel } from '../cardMapping';
   import { buildCardHTML, buildSheetHTML, getPaperPx, sheetLayout } from '../lib/card-render';
   import { applyFlowFit } from '../lib/flow-render';
@@ -160,6 +161,10 @@
     const trimmed = name.trim();
     if (schema && trimmed) renameView(schema.id, templateId, trimmed);
   }
+  function onDuplicateView(templateId: string, label: string) {
+    menuOpenId = null;
+    if (schema) duplicateView(schema.id, templateId, `${label} copy`);
+  }
   function onDeleteView(templateId: string) {
     menuOpenId = null;
     if (schema && views.length > 1) deleteView(schema.id, templateId);
@@ -266,6 +271,10 @@
                   <div class="view-menu" role="menu">
                     <button type="button" role="menuitem" onclick={(e) => { e.stopPropagation(); startRename(vc.id); }}>
                       <Pencil size={12} /> Rename
+                    </button>
+                    <button type="button" role="menuitem" aria-label={`Duplicate ${vc.label}`}
+                      onclick={(e) => { e.stopPropagation(); onDuplicateView(vc.id, vc.label); }}>
+                      <Copy size={12} /> Duplicate
                     </button>
                     <button type="button" role="menuitem" aria-label={`Delete ${vc.label}`}
                       disabled={views.length <= 1}

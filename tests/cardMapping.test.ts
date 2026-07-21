@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newProject, DEFAULT_SETTINGS, type Schema, type RecordItem, type CardTemplate, type Settings } from '../src/lib/modules/flashcards/model';
-import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, applyTemplateStyle, chunkRecords, viewLabel, addView, renameView, deleteView, setViewFields } from '../src/lib/modules/flashcards/cardMapping';
+import { deriveAutoTemplate, recordToCard, applySettings, applyTemplatePatch, applyTemplateStyle, chunkRecords, viewLabel, addView, duplicateView, renameView, deleteView, setViewFields } from '../src/lib/modules/flashcards/cardMapping';
 import * as ops from '../src/lib/modules/flashcards/cardOps';
 
 function schema(): Schema {
@@ -181,6 +181,32 @@ describe('applySettings / applyTemplatePatch', () => {
       const { project: p2, id } = addView(p, 'missing');
       expect(id).toBeNull();
       expect(p2).toBe(p);
+    });
+    it('duplicateView clones a view (layout/fields/span) with a fresh id, right after the source', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [
+        { id: 't1', templateType: 'single', layout: 'img-text-flags', fields: ['title', 'pic'], rowSpan: 5, colSpan: 3, name: 'Big', mapping: {} },
+        { id: 't2', templateType: 'single', layout: 'fulltext', mapping: {} },
+      ];
+      p.schemas.push(s);
+      const { project: p2, id } = duplicateView(p, 's1', 't1');
+      const views = p2.schemas[0].cardTemplates;
+      expect(views).toHaveLength(3);
+      expect(views[1].id).toBe(id);          // inserted right after the source (index 0)
+      expect(id).not.toBe('t1');             // fresh id
+      expect(views[1]).toMatchObject({ layout: 'img-text-flags', fields: ['title', 'pic'], rowSpan: 5, colSpan: 3, name: 'Big copy' });
+      expect(views[0].id).toBe('t1');        // source untouched
+      expect(views[2].id).toBe('t2');
+    });
+    it('duplicateView uses the passed name when given, and no-ops on unknown ids', () => {
+      const p = newProject();
+      const s = schema();
+      s.cardTemplates = [{ id: 't1', templateType: 'single', layout: 'fulltext', mapping: {} }];
+      p.schemas.push(s);
+      expect(duplicateView(p, 's1', 't1', 'My Copy').project.schemas[0].cardTemplates.some((t) => t.name === 'My Copy')).toBe(true);
+      expect(duplicateView(p, 'nope', 't1').id).toBeNull();
+      expect(duplicateView(p, 's1', 'nope').id).toBeNull();
     });
     it('renameView sets an explicit name on the addressed template only', () => {
       const p = newProject();
