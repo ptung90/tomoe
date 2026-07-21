@@ -41,7 +41,8 @@
 .fc-layout-fullimage .fc-image-slot { width:100%; height:100%; }
 /* single-image, non-grid layouts: the lone slot fills its image area */
 .fc-layout-1full .fc-image-slot,
-.fc-layout-title-img-text .fc-image-slot { width:100%; height:100%; }
+.fc-layout-title-img-text .fc-image-slot,
+.fc-layout-img-text-flags .fc-image-slot { width:100%; height:100%; }
 /* title-img-text: image area grows to fill the middle; text sizes to its content below it */
 .fc-layout-title-img-text .fc-text-area { flex:0 0 auto; }
 /* 1big-2small & 1left-2right: big/left cell (col 1) spans both rows; two cells stack in col 2 */
