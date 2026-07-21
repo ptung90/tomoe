@@ -22,8 +22,8 @@
 .fc-img-label { padding:2px 5px; font-size:0.78em; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* Corner flags (img-text-flags layout): pinned top-right, stacked. Size/position are CSS-tunable —
    override `.fc-corner-flags` (width/top/right) or `.fc-flag` in the Style panel's CSS tab. */
-.fc-corner-flags { position:absolute; top:4%; right:4%; width:22%; display:flex; flex-direction:column; gap:4px; z-index:2; }
-.fc-corner-flags .fc-flag { display:block; width:100%; height:auto; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+.fc-corner-flags { position:absolute; top:4%; right:4%; width:46%; display:flex; flex-flow:row wrap; justify-content:flex-end; gap:4px; z-index:2; }
+.fc-corner-flags .fc-flag { display:block; width:30%; height:auto; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
 
 /* Grid overrides for the in-scope layouts */
 .fc-layout-2top-1bot .fc-image-area { display:grid; grid-template-rows:1fr 1fr; grid-template-columns:1fr 1fr; gap:2px; }
