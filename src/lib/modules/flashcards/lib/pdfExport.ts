@@ -25,10 +25,26 @@ export function pdfFileName(projectName: string, stamp: string): string {
  * null if there are no sheets. Browser/webview only (uses DOM + canvas). Throws on a
  * tainted canvas (a non-CORS remote image) — the caller surfaces that.
  */
-export async function exportCardsPdf(project: Project, selection?: PrintSelection, opts?: { compact?: boolean }): Promise<Uint8Array | null> {
+/** Rotate a canvas 90° clockwise into a new canvas (dims swapped). Used to force a page whose packed
+ *  orientation differs from the chosen output orientation onto a same-orientation sheet. */
+function rotate90(src: HTMLCanvasElement): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = src.height;
+  c.height = src.width;
+  const ctx = c.getContext('2d')!;
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(src, -src.width / 2, -src.height / 2);
+  return c;
+}
+
+export async function exportCardsPdf(project: Project, selection?: PrintSelection, opts?: { compact?: boolean; orient?: 'portrait' | 'landscape' }): Promise<Uint8Array | null> {
   // compact = paper-saving 2D bin-pack (mixed views/sizes/orientation); else the classic per-view grid.
   const sheets = opts?.compact ? collectPackedSheets(project, selection) : collectPrintSheets(project, selection);
   if (!sheets.length) return null;
+  // orient (final step): force EVERY PDF page to one physical orientation — pages packed the other way
+  // get their rendered image rotated 90°, so the whole PDF feeds/prints in a single direction.
+  const forceOrient = opts?.orient;
 
   const s = project.settings;
   const scale = s.pdfScale || 2;
@@ -48,7 +64,8 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
       // The sheet's own paper size/orientation, from `lay`/`settings` (schema-effective —
       // matches the grid buildSheetHTML actually renders, not a re-derivation from card data).
       const paperMm = PAPER_MM[sheet.settings.paperSize] ?? PAPER_MM.A4;
-      const landscape = sheet.lay.orient === 'landscape';
+      const packedLandscape = sheet.lay.orient === 'landscape';
+      const landscape = forceOrient ? forceOrient === 'landscape' : packedLandscape;
       const pageW = landscape ? paperMm.h : paperMm.w;
       const pageH = landscape ? paperMm.w : paperMm.h;
       const px = { w: sheet.lay.sheetW, h: sheet.lay.sheetH };
@@ -83,7 +100,10 @@ export async function exportCardsPdf(project: Project, selection?: PrintSelectio
             + ` — likely out of memory. Export fewer records or views at a time, or restart the app first.`;
         },
       );
-      const data = canvas.toDataURL(mime, quality);
+      // Final step: if this page was packed the other way than the forced output orientation, rotate
+      // its image 90° so it fills the single-orientation sheet.
+      const outCanvas = packedLandscape !== landscape ? rotate90(canvas) : canvas;
+      const data = outCanvas.toDataURL(mime, quality);
 
       if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [pageW, pageH], orientation: landscape ? 'l' : 'p' });
       else pdf.addPage([pageW, pageH], landscape ? 'l' : 'p');

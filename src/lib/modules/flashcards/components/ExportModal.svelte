@@ -28,10 +28,12 @@
   let exporting = $state(false);
   // Compact = paper-saving 2D bin-pack for the PDF (mixes views/sizes, per-page orientation). Off = classic per-view grid.
   let compact = $state(false);
+  // Final step for compact: force the whole PDF to one physical orientation (rotating off-orientation pages 90°).
+  let orient = $state<'portrait' | 'landscape'>('landscape');
 
   // Default to "everything selected" each time the modal opens.
   $effect(() => {
-    if (open) { selViews = new Set(allViewIds); selRecords = new Set(allRecordIds); }
+    if (open) { selViews = new Set(allViewIds); selRecords = new Set(allRecordIds); orient = $project.settings.orientation; }
   });
 
   const selection = $derived({ views: selViews, records: selRecords });
@@ -60,7 +62,7 @@
     if (!pageCount || exporting) return;
     exporting = true;
     try {
-      const bytes = await exportCardsPdf($project, selection, { compact });
+      const bytes = await exportCardsPdf($project, selection, { compact, orient: compact ? orient : undefined });
       if (!bytes) { showToast('Nothing selected to export', 'error'); return; }
       const path = await saveDialog({ defaultPath: pdfFileName($project.projectName, pdfStamp(new Date())), filters: [{ name: 'PDF', extensions: ['pdf'] }] });
       if (!path) return;
@@ -85,6 +87,15 @@
           <input type="checkbox" checked={compact} onchange={() => (compact = !compact)} />
           <span>Xếp gọn tiết kiệm giấy (PDF)</span>
         </label>
+        {#if compact}
+          <div class="opt-row">
+            <span>Chiều giấy in</span>
+            <span class="seg">
+              <button type="button" class:on={orient === 'portrait'} onclick={() => (orient = 'portrait')}>Dọc</button>
+              <button type="button" class:on={orient === 'landscape'} onclick={() => (orient = 'landscape')}>Ngang</button>
+            </span>
+          </div>
+        {/if}
         {#each groups as g (g.schema.id)}
           <section class="group">
             {#if groups.length > 1}<h3 class="schema-name">{g.schema.name}</h3>{/if}
@@ -149,6 +160,11 @@
   .close { border:none; background:transparent; color:var(--text-muted); }
   .body { padding:12px 14px; overflow:auto; display:flex; flex-direction:column; gap:16px; }
   .opt { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; cursor:pointer; }
+  .opt-row { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; padding:0 4px; margin-top:-8px; }
+  .opt-row .seg { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+  .opt-row .seg button { border:none; background:transparent; color:var(--text-muted); font:inherit; font-size:12px; padding:4px 12px; cursor:pointer; }
+  .opt-row .seg button:not(:last-child) { border-right:1px solid var(--border); }
+  .opt-row .seg button.on { background:var(--accent); color:#fff; }
   .schema-name { font-size:13px; margin:0 0 6px; }
   .group { display:flex; flex-direction:column; gap:10px; }
   .sub-head { display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:700;
