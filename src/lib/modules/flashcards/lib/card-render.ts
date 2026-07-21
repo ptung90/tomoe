@@ -229,6 +229,15 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
 
   const frameStyle = imageFrameStyle(s.image);
   const slots = buildSlots(card, slotCount, imgStyle, frameStyle, forPrint);
+  // `img-text-flags`: slot 0 is the main image (rendered in the normal area above); every extra image
+  // (slots ≥1, i.e. additional image fields) is pinned to the top-right corner as a flag. Size/position
+  // are CSS-tunable via `.fc-corner-flags` / `.fc-flag` (see card-render.css).
+  const cornerFlags = card.layout === 'img-text-flags' ? card.images.filter((im) => im.slot >= 1 && im.url) : [];
+  const cornerFlagsHtml = cornerFlags.length
+    ? '<div class="fc-corner-flags">' +
+      cornerFlags.map((im) => '<img class="fc-flag" alt="" src="' + esc(im.url) + '" />').join('') +
+      '</div>'
+    : '';
   const handles = '';
   const hideLabels = !!card.hideSectionLabels;
   const sectionsHtml = buildSectionsHtml(card.sections, hideLabels, !!card.inlineSections, locale);
@@ -379,7 +388,7 @@ export function buildCardHTML(card: Card, settings: Settings, locale: string, fo
       : '') +
     '<div class="fc-sections" style="' + contentStyle + sectionsFlexOverride + '">' +
     sectionsHtml +
-    '</div></div></div>'
+    '</div></div>' + cornerFlagsHtml + '</div>'
   );
 }
 

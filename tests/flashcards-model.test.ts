@@ -178,9 +178,9 @@ describe('flashcards model', () => {
 });
 
 describe('layout registry', () => {
-  it('exposes 12 unique layout ids', () => {
-    expect(LAYOUTS).toHaveLength(12);
-    expect(new Set(LAYOUTS.map((l) => l.id)).size).toBe(12);
+  it('exposes 13 unique layout ids', () => {
+    expect(LAYOUTS).toHaveLength(13);
+    expect(new Set(LAYOUTS.map((l) => l.id)).size).toBe(13);
   });
   it('1big-2small has 3 slots', () => {
     expect(LAYOUT_SLOTS['1big-2small']).toBe(3);

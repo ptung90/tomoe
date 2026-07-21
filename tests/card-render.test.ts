@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getPaperPx, mmToPx, esc, resolveLocale, resolveLabel, labelLocaleValue, setLabelLocale, mutedHex } from '../src/lib/modules/flashcards/lib/card-render';
 import { buildCardHTML, sheetGrid, sheetLayout, buildSheetHTML } from '../src/lib/modules/flashcards/lib/card-render';
-import { LAYOUT_SLOTS } from '../src/lib/modules/flashcards/lib/layouts';
+import { LAYOUT_SLOTS, LAYOUT_IDS } from '../src/lib/modules/flashcards/lib/layouts';
 import { DEFAULT_SETTINGS, type Card } from '../src/lib/modules/flashcards/model';
 
 describe('card-render helpers', () => {
@@ -449,6 +449,36 @@ describe('buildSheetHTML', () => {
     expect(html).toContain(`grid-template-columns:repeat(${lay.cols},${lay.cellW}px)`);
     expect(html).toContain(`grid-template-rows:repeat(${lay.rows},${lay.cellH}px)`);
     expect(html).toContain('justify-content:start;align-content:start;');
+  });
+});
+
+describe('buildCardHTML — img-text-flags layout (corner flags)', () => {
+  const mk = (imgs: { slot: number; url: string }[]) => card({
+    layout: 'img-text-flags', imageHeightPercent: 60, title: 'France',
+    images: imgs, sections: [{ id: 's1', label: '', content: 'hi' }],
+  });
+  it('is registered in LAYOUTS (selectable in the picker)', () => {
+    expect(LAYOUT_IDS).toContain('img-text-flags');
+  });
+  it('renders slot-0 as the main image and slots ≥1 as corner flags', () => {
+    const html = buildCardHTML(mk([
+      { slot: 0, url: 'main.jpg' }, { slot: 1, url: 'fr.png' }, { slot: 2, url: 'it.png' },
+    ]), DEFAULT_SETTINGS, 'en');
+    expect(html).toContain('class="fc-corner-flags"');
+    expect((html.match(/<img class="fc-flag"/g) || []).length).toBe(2);
+    expect(html).toContain('src="fr.png"');
+    expect(html).toContain('src="it.png"');
+    expect(html).toContain('src="main.jpg"');   // main image via the normal slot, not a corner flag
+    expect(html).toContain('France');           // title still renders
+    expect(html).toContain('hi');               // content still renders
+  });
+  it('omits the corner-flags block when there is only a main image', () => {
+    const html = buildCardHTML(mk([{ slot: 0, url: 'main.jpg' }]), DEFAULT_SETTINGS, 'en');
+    expect(html).not.toContain('fc-corner-flags');
+  });
+  it('other layouts never emit corner flags even with multiple images', () => {
+    const html = buildCardHTML(card({ layout: '2x2', images: [{ slot: 0, url: 'a' }, { slot: 1, url: 'b' }] }), DEFAULT_SETTINGS, 'en');
+    expect(html).not.toContain('fc-corner-flags');
   });
 });
 

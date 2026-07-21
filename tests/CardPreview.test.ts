@@ -23,11 +23,11 @@ describe('CardPreview', () => {
     render(CardPreview);
     expect(screen.getByText(/no card to preview/i)).toBeInTheDocument();
   });
-  it('offers the 12 single-card layouts in the layout selector', () => {
+  it('offers the 13 single-card layouts in the layout selector', () => {
     render(CardPreview);
     const sel = screen.getByLabelText(/layout/i) as HTMLSelectElement;
     const cardsGroup = sel.querySelector('optgroup[label="Cards"]') as HTMLOptGroupElement;
-    expect(cardsGroup.querySelectorAll('option')).toHaveLength(12);
+    expect(cardsGroup.querySelectorAll('option')).toHaveLength(13);
   });
 
   it('lists grid layouts and a Document optgroup with flow presets', () => {
