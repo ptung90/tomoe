@@ -242,8 +242,20 @@
       return;
     }
     if (!work) return;
-    // Erased -> PNG (keeps alpha); untouched/reset -> JPEG (smaller, no transparency needed).
-    onApply(hasErased ? work.toDataURL('image/png') : work.toDataURL('image/jpeg', 0.9));
+    // Always JPEG. Erased areas are flattened onto white (cards are white, so it looks identical)
+    // instead of kept as a transparent PNG — a JPEG is far smaller and keeps project files light.
+    onApply(hasErased ? flattenToWhiteJpeg(work) : work.toDataURL('image/jpeg', 0.9));
+  }
+
+  /** Composite a (possibly transparent) canvas onto white and encode as JPEG. */
+  function flattenToWhiteJpeg(src: HTMLCanvasElement): string {
+    const c = document.createElement('canvas');
+    c.width = src.width; c.height = src.height;
+    const x = c.getContext('2d')!;
+    x.fillStyle = '#ffffff';
+    x.fillRect(0, 0, c.width, c.height);
+    x.drawImage(src, 0, 0);
+    return c.toDataURL('image/jpeg', 0.9);
   }
 </script>
 

@@ -12,10 +12,11 @@ export function fitWithin(w: number, h: number, max: number): { w: number; h: nu
   return { w: Math.max(1, Math.round(w * scale)), h: Math.max(1, Math.round(h * scale)) };
 }
 
-/** Downscale a blob to a data URL whose longest side is <= `max`, re-encoded (JPEG by default;
- *  PNG kept for source PNGs so transparency survives). Browser-only (Image + canvas). Rejects if the
- *  image can't be decoded (e.g. SVG/TIFF the browser won't render) — callers fall back to the
- *  original blob. Already-small images are still normalised through the canvas (cheap). */
+/** Downscale a blob to a data URL whose longest side is <= `max`, flattened onto white and always
+ *  re-encoded as JPEG. Cards are white, so flattening transparency onto white looks identical while
+ *  a JPEG is 2–5× smaller than the equivalent PNG (photos pasted from the web/Pinterest arrive as
+ *  PNG for no benefit). Browser-only (Image + canvas). Rejects if the image can't be decoded (e.g.
+ *  SVG/TIFF the browser won't render) — callers fall back to the original blob. */
 export function downscaleBlob(blob: Blob, max = 1600, quality = 0.82): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
@@ -28,9 +29,10 @@ export function downscaleBlob(blob: Blob, max = 1600, quality = 0.82): Promise<s
         canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('no 2d context')); return; }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
-        const mime = blob.type === 'image/png' ? 'image/png' : 'image/jpeg';
-        resolve(canvas.toDataURL(mime, quality));
+        resolve(canvas.toDataURL('image/jpeg', quality));
       } catch (e) {
         reject(e instanceof Error ? e : new Error('downscale failed'));
       }
