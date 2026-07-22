@@ -5,6 +5,7 @@
   import { openUrl } from '@tauri-apps/plugin-opener';
   import ImageSearchModal from './ImageSearchModal.svelte';
   import CropModal from './CropModal.svelte';
+  import { downscaleBlob } from '../lib/imageDownscale';
   import { showToast } from '../../../shell';
 
   let { value = '', query = '', onChange }:
@@ -35,10 +36,18 @@
     });
   }
 
+  // Import a picked/pasted image blob: downscale + re-encode (cap longest side) so we never store a
+  // 20–90 MB original that bloats the project file. Falls back to the raw blob if the browser can't
+  // decode it (e.g. SVG/TIFF), which is no worse than before.
+  async function importBlob(blob: Blob) {
+    try { onChange(await downscaleBlob(blob)); }
+    catch { onChange(await blobToDataUrl(blob)); }
+  }
+
   function onFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    blobToDataUrl(file).then(onChange);
+    importBlob(file);
   }
 
   async function paste() {
@@ -50,7 +59,7 @@
         for (const item of items) {
           const type = item.types.find((t) => t.startsWith('image/'));
           if (type) {
-            onChange(await blobToDataUrl(await item.getType(type)));
+            await importBlob(await item.getType(type));
             return;
           }
         }
