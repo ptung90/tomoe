@@ -4,12 +4,21 @@
   import StartScreen from './lib/components/StartScreen.svelte';
   import Toast from './lib/components/Toast.svelte';
   import ConfigModal from './lib/components/ConfigModal.svelte';
-  import { activeModuleId, theme, seedUserName } from './lib/shell';
+  import { activeModuleId, theme, seedUserName, autoSaveEnabled } from './lib/shell';
   import { getModule } from './lib/modules/registry';
   import { pickOpen, loadStartupFile, listenForOpenFile } from './lib/fileService';
   import { applyTheme } from './lib/theme';
+  import { startAutoSave } from './lib/autoSave';
 
   const mod = $derived($activeModuleId ? getModule($activeModuleId) : null);
+
+  // Auto-save the active module: save a couple of seconds after edits settle, only for a doc that's
+  // already bound to a file and while the feature is enabled. Re-wires when the active module changes.
+  $effect(() => {
+    const m = mod;
+    if (!m) return;
+    return startAutoSave({ enabled: autoSaveEnabled, dirty: m.dirty, filePath: m.filePath, save: () => void m.save() });
+  });
 
   function onKeydown(e: KeyboardEvent) {
     const k = e.key.toLowerCase();

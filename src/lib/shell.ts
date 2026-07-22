@@ -14,6 +14,15 @@ export function setActiveModule(id: string | null): void { activeModuleId.set(id
 export const theme: Writable<Theme> = writable(loadTheme());
 export const configOpen: Writable<boolean> = writable(false);
 
+// ── Auto-save (app-level, NOT in any document). Default ON: only '0' disables it, so a fresh
+//    install (no stored value) and an explicit '1' both read as enabled. ──────────────────────
+const AUTOSAVE_KEY = 'tomoe.autoSave';
+export const autoSaveEnabled: Writable<boolean> = writable(localStorage.getItem(AUTOSAVE_KEY) !== '0');
+export function setAutoSaveEnabled(v: boolean): void {
+  autoSaveEnabled.set(v);
+  try { localStorage.setItem(AUTOSAVE_KEY, v ? '1' : '0'); } catch { /* ignore storage errors */ }
+}
+
 // ── Identity ("Your name") — app-level, NOT in any document. Used by the edit
 //    log and the lock-file to record/attribute who is editing. ───────────────
 const USER_NAME_KEY = 'tomoe.userName';

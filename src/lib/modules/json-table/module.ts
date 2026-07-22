@@ -12,6 +12,7 @@ export const jsonTable: TomoeModule = {
   open: (text, path) => openText(text, path),
   save: () => saveCurrent(),
   saveAs: () => pickSave(),
+  filePath: S.filePath,
   dirty: S.dirty,
   canUndo: S.canUndo,
   canRedo: S.canRedo,

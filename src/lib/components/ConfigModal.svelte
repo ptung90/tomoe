@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import X from 'lucide-svelte/icons/x';
   import { configOpen, theme, userName, setUserName,
+    autoSaveEnabled, setAutoSaveEnabled,
     backupEnabled, backupDir, backupKeep, setBackupEnabled, setBackupKeep,
     chooseBackupDir, openBackupFolder } from '../shell';
   import { continentColors, setContinentColor, resetContinentColors } from '../modules/flashcards/stores';
@@ -59,6 +60,15 @@
         <input type="radio" name="theme" checked={$theme === 'dark'} onchange={() => setTheme('dark')} />
         Dark
       </label>
+
+      <p class="label">Auto-save</p>
+      <label class="opt">
+        <input type="checkbox" aria-label="enable auto-save"
+          checked={$autoSaveEnabled}
+          onchange={(e) => setAutoSaveEnabled((e.target as HTMLInputElement).checked)} />
+        Auto-save changes to the open file
+      </label>
+      <p class="hint">Saves a couple of seconds after you stop editing. Applies once the project has been saved to a file at least once.</p>
 
       <p class="label">Backups</p>
       <label class="opt">

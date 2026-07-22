@@ -14,5 +14,6 @@ export const flashcards: TomoeModule = {
   open: (text, path) => S.loadProject(parseProject(text), path && path.endsWith('.tomoe.json') ? path : null, text),
   save: async () => { const p = get(S.filePath); if (p) return saveToPath(p); return pickSaveTo(); },
   saveAs: () => pickSaveTo(),
+  filePath: S.filePath,
   dirty: S.dirty, canUndo: S.canUndo, canRedo: S.canRedo, undo: S.undo, redo: S.redo,
 };

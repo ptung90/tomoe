@@ -14,5 +14,6 @@ export const menu: TomoeModule = {
     S.loadDoc(parseMenuDoc(text), path && path.endsWith('.menu.tomoe.json') ? path : null, text),
   save: async () => { const p = get(S.filePath); if (p) return saveToPath(p); return pickSaveTo(); },
   saveAs: () => pickSaveTo(),
+  filePath: S.filePath,
   dirty: S.dirty, canUndo: S.canUndo, canRedo: S.canRedo, undo: S.undo, redo: S.redo,
 };

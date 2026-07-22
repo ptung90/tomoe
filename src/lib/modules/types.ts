@@ -12,6 +12,7 @@ export interface TomoeModule {
   open(text: string, path: string | null): void;  // parse text into this module's store
   save(): Promise<void>;      // this module serializes + writes (native) + toast
   saveAs?(): Promise<void>;   // always prompt for a new path (Save As…), then write there
+  filePath: Readable<string | null>;  // current bound file, or null when unsaved (drives auto-save)
   dirty: Readable<boolean>;
   canUndo: Readable<boolean>;
   canRedo: Readable<boolean>;
