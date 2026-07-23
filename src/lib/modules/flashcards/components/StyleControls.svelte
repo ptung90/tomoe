@@ -249,7 +249,7 @@
         {/if}
         <span class="tool" title="Image fit"><ScanLine size={14} />
           <select aria-label="Fit" value={eff.image.backgroundSize} onchange={(e) => write({ image: { backgroundSize: str(e) } })}>
-            {#each ['cover','contain','auto'] as v (v)}<option value={v}>{v}</option>{/each}
+            {#each [['cover','cover'],['contain','contain'],['100% auto','fit width'],['auto 100%','fit height'],['auto','auto']] as [v, lbl] (v)}<option value={v}>{lbl}</option>{/each}
           </select>
         </span>
         <span class="tool" title="Image position"><MoveVertical size={14} />

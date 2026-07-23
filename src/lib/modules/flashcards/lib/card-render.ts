@@ -116,6 +116,10 @@ export function getGridTemplateStyle(layout: string, sp: GridSplit): string {
 function imgFitStyle(size: string, position: string): string {
   if (size === 'cover')
     return 'width:100%;height:100%;object-fit:cover;object-position:' + position + ';';
+  // Fit one dimension, leave the other proportional — the element box equals the (possibly
+  // upscaled) picture, so a border still hugs it. Fixes small images not filling under contain.
+  if (size === '100% auto') return 'width:100%;height:auto;';   // fit width
+  if (size === 'auto 100%') return 'height:100%;width:auto;';   // fit height
   return 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;';
 }
 

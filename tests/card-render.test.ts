@@ -120,6 +120,13 @@ describe('buildCardHTML — image frame (border-radius + background fill + borde
     expect(style).not.toMatch(/border:/);
   });
 
+  it('fit width / fit height fill one dimension and leave the other auto (upscaling small images)', () => {
+    const w = buildCardHTML(withImg(), { ...DEFAULT_SETTINGS, image: { ...DEFAULT_SETTINGS.image, backgroundSize: '100% auto' } }, 'en');
+    expect(fcImgStyle(w)).toContain('width:100%;height:auto');
+    const h = buildCardHTML(withImg(), { ...DEFAULT_SETTINGS, image: { ...DEFAULT_SETTINGS.image, backgroundSize: 'auto 100%' } }, 'en');
+    expect(fcImgStyle(h)).toContain('height:100%;width:auto');
+  });
+
   it('fit=contain keeps aspect ratio (object-fit:contain + max-width) so a border hugs the image', () => {
     const html = buildCardHTML(withImg(), {
       ...DEFAULT_SETTINGS, image: { ...DEFAULT_SETTINGS.image, backgroundSize: 'contain' },
