@@ -66,7 +66,15 @@
 
   // ── Cascade scope: Global (settings) → This view (template.style) → This card (card.style) ──
   let scope = $state<'global' | 'schema' | 'card'>('global');
-  const eff = $derived(resolveStyle($project.settings, template?.style, card?.style));
+  // Resolve only UP TO the selected scope so the controls show THIS scope's value: Global shows the
+  // base (unshadowed by view/card overrides), This view shows base+view, This card shows the full
+  // cascade. Otherwise editing Global looks like a no-op when a view/card override shadows it, and
+  // switching tabs never changes the displayed numbers.
+  const eff = $derived(
+    scope === 'card' ? resolveStyle($project.settings, template?.style, card?.style)
+      : scope === 'schema' ? resolveStyle($project.settings, template?.style)
+        : resolveStyle($project.settings),
+  );
   // Image background fill: 'transparent'/empty = off. The colour <input> needs a valid hex, so
   // fall back to white when off; toggling on seeds white.
   const imgFillOn = $derived(!!eff.image.backgroundColor && eff.image.backgroundColor !== 'transparent');

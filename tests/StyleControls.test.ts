@@ -172,11 +172,15 @@ describe('StyleControls (scope switcher: Global / This view / This card)', () =>
     expect(get(S.project).schemas[0].cardTemplates[0]?.style?.border?.width).not.toBe(11);
   });
 
-  it('controls display the resolved (cascaded) value from a schema override', async () => {
+  it('controls show the value AT the selected scope: base at Global, the override at This view', async () => {
     const sid = seedSelected();
     S.setTemplateStyle(sid, { border: { width: 22 } });
     render(StyleControls);
     await tab('Border');
+    // Global scope (default) shows the BASE width, unshadowed by the view override…
+    expect((screen.getByLabelText('Width') as HTMLInputElement).value).toBe(String(get(S.project).settings.border.width));
+    // …switching to This view shows the override (22).
+    await fireEvent.click(screen.getByRole('tab', { name: 'This view' }));
     expect((screen.getByLabelText('Width') as HTMLInputElement).value).toBe('22');
   });
 
